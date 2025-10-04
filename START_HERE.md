@@ -34,6 +34,11 @@ This is your master guide. It contains **53 tasks in 9 phases**, structured for 
    - Directory structure
    - Technology stack
    - Design patterns
+   
+6. **[STATE_MANAGEMENT.md](./STATE_MANAGEMENT.md)** - State mutation strategy
+   - Action queue pattern
+   - Race condition prevention
+   - Concurrency handling
 
 ### Step 3: Start Implementation
 

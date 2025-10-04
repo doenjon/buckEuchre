@@ -258,14 +258,27 @@ interface GameStore {
 }
 ```
 
-**Server State (In-Memory)**
+**Server State (In-Memory with Action Queue)**
 ```typescript
 // In-memory game store
 const activeGames = new Map<string, GameState>();
 
-// Persisted to database after each action
-await saveGameState(gameId, gameState);
+// Action queue per game (prevents race conditions)
+const gameActionQueues = new Map<string, Promise<void>>();
+
+// All state mutations go through the queue
+const newState = await executeGameAction(gameId, async (currentState) => {
+  return applyAction(currentState, action);
+});
+
+// State is automatically persisted to database after each action
 ```
+
+**Race Condition Prevention:**
+- Each game has its own action queue
+- Actions for the same game are processed sequentially
+- Different games can process actions in parallel
+- No locks or mutexes needed - uses Promise chaining
 
 ### 3. WebSocket Architecture
 
@@ -278,7 +291,7 @@ socket.join(`game:${gameId}`);
 io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', gameState);
 ```
 
-**Event Handling Pattern**
+**Event Handling Pattern (with Action Queue)**
 ```typescript
 // backend/src/sockets/game.ts
 export function registerGameHandlers(io: Server) {
@@ -288,21 +301,18 @@ export function registerGameHandlers(io: Server) {
         // 1. Validate payload
         const validated = playCardSchema.parse(payload);
         
-        // 2. Get current game state
-        const gameState = activeGames.get(validated.gameId);
-        
-        // 3. Validate action against game rules
-        const validation = validateCardPlay(gameState, validated);
-        if (!validation.valid) {
-          socket.emit('ERROR', { code: 'INVALID_CARD', message: validation.reason });
-          return;
-        }
-        
-        // 4. Apply action to state
-        const newState = applyCardPlay(gameState, validated);
-        
-        // 5. Persist state
-        await saveGameState(validated.gameId, newState);
+        // 2-5. Execute action through queue (ensures sequential processing)
+        const newState = await executeGameAction(validated.gameId, async (currentState) => {
+          // Validate action against current state
+          const validation = validateCardPlay(currentState, validated);
+          if (!validation.valid) {
+            throw new ValidationError(validation.reason);
+          }
+          
+          // Apply action to state (pure function)
+          return applyCardPlay(currentState, validated);
+        });
+        // State is automatically persisted by executeGameAction
         
         // 6. Broadcast update
         io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
@@ -317,6 +327,13 @@ export function registerGameHandlers(io: Server) {
   });
 }
 ```
+
+**Why Action Queue?**
+- **Prevents race conditions**: If two players act simultaneously, actions are processed sequentially
+- **No locks needed**: Uses Promise chaining (native to Node.js event loop)
+- **Per-game isolation**: Different games process actions in parallel
+- **Simple to reason about**: Each action sees consistent state
+- **Database-safe**: State is persisted after each successful action
 
 ### 4. Pure Game Logic
 
@@ -444,9 +461,11 @@ app.use('/api/', limiter);
 
 ### For MVP (<50 concurrent games)
 - In-memory game state (Map<gameId, GameState>)
+- Action queue per game (prevents race conditions)
 - PostgreSQL for persistence
 - No caching layer needed
 - Single server instance
+- No distributed locks needed (single server + action queue is sufficient)
 
 ### Future Scaling
 - **Redis**: Move active games to Redis (shared state across servers)

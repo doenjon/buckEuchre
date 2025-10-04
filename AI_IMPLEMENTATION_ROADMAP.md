@@ -487,7 +487,7 @@ export async function getGameState(gameId: string): Promise<GameState | null>
 **Status:** ⬜ NOT_STARTED  
 **Dependencies:** Task 3.1, Task 2.6
 
-**Objective:** In-memory state management + persistence
+**Objective:** In-memory state management + persistence with race condition prevention
 
 **What to Create:** `backend/src/services/state.service.ts`
 
@@ -496,6 +496,48 @@ export async function getGameState(gameId: string): Promise<GameState | null>
 // In-memory game state store
 const activeGames = new Map<string, GameState>();
 
+// Action queue per game to prevent race conditions
+const gameActionQueues = new Map<string, Promise<void>>();
+
+/**
+ * Execute an action on a game state, ensuring sequential processing
+ * This prevents race conditions when multiple players act simultaneously
+ */
+export async function executeGameAction<T>(
+  gameId: string,
+  action: (currentState: GameState) => Promise<GameState>
+): Promise<GameState> {
+  // Get or create queue for this game
+  const currentQueue = gameActionQueues.get(gameId) || Promise.resolve();
+  
+  // Chain this action to the queue
+  const newQueue = currentQueue.then(async () => {
+    const state = activeGames.get(gameId);
+    if (!state) {
+      throw new Error('Game not found');
+    }
+    
+    // Execute action (pure function from game/state.ts)
+    const newState = await action(state);
+    
+    // Update in-memory state
+    activeGames.set(gameId, newState);
+    
+    // Persist to database (don't await - fire and forget for performance)
+    saveGameState(gameId, newState).catch(err => 
+      console.error('Failed to persist game state:', err)
+    );
+    
+    return newState;
+  });
+  
+  // Update queue
+  gameActionQueues.set(gameId, newQueue);
+  
+  // Return new state when this action completes
+  return newQueue;
+}
+
 export function getActiveGameState(gameId: string): GameState | null
 export function setActiveGameState(gameId: string, state: GameState): void
 export async function saveGameState(gameId: string, state: GameState): Promise<void>
@@ -503,13 +545,15 @@ export async function loadGameState(gameId: string): Promise<GameState | null>
 export function deleteGameState(gameId: string): void
 ```
 
-**Note:** MVP accepts rare race conditions on concurrent actions.
+**Note:** Action queue ensures all game actions are processed sequentially per game, preventing race conditions while allowing different games to process actions in parallel.
 
 **Testing:**
 - [ ] In-memory operations work
 - [ ] Persists to database
 - [ ] Loads from database
 - [ ] JSON serialization works
+- [ ] Concurrent actions are serialized (race condition test)
+- [ ] Multiple games can process actions in parallel
 
 ---
 
@@ -639,13 +683,38 @@ export function registerGameHandlers(io: Server, socket: Socket) {
 }
 ```
 
-**Pattern for Each Handler:**
-1. Validate payload (Zod)
-2. Get current game state
-3. Validate action
-4. Apply state transition (pure function)
-5. Persist state
-6. Broadcast update to room
+**Pattern for Each Handler (using action queue):**
+```typescript
+async function handlePlayCard(payload: PlayCardPayload) {
+  try {
+    // 1. Validate payload (Zod)
+    const validated = playCardSchema.parse(payload);
+    
+    // 2. Execute action through queue (prevents race conditions)
+    const newState = await executeGameAction(validated.gameId, async (currentState) => {
+      // 3. Validate action against current state
+      const validation = canPlayCard(currentState, validated);
+      if (!validation.valid) {
+        throw new ValidationError(validation.reason);
+      }
+      
+      // 4. Apply state transition (pure function from game/state.ts)
+      return applyCardPlay(currentState, validated);
+    });
+    
+    // 5. Broadcast update to room (state already persisted by executeGameAction)
+    io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
+      gameState: newState,
+      event: 'CARD_PLAYED'
+    });
+    
+  } catch (error) {
+    socket.emit('ERROR', { code: 'PLAY_CARD_FAILED', message: error.message });
+  }
+}
+```
+
+**Key Pattern:** All state mutations go through `executeGameAction()` which ensures sequential processing per game.
 
 **MVP Note:** No state versioning yet. Added in Phase 6.
 
@@ -654,6 +723,7 @@ export function registerGameHandlers(io: Server, socket: Socket) {
 - [ ] Validation rejects invalid actions
 - [ ] State updates correctly
 - [ ] Broadcasts work
+- [ ] Race conditions prevented (concurrent card plays)
 
 ---
 

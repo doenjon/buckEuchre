@@ -162,6 +162,11 @@ This project is structured for **incremental delivery**:
 - 2025-01-04: Client validation deferred to Phase 6
 - 2025-01-04: Docker deferred to Phase 9 (use local services for MVP)
 - 2025-01-04: Full lobby deferred to Phase 7 (join by URL for MVP)
+- 2025-10-04: **Added action queue pattern** to prevent race conditions (see STATE_MANAGEMENT.md)
+  - Each game has its own Promise-based action queue
+  - All state mutations processed sequentially per game
+  - Different games can process actions in parallel
+  - No locks or Redis needed for single-server MVP
 
 ### Important Reminders
 - Game logic must be pure functions
