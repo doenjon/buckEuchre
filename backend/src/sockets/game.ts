@@ -57,19 +57,39 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
     const playerId = socket.data.playerId;
     const playerName = socket.data.playerName;
 
+    console.log(`[JOIN_GAME] Player ${playerName} attempting to join game ${validated.gameId}`);
+
     // Add player to game (uses game service)
     const gameState = await joinGame(validated.gameId, playerId);
 
+    // Join socket room regardless of whether game has started
+    socket.join(`game:${validated.gameId}`);
+
     if (!gameState) {
-      socket.emit('ERROR', {
-        code: 'JOIN_FAILED',
-        message: 'Failed to join game. Game may be full or not found.'
+      // Game exists but hasn't started yet (still in WAITING)
+      console.log(`[JOIN_GAME] Game ${validated.gameId} is in WAITING status (no state yet)`);
+      
+      // Get game info from database to show player list
+      const game = await getGame(validated.gameId);
+      if (!game) {
+        socket.emit('ERROR', {
+          code: 'GAME_NOT_FOUND',
+          message: 'Game not found'
+        });
+        return;
+      }
+      
+      // Send a simple update to show players waiting
+      socket.emit('GAME_WAITING', {
+        gameId: validated.gameId,
+        playerCount: game.players.length,
+        playersNeeded: 4 - game.players.length,
+        message: `Waiting for ${4 - game.players.length} more player(s)...`
       });
+      
+      console.log(`[JOIN_GAME] Player ${playerName} joined. ${game.players.length}/4 players`);
       return;
     }
-
-    // Join socket room
-    socket.join(`game:${validated.gameId}`);
 
     // Update player name in game state
     const updatedState = await executeGameAction(validated.gameId, async (currentState) => {
@@ -85,9 +105,9 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
       event: 'PLAYER_JOINED'
     });
 
-    console.log(`Player ${playerName} joined game ${validated.gameId}`);
+    console.log(`[JOIN_GAME] Player ${playerName} joined active game ${validated.gameId}`);
   } catch (error: any) {
-    console.error('Error in JOIN_GAME:', error);
+    console.error('[JOIN_GAME] Error:', error);
     socket.emit('ERROR', {
       code: 'JOIN_GAME_FAILED',
       message: error.message || 'Failed to join game'
