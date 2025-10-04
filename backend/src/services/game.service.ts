@@ -156,6 +156,9 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
       const playerIds = game.players.map((gp) => gp.player.id) as [string, string, string, string];
       const initialState = initializeGame(playerIds);
       
+      // CRITICAL: Set the gameId on the state object
+      initialState.gameId = gameId;
+      
       // Store in memory
       setActiveGameState(gameId, initialState);
       
@@ -237,6 +240,9 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
 
     // Initialize game state using pure function from game/state.ts
     const initialState = initializeGame(playerIds);
+    
+    // CRITICAL: Set the gameId on the state object
+    initialState.gameId = gameId;
 
     // Update game status to IN_PROGRESS
     await prisma.game.update({
