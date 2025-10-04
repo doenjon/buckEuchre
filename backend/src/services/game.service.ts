@@ -104,7 +104,7 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     throw new Error('Player not found');
   }
 
-  // Check if player is already in another active game
+  // Check if player is already in another active game (different from this one)
   const existingGame = await prisma.gamePlayer.findFirst({
     where: {
       playerId,
@@ -116,8 +116,39 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     },
   });
 
-  if (existingGame) {
-    throw new Error('Player is already in an active game');
+  if (existingGame && existingGame.gameId !== gameId) {
+    throw new Error('Player is already in a different active game');
+  }
+  
+  // If player is already in THIS game, just return the current state
+  if (existingGame && existingGame.gameId === gameId) {
+    const game = await prisma.game.findUnique({
+      where: { id: gameId },
+      include: {
+        players: {
+          orderBy: { position: 'asc' },
+        },
+      },
+    });
+    
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    
+    // Load game state from database or memory
+    const gameState = getActiveGameState(gameId);
+    if (gameState) {
+      return gameState;
+    }
+    
+    const dbGameState = await loadGameState(gameId);
+    if (dbGameState) {
+      setActiveGameState(gameId, dbGameState);
+      return dbGameState;
+    }
+    
+    // Game exists but no state yet (still in WAITING)
+    return null;
   }
 
   // Get game with current players
