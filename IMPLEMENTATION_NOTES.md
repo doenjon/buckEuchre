@@ -112,6 +112,355 @@ export function cleanupGameState(gameId: string): void {
 
 ---
 
+## Known Shortcuts & Technical Debt
+
+This section documents intentional compromises made for MVP speed. These are **not mistakes** - they are deliberate trade-offs.
+
+### 1. Fire-and-Forget Database Writes
+
+**What we're doing:**
+```typescript
+saveGameState(gameId, newState).catch(err => console.error(err));
+// Don't await - game continues
+```
+
+**Why it's not optimal:**
+- If database save fails, state could be lost on server crash
+- No guarantee of data persistence
+- Silent failures (only logged)
+
+**Why we're doing it anyway:**
+- Real-time performance is critical
+- Waiting for DB writes adds 10-50ms latency per action
+- For MVP, losing a game on crash is acceptable
+- Single server makes this reliable enough
+
+**When to fix:**
+- Production: Add write-ahead log (WAL)
+- Or: Use Redis with AOF persistence
+- Or: Batch writes every 5 seconds
+
+---
+
+### 2. No Transaction Log / Event Sourcing
+
+**What we're doing:**
+- Storing full game state snapshots
+- No history of individual actions
+
+**Why it's not optimal:**
+- Can't replay game to debug issues
+- Can't recover from partial corruption
+- No audit trail for disputes
+
+**Why we're doing it anyway:**
+- Event sourcing adds complexity
+- MVP doesn't need replay/audit features
+- Simpler to implement and reason about
+
+**When to fix:**
+- Phase 8: Add optional event logging to Round table
+- Post-MVP: Full event sourcing if needed
+
+---
+
+### 3. Simple Error Messages (MVP)
+
+**What we're doing (Phase 1-5):**
+```typescript
+socket.emit('ERROR', { message: 'Invalid move' });
+```
+
+**Why it's not optimal:**
+- No error codes for client to parse
+- Can't internationalize
+- Hard to handle programmatically
+
+**Why we're doing it anyway:**
+- Faster to implement
+- Good enough for MVP testing
+- Structured errors added in Phase 6
+
+**When fixed:** Phase 6, Task 6.2
+
+---
+
+### 4. No Client-Side Validation (MVP)
+
+**What we're doing (Phase 1-5):**
+- Client sends action
+- Server validates
+- Server rejects if invalid
+- Round trip for every validation error
+
+**Why it's not optimal:**
+- Slower UX (network round trip)
+- Unnecessary server load
+- Players see cards "bounce back"
+
+**Why we're doing it anyway:**
+- Server must validate anyway (security)
+- Duplicate validation logic is error-prone
+- MVP focuses on working game, not polish
+
+**When fixed:** Phase 6, Task 6.6
+
+---
+
+### 5. No Grace Period for Disconnection (MVP)
+
+**What we're doing (Phase 1-5):**
+- Player disconnects → immediately marked offline
+- Game continues (if possible)
+
+**Why it's not optimal:**
+- Brief network hiccup ruins game
+- No buffer for mobile switching between WiFi/cellular
+- Poor UX
+
+**Why we're doing it anyway:**
+- Grace period logic is complex
+- Need to handle "what if they don't come back?"
+- MVP proves core gameplay first
+
+**When fixed:** Phase 6, Task 6.3 (30-second grace period)
+
+---
+
+### 6. Manual Testing Only (MVP)
+
+**What we're doing (Phase 1-5):**
+- Open 4 browser tabs
+- Manually play through game
+- No automated tests
+
+**Why it's not optimal:**
+- Regressions won't be caught
+- No CI/CD pipeline
+- Time-consuming to test
+
+**Why we're doing it anyway:**
+- Writing tests takes time
+- Game logic tests come in Phase 2 (Task 2.7)
+- Integration tests in Phase 8
+- Manual testing validates UX better for MVP
+
+**When fixed:** Phase 2 (unit tests), Phase 8 (integration tests)
+
+---
+
+### 7. No State Versioning (MVP)
+
+**What we're doing (Phase 1-5):**
+```typescript
+io.to(game).emit('GAME_STATE_UPDATE', { gameState });
+// No version number
+```
+
+**Why it's not optimal:**
+- Out-of-order WebSocket messages could cause issues
+- Clients might apply stale updates
+- Race conditions on client side
+
+**Why we're doing it anyway:**
+- WebSocket guarantees order (usually)
+- Extra complexity for MVP
+- In practice, rarely a problem
+
+**When fixed:** Phase 6, Task 6.4
+
+---
+
+### 8. Join Game By URL Only (MVP)
+
+**What we're doing (Phase 1-5):**
+- Creator shares game URL manually
+- No in-app lobby/game list
+
+**Why it's not optimal:**
+- Poor discoverability
+- Can't browse available games
+- Requires out-of-band communication
+
+**Why we're doing it anyway:**
+- Lobby adds UI complexity
+- MVP is for playing with friends (they have the link)
+- Simpler MVP flow
+
+**When fixed:** Phase 7, Task 7.1
+
+---
+
+### 9. No Docker for Development (MVP)
+
+**What we're doing (Phase 1-5):**
+- Local Node.js installation
+- PostgreSQL in Docker (or local)
+- Manual setup
+
+**Why it's not optimal:**
+- "Works on my machine" problems
+- Inconsistent environments
+- Harder for new contributors
+
+**Why we're doing it anyway:**
+- Faster development (no container overhead)
+- Most developers have Node.js
+- Docker adds layer of complexity
+
+**When fixed:** Phase 9, Task 9.1
+
+---
+
+### 10. Single Server / No Horizontal Scaling
+
+**What we're doing:**
+- In-memory Map on single server
+- No Redis or distributed state
+
+**Why it's not optimal:**
+- Can't scale beyond one server
+- Server restart loses active games
+- No load balancing
+
+**Why we're doing it anyway:**
+- MVP targets 10-20 concurrent users
+- Single server handles this easily
+- Distributed systems add massive complexity
+- Action queue pattern works perfectly for single server
+
+**When to fix:**
+- Only if you exceed ~100 concurrent games
+- Then: Add Redis, Socket.io Redis adapter, load balancer
+
+---
+
+### 11. Console.log Instead of Proper Logging
+
+**What we're doing:**
+```typescript
+console.log('Player joined:', playerId);
+console.error('Failed to save state:', err);
+```
+
+**Why it's not optimal:**
+- No log levels in production
+- Can't filter or search logs easily
+- No structured logging
+- No log aggregation
+
+**Why we're doing it anyway:**
+- Simple and works
+- Every environment has console
+- Good enough for MVP debugging
+
+**When to fix:**
+- Phase 9: Add winston or pino
+- Production: Add log aggregation (CloudWatch, etc.)
+
+---
+
+### 12. No Rate Limiting
+
+**What we're doing:**
+- Accept all requests
+- No throttling
+
+**Why it's not optimal:**
+- Vulnerable to spam/DoS
+- Player could spam actions
+- No protection
+
+**Why we're doing it anyway:**
+- MVP is for trusted friends
+- Not public-facing yet
+- Adds complexity
+
+**When to fix:**
+- Phase 6 or 9 (production hardening)
+- Use express-rate-limit
+
+---
+
+### 13. JWT Secrets in .env File
+
+**What we're doing:**
+```env
+JWT_SECRET="some_random_string"
+```
+
+**Why it's not optimal:**
+- Should use secrets manager (AWS Secrets Manager, etc.)
+- Secrets committed to git if not careful
+- No rotation
+
+**Why we're doing it anyway:**
+- Simple for MVP
+- Adequate for small-scale deployment
+- .env is gitignored
+
+**When to fix:**
+- Production deployment to AWS/GCP: Use secrets manager
+- For now: Ensure .env is never committed
+
+---
+
+### 14. No Database Connection Pooling Configuration
+
+**What we're doing:**
+- Using Prisma defaults
+
+**Why it's not optimal:**
+- Not tuned for workload
+- Might hit connection limits under load
+
+**Why we're doing it anyway:**
+- Prisma defaults are sensible
+- MVP won't hit limits
+- Premature optimization
+
+**When to fix:**
+- If you see connection errors
+- Phase 9: Configure pool size
+
+---
+
+### 15. No Metrics / Monitoring
+
+**What we're doing:**
+- No dashboards
+- No alerts
+- No performance tracking
+
+**Why it's not optimal:**
+- Can't detect issues proactively
+- No visibility into performance
+- Hard to debug production issues
+
+**Why we're doing it anyway:**
+- Monitoring adds overhead
+- MVP doesn't need this
+- Can check logs manually
+
+**When to fix:**
+- Phase 9: Add basic healthchecks
+- Post-MVP: Add Prometheus/Grafana or CloudWatch
+
+---
+
+## Summary: We Know It's Not Perfect
+
+**These shortcuts are intentional.** The goal is:
+1. **Get MVP working in 4 weeks**
+2. **Prove the game is fun**
+3. **Then add polish**
+
+If an AI agent sees something that seems "wrong" or "not best practice," check this list first. It might be a deliberate trade-off for speed.
+
+**Rule of thumb:** If it's in this list, implement it as documented (even if suboptimal). If it's NOT in this list and seems wrong, it might be a real bug - flag it.
+
+---
+
 ## Common Pitfalls to Avoid
 
 ### ❌ Don't read from database during gameplay

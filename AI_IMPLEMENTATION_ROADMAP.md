@@ -14,6 +14,28 @@ Living document guiding Buck Euchre implementation. Update task status as you wo
 
 ---
 
+## ⚠️ Important: Known Shortcuts for MVP
+
+**This project intentionally takes shortcuts for speed.** These are documented in `IMPLEMENTATION_NOTES.md` under "Known Shortcuts & Technical Debt."
+
+**Key things that are "not optimal" BY DESIGN:**
+1. ❌ No client-side validation (Phase 1-5) → Added in Phase 6
+2. ❌ Simple error strings (Phase 1-5) → Error codes in Phase 6
+3. ❌ Fire-and-forget DB writes → May lose data on crash (acceptable for MVP)
+4. ❌ No state versioning (Phase 1-5) → Added in Phase 6
+5. ❌ Manual testing only (Phase 1-5) → Automated tests in Phase 2 & 8
+6. ❌ No Docker for dev (Phase 1-5) → Added in Phase 9
+7. ❌ No rate limiting, monitoring, proper logging → Added in Phase 6-9
+
+**If you see something that looks "wrong" or "not best practice":**
+- Check IMPLEMENTATION_NOTES.md first
+- If it's listed there, implement as documented (even if suboptimal)
+- If NOT listed and seems wrong, it might be a bug - flag it
+
+**Why these shortcuts?** Speed. Get working game in 4 weeks, polish later.
+
+---
+
 ## Implementation Philosophy: MVP → Production
 
 This roadmap is organized to deliver a **playable MVP in ~4 weeks** (Phases 1-5), then add production polish (Phases 6-8) and deployment infrastructure (Phase 9).

@@ -85,12 +85,16 @@ Example flow:
 - ✅ Test before marking complete
 - ✅ Update roadmap and PROGRESS.md
 - ✅ Commit frequently
+- ✅ Check IMPLEMENTATION_NOTES.md for known shortcuts
 
 **DON'T:**
 - ❌ Skip dependencies
 - ❌ Use `any` types in TypeScript
 - ❌ Mark tasks complete without testing
 - ❌ Create files outside defined structure
+- ❌ "Improve" intentional shortcuts (check IMPLEMENTATION_NOTES.md first)
+
+**IMPORTANT:** This project takes deliberate shortcuts for MVP speed. See IMPLEMENTATION_NOTES.md "Known Shortcuts & Technical Debt" section. If something looks suboptimal, it might be intentional!
 
 ### Key Principles
 
