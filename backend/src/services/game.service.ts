@@ -154,10 +154,13 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     if (game.players.length === 4 && game.status === GameStatus.WAITING) {
       // All 4 players present! Initialize game
       const playerIds = game.players.map((gp) => gp.player.id) as [string, string, string, string];
-      const initialState = initializeGame(playerIds);
+      let initialState = initializeGame(playerIds);
       
       // CRITICAL: Set the gameId on the state object
       initialState.gameId = gameId;
+      
+      // Deal the first round (moves from DEALING → BIDDING and deals cards)
+      initialState = dealNewRound(initialState);
       
       // Store in memory
       setActiveGameState(gameId, initialState);
@@ -282,10 +285,13 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     const playerIds = updatedGame.players.map((gp) => gp.player.id) as [string, string, string, string];
 
     // Initialize game state using pure function from game/state.ts
-    const initialState = initializeGame(playerIds);
+    let initialState = initializeGame(playerIds);
     
     // CRITICAL: Set the gameId on the state object
     initialState.gameId = gameId;
+
+    // Deal the first round (moves from DEALING → BIDDING and deals cards)
+    initialState = dealNewRound(initialState);
 
     // Store in memory (SOURCE OF TRUTH)
     setActiveGameState(gameId, initialState);
