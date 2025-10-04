@@ -121,13 +121,14 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     throw new Error('Player is already in a different active game');
   }
   
-  // If player is already in THIS game, just return the current state
+  // If player is already in THIS game, check if game has started
   if (existingGame && existingGame.gameId === gameId) {
     const game = await prisma.game.findUnique({
       where: { id: gameId },
       include: {
         players: {
           orderBy: { position: 'asc' },
+          include: { player: true },
         },
       },
     });
@@ -136,19 +137,39 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
       throw new Error('Game not found');
     }
     
-    // Load game state from database or memory
-    const gameState = getActiveGameState(gameId);
+    // Check if game state exists in memory
+    let gameState = getActiveGameState(gameId);
     if (gameState) {
       return gameState;
     }
     
+    // Check if game state exists in database
     const dbGameState = await loadGameState(gameId);
     if (dbGameState) {
       setActiveGameState(gameId, dbGameState);
       return dbGameState;
     }
     
-    // Game exists but no state yet (still in WAITING)
+    // No state yet - check if we should start the game
+    if (game.players.length === 4 && game.status === GameStatus.WAITING) {
+      // All 4 players present! Initialize game
+      const playerIds = game.players.map((gp) => gp.player.id) as [string, string, string, string];
+      const initialState = initializeGame(playerIds);
+      
+      // Store in memory
+      setActiveGameState(gameId, initialState);
+      
+      // Update game status to IN_PROGRESS
+      await prisma.game.update({
+        where: { id: gameId },
+        data: { status: GameStatus.IN_PROGRESS },
+      });
+      
+      console.log(`[joinGame] Game ${gameId} started with 4 players!`);
+      return initialState;
+    }
+    
+    // Game exists but no state yet (still in WAITING, not enough players)
     return null;
   }
 

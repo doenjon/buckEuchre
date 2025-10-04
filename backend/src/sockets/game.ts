@@ -79,8 +79,8 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
         return;
       }
       
-      // Send a simple update to show players waiting
-      socket.emit('GAME_WAITING', {
+      // Broadcast waiting status to all players in the room
+      io.to(`game:${validated.gameId}`).emit('GAME_WAITING', {
         gameId: validated.gameId,
         playerCount: game.players.length,
         playersNeeded: 4 - game.players.length,
@@ -91,7 +91,7 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
       return;
     }
 
-    // Update player name in game state
+    // Game has started! Update player names in state
     const updatedState = await executeGameAction(validated.gameId, async (currentState) => {
       const players = currentState.players.map((p: Player) => 
         p.id === playerId ? { ...p, name: playerName } : p
@@ -99,10 +99,10 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
       return { ...currentState, players };
     });
 
-    // Broadcast to all players in game
+    // Broadcast game state to all players
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
       gameState: updatedState,
-      event: 'PLAYER_JOINED'
+      event: 'GAME_STARTED'
     });
 
     console.log(`[JOIN_GAME] Player ${playerName} joined active game ${validated.gameId}`);
