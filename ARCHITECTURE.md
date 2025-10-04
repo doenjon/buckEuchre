@@ -4,6 +4,15 @@
 
 Buck Euchre is a real-time multiplayer web application built with a client-server architecture. This document defines the system architecture, technology choices, and implementation strategy optimized for AI-driven development.
 
+### Implementation Philosophy: MVP → Production
+
+This project is organized for **incremental delivery**:
+- **Phases 1-5 (~4 weeks)**: Playable MVP with basic UI
+- **Phases 6-8 (~2 weeks)**: Production polish (error handling, testing, reconnection)
+- **Phase 9 (~1 week)**: Deployment infrastructure (Docker, monitoring)
+
+See AI_IMPLEMENTATION_ROADMAP.md for detailed task breakdown.
+
 ## High-Level Architecture
 
 ```
@@ -545,14 +554,46 @@ Each module should have a comment block:
  */
 ```
 
-## Open Questions / Future Enhancements
+## MVP vs Production Features
 
-### MVP Scope (Must Have)
+### MVP (Phases 1-5)
+**Must Have:**
 - ✅ 4 human players
 - ✅ Full Buck Euchre rules
-- ✅ Real-time gameplay
+- ✅ Real-time gameplay via WebSocket
 - ✅ Score tracking
-- ✅ Reconnection support
+- ✅ Basic UI with all game components
+- ✅ Simple error messages (strings)
+- ✅ Basic reconnection (auto-reconnect + state sync)
+- ✅ Join game via URL
+
+**Acceptable for MVP:**
+- Simple error messages (not structured error codes)
+- Server-only validation (no client-side validation)
+- Basic turn indicator (text-based)
+- No grace periods for disconnection
+- No Docker (local services)
+- Manual testing (no automated tests yet)
+
+### Production Polish (Phases 6-8)
+**Added:**
+- ✅ Structured error handling with error codes
+- ✅ Client-side validation for instant feedback
+- ✅ Reconnection with grace periods
+- ✅ Enhanced loading states & turn indicators
+- ✅ Full game lobby with game list
+- ✅ State versioning for message ordering
+- ✅ Comprehensive test coverage
+- ✅ UI animations and polish
+- ✅ Mobile responsiveness
+
+### Deployment (Phase 9)
+**Infrastructure:**
+- ✅ Docker development setup
+- ✅ Docker production configuration
+- ✅ Environment validation
+- ✅ Deployment documentation
+- ✅ Backup strategy
 
 ### Post-MVP (Nice to Have)
 - ⬜ AI opponents

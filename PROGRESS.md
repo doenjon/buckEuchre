@@ -1,13 +1,13 @@
 # Implementation Progress
 
-**Last Updated:** 2025-01-04 (Initial setup)  
-**Status:** Design phase complete, ready for implementation
+**Last Updated:** 2025-01-04  
+**Status:** Planning complete, ready for implementation
 
 ---
 
 ## Overall Progress
 
-**Total:** 0/43 tasks complete (0%)
+**Total:** 0/53 tasks complete (0%)
 
 ```
 [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0%
@@ -15,84 +15,120 @@
 
 ---
 
+## Implementation Approach: MVP → Production
+
+This project is structured for **incremental delivery**:
+
+1. **Phases 1-5** (Weeks 1-4): Playable MVP
+2. **Phases 6-8** (Weeks 5-6): Production polish
+3. **Phase 9** (Week 7): Deployment infrastructure
+
+---
+
 ## Phase Status
 
-- [ ] **Phase 0: Project Setup & Foundation** (0/5 tasks)
-  - [ ] Task 0.1: Project Structure Setup
-  - [ ] Task 0.2: Shared Types Module
-  - [ ] Task 0.3: Shared Constants Module
-  - [ ] Task 0.4: Shared Validators Module
-  - [ ] Task 0.5: Database Schema (Prisma)
+### 🎯 Milestone 1: MVP (Weeks 1-4)
 
-- [ ] **Phase 1: Backend - Pure Game Logic** (0/6 tasks)
-  - [ ] Task 1.1: Deck & Card Utilities
-  - [ ] Task 1.2: Card Ranking & Comparison
-  - [ ] Task 1.3: Trick Evaluation
-  - [ ] Task 1.4: Scoring Logic
-  - [ ] Task 1.5: Move Validation
-  - [ ] Task 1.6: State Transitions
+- [ ] **Phase 1: Foundation** (0/5 tasks) - 2-3 days
+  - [ ] Task 1.1: Project Structure Setup
+  - [ ] Task 1.2: Shared Types Module
+  - [ ] Task 1.3: Shared Constants Module
+  - [ ] Task 1.4: Shared Validators Module
+  - [ ] Task 1.5: Database Schema (Prisma)
 
-- [ ] **Phase 2: Backend - Services Layer** (0/4 tasks)
-  - [ ] Task 2.1: Database Client Setup
-  - [ ] Task 2.2: Player Service
-  - [ ] Task 2.3: Game Service
-  - [ ] Task 2.4: State Service
+- [ ] **Phase 2: Game Logic** (0/7 tasks) - 3-5 days
+  - [ ] Task 2.1: Deck & Card Utilities
+  - [ ] Task 2.2: Card Ranking & Comparison
+  - [ ] Task 2.3: Trick Evaluation
+  - [ ] Task 2.4: Scoring Logic
+  - [ ] Task 2.5: Move Validation
+  - [ ] Task 2.6: State Transitions
+  - [ ] Task 2.7: Unit Tests for Game Logic
 
-- [ ] **Phase 3: Backend - API Layer** (0/5 tasks)
-  - [ ] Task 3.1: Authentication Middleware
-  - [ ] Task 3.2: REST API Routes
-  - [ ] Task 3.3: WebSocket Connection Handling
-  - [ ] Task 3.4: WebSocket Game Event Handlers
-  - [ ] Task 3.5: Express Server Setup
+- [ ] **Phase 3: Backend Services** (0/5 tasks) - 2-3 days
+  - [ ] Task 3.1: Database Client Setup
+  - [ ] Task 3.2: Player Service
+  - [ ] Task 3.3: Game Service
+  - [ ] Task 3.4: State Service
+  - [ ] Task 3.5: Authentication Middleware
 
-- [ ] **Phase 4: Frontend - Foundation** (0/5 tasks)
-  - [ ] Task 4.1: Vite + React Setup
-  - [ ] Task 4.2: API Client Service
-  - [ ] Task 4.3: Socket Client Service
-  - [ ] Task 4.4: State Management (Zustand Stores)
-  - [ ] Task 4.5: Custom Hooks
+- [ ] **Phase 4: Backend API** (0/4 tasks) - 2-3 days
+  - [ ] Task 4.1: REST API Routes (basic)
+  - [ ] Task 4.2: WebSocket Connection Handling (basic)
+  - [ ] Task 4.3: WebSocket Game Event Handlers (basic)
+  - [ ] Task 4.4: Express Server Setup
 
-- [ ] **Phase 5: Frontend - UI Components** (0/12 tasks)
-  - [ ] Task 5.1: Shadcn/ui Setup + Base Components
-  - [ ] Task 5.2: Layout Components
-  - [ ] Task 5.3: Authentication Components
-  - [ ] Task 5.4: Lobby Components
-  - [ ] Task 5.5: Card Component
-  - [ ] Task 5.6: Player Hand Component
-  - [ ] Task 5.7: Current Trick Component
-  - [ ] Task 5.8: Scoreboard Component
-  - [ ] Task 5.9: Bidding Panel Component
-  - [ ] Task 5.10: Trump Selector Component
-  - [ ] Task 5.11: Fold Decision Component
-  - [ ] Task 5.12: Game Board Component
+- [ ] **Phase 5: Frontend UI** (0/15 tasks) - 5-7 days
+  - [ ] Task 5.1: Vite + React Setup
+  - [ ] Task 5.2: API Client Service
+  - [ ] Task 5.3: Socket Client Service
+  - [ ] Task 5.4: State Management (Zustand)
+  - [ ] Task 5.5: Custom Hooks
+  - [ ] Task 5.6: React Router Setup
+  - [ ] Task 5.7: Shadcn/ui Setup
+  - [ ] Task 5.8: Layout Components
+  - [ ] Task 5.9: Authentication Components
+  - [ ] Task 5.10: Card Component
+  - [ ] Task 5.11: Player Hand Component
+  - [ ] Task 5.12: Current Trick Component
+  - [ ] Task 5.13: Scoreboard Component
+  - [ ] Task 5.14: Bidding Panel Component
+  - [ ] Task 5.15: Trump Selector Component
+  - [ ] Task 5.16: Fold Decision Component
+  - [ ] Task 5.17: Game Board Component
+  - [ ] Task 5.18: MVP Testing & Bug Fixes
 
-- [ ] **Phase 6: Integration & Testing** (0/3 tasks)
-  - [ ] Task 6.1: End-to-End Game Flow Test
-  - [ ] Task 6.2: Edge Case Testing
-  - [ ] Task 6.3: Performance & Load Testing
+**MVP Deliverable (End of Phase 5):**
+- ✅ 4 players can join and play complete game
+- ✅ All rules implemented correctly
+- ✅ Real-time updates via WebSocket
+- ✅ Basic UI with all game components
+- ✅ Score tracking and win detection
 
-- [ ] **Phase 7: Deployment** (0/3 tasks)
-  - [ ] Task 7.1: Docker Configuration
-  - [ ] Task 7.2: Environment Configuration
-  - [ ] Task 7.3: Production Deployment Guide
+---
+
+### 🎯 Milestone 2: Production Polish (Weeks 5-6)
+
+- [ ] **Phase 6: Error Handling & Reconnection** (0/6 tasks) - 3-4 days
+  - [ ] Task 6.1: Environment Variable Validation
+  - [ ] Task 6.2: Error Handling Strategy & Taxonomy
+  - [ ] Task 6.3: WebSocket Reconnection Handling
+  - [ ] Task 6.4: State Versioning for WebSocket
+  - [ ] Task 6.5: Loading States & Turn Indicators (Enhanced)
+  - [ ] Task 6.6: Client-Side Validation Utilities
+
+- [ ] **Phase 7: UI Polish & Full Lobby** (0/2 tasks) - 2-3 days
+  - [ ] Task 7.1: Full Lobby Components
+  - [ ] Task 7.2: UI Polish Pass
+
+- [ ] **Phase 8: Production Testing** (0/3 tasks) - 2-3 days
+  - [ ] Task 8.1: Backend Integration Tests
+  - [ ] Task 8.2: Frontend Component Tests
+  - [ ] Task 8.3: Performance & Load Testing
+
+---
+
+### 🎯 Milestone 3: Production Deployment (Week 7)
+
+- [ ] **Phase 9: Production Deployment** (0/4 tasks) - 2-3 days
+  - [ ] Task 9.1: Docker Development Setup
+  - [ ] Task 9.2: Docker Production Configuration
+  - [ ] Task 9.3: Environment Configuration
+  - [ ] Task 9.4: Production Deployment Guide
 
 ---
 
 ## Active Work
 
-_AI agents: Update this section when you start a task_
-
 **Currently Working On:**
-- None yet - Ready to start Task 0.1
+- None - Ready to start Task 1.1
 
 **Agents Active:**
-- None currently
+- None
 
 ---
 
 ## Recently Completed Tasks
-
-_AI agents: Add entries here as tasks complete_
 
 **Completed:**
 - None yet
@@ -101,57 +137,54 @@ _AI agents: Add entries here as tasks complete_
 
 ## Next Available Tasks
 
-These tasks have no incomplete dependencies and can be started:
-
-1. ✅ **Task 0.1: Project Structure Setup** - No dependencies, start here!
+1. ✅ **Task 1.1: Project Structure Setup** - No dependencies
 
 ---
 
 ## Blockers & Issues
 
-_AI agents: Document any problems here_
-
 **Current Blockers:**
 - None
-
-**Resolved Issues:**
-- None yet
 
 ---
 
 ## Notes & Decisions
 
-_AI agents: Add important notes about implementation decisions_
+### Design Philosophy
+- **MVP First**: Build playable game in 4 weeks (36 tasks)
+- **Then Polish**: Add production features weeks 5-6 (13 tasks)
+- **Finally Deploy**: Production infrastructure week 7 (4 tasks)
 
-### Design Decisions
-- 2025-01-04: Using npm instead of pnpm for AI compatibility
-- 2025-01-04: PostgreSQL in Docker (not RDS) for cost savings
-- 2025-01-04: Corrected rules: 5 cards, countdown scoring, folding mechanism
+### Key Decisions
+- 2025-01-04: Restructured roadmap for incremental delivery
+- 2025-01-04: MVP uses simple errors (strings), production adds error codes
+- 2025-01-04: MVP has basic reconnection, production adds grace periods
+- 2025-01-04: Client validation deferred to Phase 6
+- 2025-01-04: Docker deferred to Phase 9 (use local services for MVP)
+- 2025-01-04: Full lobby deferred to Phase 7 (join by URL for MVP)
 
 ### Important Reminders
-- Game logic must be pure functions (no side effects)
+- Game logic must be pure functions
 - Target file size: <200 lines
 - No `any` types in TypeScript
-- Update roadmap after every task
 - Test before marking complete
+- Update this file after every task
 
 ---
 
 ## Statistics
 
-**Phase Completion:**
-- Phase 0: 0% (0/5)
-- Phase 1: 0% (0/6)
-- Phase 2: 0% (0/4)
-- Phase 3: 0% (0/5)
-- Phase 4: 0% (0/5)
-- Phase 5: 0% (0/12)
-- Phase 6: 0% (0/3)
-- Phase 7: 0% (0/3)
+**By Milestone:**
+- MVP (Phases 1-5): 0/36 tasks (0%)
+- Production (Phases 6-8): 0/13 tasks (0%)
+- Deployment (Phase 9): 0/4 tasks (0%)
 
-**Estimated Remaining:** 43 tasks
+**Estimated Time:**
+- MVP: 3-4 weeks
+- Production: 2 weeks
+- Deployment: 1 week
+- **Total: 6-7 weeks**
 
 ---
 
-_AI agents: Please keep this file updated as you work. Update "Last Updated" date when making changes._
-
+_Update this file as you complete tasks. Change "Last Updated" date when making changes._

@@ -5,7 +5,10 @@
 ### Step 1: Read the Roadmap
 Open and read: **[AI_IMPLEMENTATION_ROADMAP.md](./AI_IMPLEMENTATION_ROADMAP.md)**
 
-This is your master guide. It contains 43 tasks broken into 7 phases with clear dependencies, testing requirements, and guidelines.
+This is your master guide. It contains **53 tasks in 9 phases**, structured for **incremental delivery**:
+- **Phases 1-5**: Playable MVP (~4 weeks, 36 tasks)
+- **Phases 6-8**: Production polish (~2 weeks, 13 tasks)  
+- **Phase 9**: Deployment infrastructure (~1 week, 4 tasks)
 
 ### Step 2: Read Design Documents (in order)
 
@@ -34,7 +37,7 @@ This is your master guide. It contains 43 tasks broken into 7 phases with clear 
 
 ### Step 3: Start Implementation
 
-Begin with **Task 0.1: Project Structure Setup** (no dependencies)
+Begin with **Task 1.1: Project Structure Setup** (Phase 1, no dependencies)
 
 This task creates:
 - Directory structure (shared/, backend/, frontend/)
@@ -42,43 +45,47 @@ This task creates:
 - Basic TypeScript configuration
 - Empty entry points
 
-### Step 4: Update Progress
+### Step 4: Track Progress
 
-As you complete each task, update the roadmap with:
-- **Status:** Change from ⬜ NOT_STARTED → 🟨 IN_PROGRESS → ✅ COMPLETE
-- **Date completed:** YYYY-MM-DD format
-- **Changes made:** List any deviations or improvements
-- **Testing:** Confirm all checklist items passed
+As you work:
+- Update task status: ⬜ NOT_STARTED → 🟨 IN_PROGRESS → ✅ COMPLETE
+- Complete all testing checklist items
+- Document any changes made
+- Update [PROGRESS.md](./PROGRESS.md)
 
-Also update [PROGRESS.md](./PROGRESS.md) with overall progress.
+### Step 5: MVP Milestone
 
-### Step 5: Follow Dependencies
+After completing **Phase 5**, you'll have a **playable MVP**:
+- 4 players can join and play
+- All rules implemented
+- Basic UI functional
+- Real-time updates working
 
-**Important:** Each task lists dependencies. Don't start a task until its dependencies are complete.
+**Then proceed to Phases 6-9 for production polish and deployment.**
+
+### Step 6: Follow Dependencies
+
+Each task lists dependencies. Don't start a task until its dependencies are complete.
 
 Example flow:
-- Task 0.1 (no deps) → Task 0.2 (depends on 0.1) → Task 0.3 (depends on 0.2)
+- Task 1.1 (no deps) → Task 1.2 (depends on 1.1) → Task 1.3 (depends on 1.2)
 
 ### Guidelines
 
-#### DO:
-- ✅ Read specifications thoroughly before coding
-- ✅ Follow TypeScript types exactly as defined
-- ✅ Write pure functions for game logic (no side effects)
-- ✅ Keep files small (<200 lines target)
-- ✅ Test each task before marking complete
-- ✅ Update roadmap after every task
-- ✅ Document all design changes
-- ✅ Commit frequently with clear messages
+**DO:**
+- ✅ Read specifications before coding
+- ✅ Follow TypeScript types exactly
+- ✅ Write pure functions for game logic
+- ✅ Keep files small (<200 lines)
+- ✅ Test before marking complete
+- ✅ Update roadmap and PROGRESS.md
+- ✅ Commit frequently
 
-#### DON'T:
-- ❌ Skip reading the design documents
-- ❌ Change design docs without updating them
+**DON'T:**
 - ❌ Skip dependencies
-- ❌ Mark tasks complete without testing
 - ❌ Use `any` types in TypeScript
+- ❌ Mark tasks complete without testing
 - ❌ Create files outside defined structure
-- ❌ Add dependencies not in the plan without justification
 
 ### Key Principles
 
@@ -129,22 +136,22 @@ Testing: All tests passing (see [path to tests])
 # 1. Read the roadmap
 cat AI_IMPLEMENTATION_ROADMAP.md
 
-# 2. Start Task 0.1
+# 2. Start Task 1.1
 # Create directory structure, package.json files, etc.
 
-# 3. Update roadmap status to IN_PROGRESS
+# 3. Update status to IN_PROGRESS
 
 # 4. Implement the task
 
-# 5. Test everything in checklist
+# 5. Complete testing checklist
 
-# 6. Update roadmap to COMPLETE
+# 6. Update status to COMPLETE
 
 # 7. Commit
 git add .
-git commit -m "Complete Task 0.1: Project structure setup"
+git commit -m "Complete Task 1.1: Project structure setup"
 
-# 8. Move to Task 0.2
+# 8. Move to Task 1.2
 ```
 
 ### Technology Stack
@@ -169,7 +176,9 @@ These will be set up as part of the implementation tasks.
 
 **Start by reading [AI_IMPLEMENTATION_ROADMAP.md](./AI_IMPLEMENTATION_ROADMAP.md) now!**
 
-Then proceed to **Task 0.1: Project Structure Setup**
+Then proceed to **Task 1.1: Project Structure Setup** (Phase 1)
+
+**Remember:** Complete Phases 1-5 for MVP, then Phases 6-9 for production.
 
 Good luck! 🎮
 

@@ -69,9 +69,9 @@ interface GameState {
   round: number;          // Current round number (starts at 1)
   dealerPosition: number; // Current dealer (0-3)
   
-  // Blind/Kitty State
-  blind: Card[];          // 4 cards in the blind
-  turnUpCard: Card | null; // Top card revealed from blind
+  // Blind/Kitty State (for information only - not used in play)
+  blind: Card[];          // 4 cards in the blind (remain hidden)
+  turnUpCard: Card | null; // Top card revealed from blind (for info only)
   isClubsTurnUp: boolean; // If turn-up card is Club (no folding allowed)
   
   // Bidding State
@@ -135,9 +135,11 @@ Actions:
   3. Reset all players.folded to false
   4. Shuffle deck
   5. Deal 5 cards to each player
-  6. Put remaining 4 cards in blind
-  7. Reveal top card of blind (turnUpCard)
+  6. Put remaining 4 cards in blind (they stay hidden and are not used)
+  7. Reveal top card of blind (turnUpCard) - for information only
   8. Set isClubsTurnUp = (turnUpCard.suit === 'CLUBS')
+  
+Note: The blind cards remain hidden and do not affect gameplay beyond the turn-up card.
   
 Next Phase: BIDDING
 ```
@@ -168,10 +170,12 @@ Valid Actions:
     - Set currentBidder to next player who hasn't passed
   
   End Condition:
-    - All players except one have passed, OR
-    - Dealer is forced to bid (all others passed, dealer must bid minimum 2)
+    - All players except one have passed → winning bidder declares trump
+    - All players pass → hand is over, no scoring, deal passes to next player
   
-Next Phase: DECLARING_TRUMP
+Next Phase: 
+  - If winner exists: DECLARING_TRUMP
+  - If all passed: DEALING (new round, next dealer)
 ```
 
 ### Declaring Trump Phase

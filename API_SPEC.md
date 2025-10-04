@@ -196,7 +196,7 @@ socket.emit('LEAVE_GAME', {
 // Place a bid during bidding phase
 socket.emit('PLACE_BID', {
   gameId: string,
-  amount: 'PASS' | 3 | 4 | 5 | 6
+  amount: 'PASS' | 2 | 3 | 4 | 5
 });
 
 // Server validates:

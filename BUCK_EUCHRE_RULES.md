@@ -51,7 +51,8 @@ For suits that are not trump (highest to lowest):
 - Dealer shuffles and deals **5 cards** to each player
 - Cards are dealt in batches (typically 2-3 or 3-2)
 - **4 cards remain in the "blind" (kitty)**
-- The **top card of the blind is turned face-up**
+- The **top card of the blind is turned face-up** for all players to see
+- **Important:** The blind cards are NOT used in gameplay - they stay hidden. The turned-up card is only for information.
 
 ### 3. Trump Determination & Bidding Phase
 
@@ -72,7 +73,7 @@ For suits that are not trump (highest to lowest):
 **Bidding Rules:**
 - Each bid must be higher than the previous bid
 - Player can pass and cannot re-enter bidding
-- Dealer must bid if all other players pass (dealer is "stuck")
+- **If all players pass:** Hand is over, deal passes to next player, no scoring
 - Bidding ends when one player has highest bid and all others have passed
 
 **Winning Bidder:**
@@ -162,9 +163,10 @@ After all 5 tricks are played:
 
 ## Edge Cases
 
-### All Players Pass Except Dealer
-- Dealer must make minimum bid (2)
-- Dealer declares trump and plays
+### All Players Pass
+- Hand is over, no tricks played, no scoring
+- Deal passes to next player (clockwise)
+- New hand is dealt
 
 ### Clubs Turn-Up
 - Clubs are automatically trump
