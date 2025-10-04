@@ -162,11 +162,10 @@ npm run test:watch
 ## 🎯 Development Roadmap
 
 ### Phase 1-5: MVP (Playable Game) - ~4 weeks
-- ✅ Task 1.1: Project structure setup
-- ⬜ Task 1.2-1.5: Foundation (types, constants, validators, database)
+- ✅ Phase 1: Foundation (types, constants, validators, database)
 - ✅ Phase 2: Game logic (pure functions, fully tested)
 - ✅ Phase 3: Backend services
-- ⬜ Phase 4: REST & WebSocket API
+- ✅ Phase 4: REST & WebSocket API
 - ⬜ Phase 5: Frontend UI components
 
 ### Phase 6-8: Production Polish - ~2 weeks
