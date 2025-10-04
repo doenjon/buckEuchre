@@ -2,6 +2,7 @@ import { prisma } from '../db/client';
 import { Game, GameStatus, GamePlayer } from '@prisma/client';
 import { GameState } from '@buck-euchre/shared';
 import { initializeGame } from '../game/state';
+import { setActiveGameState, getActiveGameState, loadGameState } from './state.service';
 
 /**
  * Game summary for listing available games
