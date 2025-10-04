@@ -177,7 +177,7 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
   }
 
   // Get game with current players
-  const game = await prisma.game.findUnique({
+  let game = await prisma.game.findUnique({
     where: { id: gameId },
     include: {
       players: {
