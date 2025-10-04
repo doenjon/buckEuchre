@@ -81,7 +81,7 @@ async function joinGame(player: Player, gameId: string): Promise<void> {
 
     const handleStateUpdate = (data: { gameState: GameState }) => {
       player.gameState = data.gameState;
-      if (data.gameState.phase !== 'WAITING') {
+      if (data.gameState.phase !== 'WAITING_FOR_PLAYERS') {
         player.socket.off('GAME_STATE_UPDATE', handleStateUpdate);
         resolve();
       }
@@ -239,10 +239,10 @@ describe('Full Game Flow', () => {
       }
 
       // TRUMP DECLARATION PHASE
-      console.log('\n♠️ Phase: TRUMP DECLARATION');
-      const trumpState = await waitForPhase(players, 'TRUMP_DECLARATION', 10000);
+      console.log('\n♠️ Phase: DECLARING_TRUMP');
+      const trumpState = await waitForPhase(players, 'DECLARING_TRUMP', 10000);
       
-      expect(trumpState.phase).toBe('TRUMP_DECLARATION');
+      expect(trumpState.phase).toBe('DECLARING_TRUMP');
       expect(trumpState.winningBidderPosition).toBe(firstBidder);
       expect(trumpState.highestBid).toBe(3);
       
@@ -308,15 +308,15 @@ describe('Full Game Flow', () => {
         
         // Wait for trick to complete
         await waitForGameState(players, state => 
-          state.tricks.length === trickNum || state.phase === 'SCORING'
+          state.tricks.length === trickNum || state.phase === 'ROUND_OVER'
         , 3000);
       }
 
-      // SCORING PHASE
-      console.log('\n📊 Phase: SCORING');
-      const scoreState = await waitForPhase(players, 'SCORING', 10000);
+      // ROUND OVER PHASE (Scoring)
+      console.log('\n📊 Phase: ROUND_OVER');
+      const scoreState = await waitForPhase(players, 'ROUND_OVER', 10000);
       
-      expect(scoreState.phase).toBe('SCORING');
+      expect(scoreState.phase).toBe('ROUND_OVER');
       
       const bidderPlayer = scoreState.players[firstBidder];
       const tricksTaken = bidderPlayer.tricksTaken;
