@@ -1,0 +1,109 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Player session (temporary, for reconnection only)
+model Player {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  expiresAt DateTime // Token expiration
+  
+  // Relations
+  gamesCreated Game[] @relation("GameCreator")
+  gamePlayers  GamePlayer[]
+  
+  @@index([createdAt])
+}
+
+// Game record
+model Game {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  status    GameStatus @default(WAITING)
+  
+  // Relations
+  creatorId String
+  creator   Player @relation("GameCreator", fields: [creatorId], references: [id])
+  
+  players   GamePlayer[]
+  gameState GameState?
+  rounds    Round[]
+  
+  @@index([status, createdAt])
+}
+
+enum GameStatus {
+  WAITING        // Waiting for players
+  IN_PROGRESS    // Game active
+  COMPLETED      // Game finished
+  ABANDONED      // Players left, game inactive
+}
+
+// Junction table for players in games
+model GamePlayer {
+  id       String @id @default(uuid())
+  position Int    // 0-3
+  
+  // Relations
+  gameId   String
+  game     Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  
+  joinedAt DateTime @default(now())
+  score    Int      @default(0)
+  
+  @@unique([gameId, position])
+  @@unique([gameId, playerId])
+  @@index([gameId])
+}
+
+// Persisted game state (for recovery after server restart)
+model GameState {
+  id        String   @id @default(uuid())
+  gameId    String   @unique
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  
+  // Serialized game state (JSON)
+  state     Json
+  
+  updatedAt DateTime @updatedAt
+  
+  @@index([gameId])
+}
+
+// Round history (for statistics, optional for MVP)
+model Round {
+  id        String   @id @default(uuid())
+  gameId    String
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  
+  roundNumber       Int
+  dealerPosition    Int
+  bidderPosition    Int
+  bid               Int
+  trumpSuit         String
+  bidderMadeContract Boolean
+  
+  // Scores this round
+  scores    Json  // Record<position, score>
+  
+  // Tricks data (optional, for replay feature)
+  tricks    Json? // Array<Trick>
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([gameId, roundNumber])
+  @@index([gameId])
+}
