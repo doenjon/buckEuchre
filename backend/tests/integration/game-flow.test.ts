@@ -14,6 +14,7 @@ interface Player {
   socket: Socket;
   name: string;
   playerId: string | null;
+  token: string;
   gameState: GameState | null;
 }
 
@@ -24,17 +25,18 @@ interface Player {
  */
 async function createPlayer(name: string): Promise<Player> {
   // Step 1: Create player via REST API to get JWT token
-  const response = await fetch(`${BACKEND_URL}/api/players`, {
+  const response = await fetch(`${BACKEND_URL}/api/auth/join`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ playerName: name }),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to create player via REST API: ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Failed to create player via REST API: ${response.statusText} - ${errorText}`);
   }
 
-  const { player: playerData, token } = await response.json();
+  const { playerId, playerName, token } = await response.json() as { playerId: string; playerName: string; token: string };
 
   // Step 2: Connect WebSocket with JWT token
   return new Promise((resolve, reject) => {
@@ -46,8 +48,9 @@ async function createPlayer(name: string): Promise<Player> {
 
     const player: Player = {
       socket,
-      name,
-      playerId: playerData.id,
+      name: playerName,
+      playerId,
+      token,
       gameState: null,
     };
 
@@ -76,25 +79,24 @@ async function createPlayer(name: string): Promise<Player> {
 }
 
 /**
- * Helper to create a game
+ * Helper to create a game via REST API
  */
-async function createGame(player: Player): Promise<string> {
-  return new Promise((resolve, reject) => {
-    player.socket.emit('CREATE_GAME', {});
-
-    const handleGameCreated = (data: { gameId: string }) => {
-      player.socket.off('GAME_CREATED', handleGameCreated);
-      resolve(data.gameId);
-    };
-
-    player.socket.on('GAME_CREATED', handleGameCreated);
-
-    player.socket.on('ERROR', (error: any) => {
-      reject(new Error(`Failed to create game: ${error.message}`));
-    });
-
-    setTimeout(() => reject(new Error('Timeout creating game')), 5000);
+async function createGame(player: Player, token: string): Promise<string> {
+  const response = await fetch(`${BACKEND_URL}/api/games`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
   });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to create game: ${response.statusText} - ${errorText}`);
+  }
+
+  const { gameId } = await response.json() as { gameId: string };
+  return gameId;
 }
 
 /**
@@ -180,7 +182,7 @@ describe('Buck Euchre Game Flow', () => {
 
       // Player 1 creates game
       console.log('Player 1 creating game...');
-      const gameId = await createGame(player1);
+      const gameId = await createGame(player1, player1.token);
       console.log(`✅ Game created: ${gameId}`);
 
       // All players join
@@ -224,7 +226,7 @@ describe('Buck Euchre Game Flow', () => {
       players = [player1, player2, player3, player4, player5];
 
       // Create game and add 4 players
-      const gameId = await createGame(player1);
+      const gameId = await createGame(player1, player1.token);
       await joinGame(player1, gameId);
       await joinGame(player2, gameId);
       await joinGame(player3, gameId);
@@ -259,7 +261,7 @@ describe('Buck Euchre Game Flow', () => {
       const player4 = await createPlayer('Diana');
       players = [player1, player2, player3, player4];
 
-      const gameId = await createGame(player1);
+      const gameId = await createGame(player1, player1.token);
       await Promise.all([
         joinGame(player1, gameId),
         joinGame(player2, gameId),

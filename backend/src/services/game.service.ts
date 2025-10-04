@@ -198,21 +198,64 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     throw new Error('Game is full');
   }
 
-  // Find next available position
-  const takenPositions = game.players.map((p) => p.position);
-  let nextPosition = 0;
-  while (takenPositions.includes(nextPosition)) {
-    nextPosition++;
+  // Find next available position and add player (with retry for race conditions)
+  let attempts = 0;
+  const maxAttempts = 5;
+  let playerAdded = false;
+
+  while (!playerAdded && attempts < maxAttempts) {
+    try {
+      // Get fresh player list to avoid race conditions
+      const freshGame = await prisma.game.findUnique({
+        where: { id: gameId },
+        include: {
+          players: {
+            orderBy: { position: 'asc' },
+          },
+        },
+      });
+
+      if (!freshGame) {
+        throw new Error('Game not found');
+      }
+
+      // Find next available position
+      const takenPositions = freshGame.players.map((p) => p.position);
+      let nextPosition = 0;
+      while (takenPositions.includes(nextPosition) && nextPosition < 4) {
+        nextPosition++;
+      }
+
+      if (nextPosition >= 4) {
+        throw new Error('Game is full');
+      }
+
+      // Try to add player (may fail if another player took this position)
+      await prisma.gamePlayer.create({
+        data: {
+          gameId,
+          playerId,
+          position: nextPosition,
+        },
+      });
+
+      playerAdded = true;
+      game = freshGame; // Update game reference for later use
+    } catch (error: any) {
+      if (error.code === 'P2002' && attempts < maxAttempts - 1) {
+        // Unique constraint violation - another player took this position
+        // Retry after a short delay
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, 50 * attempts)); // Exponential backoff
+      } else {
+        throw error;
+      }
+    }
   }
 
-  // Add player to game
-  await prisma.gamePlayer.create({
-    data: {
-      gameId,
-      playerId,
-      position: nextPosition,
-    },
-  });
+  if (!playerAdded) {
+    throw new Error('Failed to join game after multiple attempts (race condition)');
+  }
 
   // If game is now full (4 players), initialize game state
   if (game.players.length + 1 === 4) {
@@ -244,12 +287,16 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     // CRITICAL: Set the gameId on the state object
     initialState.gameId = gameId;
 
+    // Store in memory (SOURCE OF TRUTH)
+    setActiveGameState(gameId, initialState);
+
     // Update game status to IN_PROGRESS
     await prisma.game.update({
       where: { id: gameId },
       data: { status: GameStatus.IN_PROGRESS },
     });
 
+    console.log(`[joinGame] Game ${gameId} started! 4 players joined.`);
     return initialState;
   }
 
