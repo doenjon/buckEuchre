@@ -6,7 +6,7 @@
  */
 
 import { io as ioClient, Socket } from 'socket.io-client';
-import { GameState, GamePhase } from '@buck-euchre/shared';
+import { GameState, GamePhase } from '../../../shared/src/types/game';
 
 const BACKEND_URL = 'http://localhost:3000';
 
@@ -19,33 +19,49 @@ interface Player {
 
 /**
  * Helper to create and authenticate a player
+ * 1. Call REST API to create player and get JWT
+ * 2. Connect WebSocket with JWT token
  */
 async function createPlayer(name: string): Promise<Player> {
+  // Step 1: Create player via REST API to get JWT token
+  const response = await fetch(`${BACKEND_URL}/api/players`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create player via REST API: ${response.statusText}`);
+  }
+
+  const { player: playerData, token } = await response.json();
+
+  // Step 2: Connect WebSocket with JWT token
   return new Promise((resolve, reject) => {
     const socket = ioClient(BACKEND_URL, {
       transports: ['websocket'],
+      auth: { token }, // Provide JWT token in handshake
       autoConnect: false,
     });
 
     const player: Player = {
       socket,
       name,
-      playerId: null,
+      playerId: playerData.id,
       gameState: null,
     };
 
     socket.on('connect', () => {
-      // Authenticate
-      socket.emit('AUTHENTICATE', { playerName: name });
-    });
-
-    socket.on('AUTHENTICATED', (data: { playerId: string; playerName: string }) => {
-      player.playerId = data.playerId;
+      // Successfully authenticated via middleware
       resolve(player);
     });
 
+    socket.on('connect_error', (error: Error) => {
+      reject(new Error(`Failed to connect WebSocket for ${name}: ${error.message}`));
+    });
+
     socket.on('ERROR', (error: any) => {
-      reject(new Error(`Failed to create player ${name}: ${error.message}`));
+      reject(new Error(`Socket error for ${name}: ${error.message}`));
     });
 
     socket.on('GAME_STATE_UPDATE', (data: { gameState: GameState }) => {
@@ -55,7 +71,7 @@ async function createPlayer(name: string): Promise<Player> {
     socket.connect();
 
     // Timeout after 5 seconds
-    setTimeout(() => reject(new Error(`Timeout creating player ${name}`)), 5000);
+    setTimeout(() => reject(new Error(`Timeout connecting player ${name}`)), 5000);
   });
 }
 

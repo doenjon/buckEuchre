@@ -4,7 +4,7 @@ module.exports = {
   roots: ['<rootDir>'],
   testMatch: ['**/*.test.ts'],
   moduleNameMapper: {
-    '^@buck-euchre/shared$': '<rootDir>/../../shared/src/index.ts',
+    '^@buck-euchre/shared$': '<rootDir>/../../../shared/src/index.ts',
   },
   setupFilesAfterEnv: ['<rootDir>/setup.ts'],
   testTimeout: 30000,
