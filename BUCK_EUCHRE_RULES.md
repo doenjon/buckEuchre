@@ -52,7 +52,7 @@ For suits that are not trump (highest to lowest):
 - Cards are dealt in batches (typically 2-3 or 3-2)
 - **4 cards remain in the "blind" (kitty)**
 - The **top card of the blind is turned face-up** for all players to see
-- **Important:** The blind cards are NOT used in gameplay - they stay hidden. The turned-up card is only for information.
+- **Important:** The 4 blind cards (including the turned-up card) are never played or added to anyone's hand - they remain set aside for the entire round. The turned-up card is visible only to provide information (specifically, to determine if the "Clubs rule" applies).
 
 ### 3. Trump Determination & Bidding Phase
 

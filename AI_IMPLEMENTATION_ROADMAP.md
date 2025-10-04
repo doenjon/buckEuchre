@@ -357,6 +357,7 @@ export function canFold(
 export function initializeGame(playerIds: string[]): GameState
 export function dealNewRound(state: GameState): GameState
 export function applyBid(state: GameState, playerPosition: number, bid: Bid['amount']): GameState
+export function handleAllPlayersPass(state: GameState): GameState  // NEW
 export function applyTrumpDeclaration(state: GameState, trumpSuit: Card['suit']): GameState
 export function applyFoldDecision(state: GameState, playerPosition: number, folded: boolean): GameState
 export function applyCardPlay(state: GameState, playerPosition: number, cardId: string): GameState
@@ -365,11 +366,18 @@ export function finishRound(state: GameState): GameState
 
 **Key Principle:** PURE functions (no I/O, no mutation, no database calls)
 
+**Important:** handleAllPlayersPass must:
+- Rotate dealer: `dealerPosition = (dealerPosition + 1) % 4`
+- Reset bidding state
+- Transition to DEALING phase for new round
+- No scoring changes (all players passed)
+
 **Testing:**
 - [ ] Each function returns new state
 - [ ] Phase transitions work
 - [ ] No state mutation
 - [ ] Full game flow end-to-end test
+- [ ] "All players pass" correctly rotates dealer and redeals
 
 ---
 
@@ -493,7 +501,7 @@ export async function getGameState(gameId: string): Promise<GameState | null>
 
 **Implementation:**
 ```typescript
-// In-memory game state store
+// In-memory game state store (SOURCE OF TRUTH)
 const activeGames = new Map<string, GameState>();
 
 // Action queue per game to prevent race conditions
@@ -502,6 +510,8 @@ const gameActionQueues = new Map<string, Promise<void>>();
 /**
  * Execute an action on a game state, ensuring sequential processing
  * This prevents race conditions when multiple players act simultaneously
+ * 
+ * IMPORTANT: In-memory Map is SOURCE OF TRUTH. Database is backup only.
  */
 export async function executeGameAction<T>(
   gameId: string,
@@ -520,10 +530,10 @@ export async function executeGameAction<T>(
     // Execute action (pure function from game/state.ts)
     const newState = await action(state);
     
-    // Update in-memory state
+    // Update in-memory state (SOURCE OF TRUTH)
     activeGames.set(gameId, newState);
     
-    // Persist to database (don't await - fire and forget for performance)
+    // Persist to database as backup (fire-and-forget, async)
     saveGameState(gameId, newState).catch(err => 
       console.error('Failed to persist game state:', err)
     );
@@ -543,17 +553,20 @@ export function setActiveGameState(gameId: string, state: GameState): void
 export async function saveGameState(gameId: string, state: GameState): Promise<void>
 export async function loadGameState(gameId: string): Promise<GameState | null>
 export function deleteGameState(gameId: string): void
+export function cleanupGameState(gameId: string): void  // Remove from memory and queues
 ```
 
-**Note:** Action queue ensures all game actions are processed sequentially per game, preventing race conditions while allowing different games to process actions in parallel.
+**Key Principle:** In-memory Map is SOURCE OF TRUTH. Database writes are async backups.
+All gameplay reads from memory, never from database.
 
 **Testing:**
 - [ ] In-memory operations work
-- [ ] Persists to database
-- [ ] Loads from database
+- [ ] Persists to database (async)
+- [ ] Loads from database on server startup
 - [ ] JSON serialization works
 - [ ] Concurrent actions are serialized (race condition test)
 - [ ] Multiple games can process actions in parallel
+- [ ] cleanupGameState removes from memory and queues
 
 ---
 

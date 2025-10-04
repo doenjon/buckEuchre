@@ -55,7 +55,7 @@ System architecture and design principles:
 
 ### 6. **AI_IMPLEMENTATION_ROADMAP.md** ⭐ NEW
 **Living document for AI agents:**
-- 43 tasks across 7 phases
+- 53 tasks across 9 phases
 - Clear dependencies between tasks
 - What can/cannot be changed for each task
 - Testing requirements
@@ -186,7 +186,7 @@ buck-euchre/
 **Design Phase:** ✅ COMPLETE  
 **Ready for Implementation:** ✅ YES  
 **Next Phase:** Implementation (follow AI_IMPLEMENTATION_ROADMAP.md)  
-**Estimated Total Effort:** 43 tasks across 7 phases
+**Estimated Total Effort:** 53 tasks across 9 phases
 
 Good luck! 🎮
 

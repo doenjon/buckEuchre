@@ -236,7 +236,9 @@ buck-euchre/
 
 ### 2. State Management Strategy
 
-**Server is Source of Truth**
+**In-Memory is Source of Truth**
+- Active game state lives in memory (fast, real-time)
+- Database is backup for persistence/recovery only
 - All game logic runs on server
 - Client is a view layer that sends actions
 - Server validates every action
@@ -260,7 +262,7 @@ interface GameStore {
 
 **Server State (In-Memory with Action Queue)**
 ```typescript
-// In-memory game store
+// In-memory game store (SOURCE OF TRUTH)
 const activeGames = new Map<string, GameState>();
 
 // Action queue per game (prevents race conditions)
@@ -271,7 +273,7 @@ const newState = await executeGameAction(gameId, async (currentState) => {
   return applyAction(currentState, action);
 });
 
-// State is automatically persisted to database after each action
+// State is automatically persisted to database after each action (async)
 ```
 
 **Race Condition Prevention:**

@@ -70,9 +70,9 @@ interface GameState {
   dealerPosition: number; // Current dealer (0-3)
   
   // Blind/Kitty State (for information only - not used in play)
-  blind: Card[];          // 4 cards in the blind (remain hidden)
-  turnUpCard: Card | null; // Top card revealed from blind (for info only)
-  isClubsTurnUp: boolean; // If turn-up card is Club (no folding allowed)
+  blind: Card[];          // 4 cards in the blind (turnUpCard is blind[0])
+  turnUpCard: Card | null; // Same as blind[0], revealed face-up (for info only)
+  isClubsTurnUp: boolean; // If turnUpCard is a Club (no folding allowed)
   
   // Bidding State
   bids: Bid[];            // All bids made this round
@@ -135,11 +135,13 @@ Actions:
   3. Reset all players.folded to false
   4. Shuffle deck
   5. Deal 5 cards to each player
-  6. Put remaining 4 cards in blind (they stay hidden and are not used)
-  7. Reveal top card of blind (turnUpCard) - for information only
+  6. Put remaining 4 cards in blind array
+  7. Set turnUpCard = blind[0] (reference to the top card)
   8. Set isClubsTurnUp = (turnUpCard.suit === 'CLUBS')
   
-Note: The blind cards remain hidden and do not affect gameplay beyond the turn-up card.
+Note: The 4 blind cards (including the turned-up card) are never played or 
+      added to anyone's hand. They remain set aside. The turnUpCard is visible 
+      to all players for information purposes only.
   
 Next Phase: BIDDING
 ```

@@ -1,4 +1,4 @@
-# State Management Architecture
+ome file# State Management Architecture
 
 ## Overview
 
@@ -164,9 +164,9 @@ socket.on('PLAY_CARD', async (payload) => {
 ```typescript
 // Inside executeGameAction:
 const newState = await action(state);
-activeGames.set(gameId, newState);
+activeGames.set(gameId, newState);  // ← SOURCE OF TRUTH (in-memory)
 
-// Fire-and-forget (don't await)
+// Fire-and-forget (don't await) - database is backup only
 saveGameState(gameId, newState).catch(err => 
   console.error('Failed to persist:', err)
 );
@@ -174,18 +174,22 @@ saveGameState(gameId, newState).catch(err =>
 
 ### Rationale
 
-- **In-memory is source of truth** (fast reads)
-- **Database is backup** (for recovery)
+- **In-memory Map is SOURCE OF TRUTH** (fast, real-time reads/writes)
+- **Database is BACKUP ONLY** (for recovery after server restart)
 - **Async writes** (don't slow down gameplay)
 - **Error logging** (monitor persistence failures)
+- **No database reads during gameplay** (all reads from memory)
 
-### Recovery
+### Recovery After Server Restart
 
-If server crashes:
-1. Load game state from database
-2. Set in-memory state
-3. Players reconnect
-4. Game continues
+If server crashes/restarts:
+1. On startup: Load active games from database into memory
+2. Restore in-memory Map (activeGames) from database
+3. Players reconnect via WebSocket
+4. Game continues from last persisted state
+
+Note: There may be a small gap between last action and crash (fire-and-forget writes),
+      but this is acceptable for MVP. Add transaction log for production if needed.
 
 ## Testing Race Conditions
 

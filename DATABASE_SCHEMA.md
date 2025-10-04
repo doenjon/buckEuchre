@@ -6,10 +6,11 @@ This document defines the PostgreSQL database schema using Prisma ORM. The schem
 
 ## Design Principles
 
-1. **Minimal Persistence**: Only store what's necessary for game recovery
-2. **In-Memory First**: Active game state lives in memory; database for persistence only
-3. **No User Accounts**: Players are ephemeral; identified by JWT tokens only
-4. **Audit Trail**: Store completed games for statistics (future feature)
+1. **In-Memory is Source of Truth**: Active game state lives in memory for real-time performance
+2. **Database is Backup**: Used only for persistence, recovery, and history
+3. **Minimal Persistence**: Only store what's necessary for game recovery
+4. **No User Accounts**: Players are ephemeral; identified by JWT tokens only
+5. **Audit Trail**: Store completed games for statistics (future feature)
 
 ## Schema Definition (Prisma)
 
@@ -142,9 +143,10 @@ model Round {
 - **Score**: Running total score for the game
 
 ### GameState
-- **Purpose**: Persist current game state for server restart recovery
+- **Purpose**: Backup of in-memory game state for server restart recovery
 - **State Field**: JSON serialization of complete GameState (from GAME_STATE_SPEC.md)
-- **Update Frequency**: After every significant game action
+- **Update Frequency**: After every significant game action (async, fire-and-forget)
+- **Source of Truth**: NO - in-memory Map is source of truth, this is backup only
 - **Performance**: Consider Redis for production (MVP uses PostgreSQL)
 
 ### Round
