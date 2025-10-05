@@ -36,7 +36,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-buckeuchre}
       POSTGRES_USER: ${POSTGRES_USER:-buckeuchre}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?ERROR: POSTGRES_PASSWORD not set!}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
     
     volumes:
@@ -52,18 +52,19 @@ services:
     
     networks:
       - buckeuchre-internal
+      - buckeuchre-web
     
-    # Don't expose to host in production (access through backend only)
-    # ports:
-    #   - "5432:5432"
+    # Expose to host for integration tests
+    ports:
+      - "5432:5432"
 
   # ----------------------------------------------------------------------------
   # Backend API Server
   # ----------------------------------------------------------------------------
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: buckeuchre-backend
     restart: unless-stopped
     
@@ -74,10 +75,10 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: ${DATABASE_URL:?ERROR: DATABASE_URL not set!}
-      JWT_SECRET: ${JWT_SECRET:?ERROR: JWT_SECRET not set!}
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
-      CORS_ORIGIN: ${CORS_ORIGIN:?ERROR: CORS_ORIGIN not set!}
+      CORS_ORIGIN: ${CORS_ORIGIN}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       WS_HEARTBEAT_INTERVAL: ${WS_HEARTBEAT_INTERVAL:-30000}
       WS_GRACE_PERIOD: ${WS_GRACE_PERIOD:-30000}
@@ -85,7 +86,7 @@ services:
     # Run migrations before starting
     command: >
       sh -c "npx prisma migrate deploy &&
-             node dist/index.js"
+             node dist/app/src/index.js"
     
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
@@ -98,17 +99,18 @@ services:
       - buckeuchre-internal
       - buckeuchre-web
     
-    # Don't expose to host in production (access through nginx only)
-    # ports:
-    #   - "3000:3000"
+    # Expose to host for integration tests
+    # In production, access through nginx only
+    ports:
+      - "3000:3000"
 
   # ----------------------------------------------------------------------------
   # Frontend Web Application
   # ----------------------------------------------------------------------------
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: buckeuchre-frontend
     restart: unless-stopped
     

@@ -37,7 +37,11 @@ export function GameList() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleJoinGame = (gameId: string) => {
+  const handleJoinGame = (gameId: string | undefined) => {
+    if (!gameId) {
+      setError('Invalid game ID');
+      return;
+    }
     navigate(`/game/${gameId}`);
   };
 
@@ -104,7 +108,7 @@ export function GameList() {
       </div>
 
       <div className="space-y-3">
-        {games.map((game) => (
+        {games.filter(game => game.gameId).map((game) => (
           <div
             key={game.gameId}
             className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
@@ -113,7 +117,7 @@ export function GameList() {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h3 className="font-medium text-gray-900">
-                    {game.creatorName}'s Game
+                    {game.creatorName || 'Unknown'}'s Game
                   </h3>
                   {getStatusBadge(game.status)}
                 </div>
@@ -132,7 +136,7 @@ export function GameList() {
                 </div>
 
                 <div className="mt-2 text-xs text-gray-500 font-mono">
-                  ID: {game.gameId.slice(0, 8)}...
+                  ID: {game.gameId?.slice(0, 8) || 'N/A'}...
                 </div>
               </div>
 

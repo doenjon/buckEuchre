@@ -31,7 +31,8 @@ import {
   dealNewRound,
   startBidding,
   finishRound,
-  handleAllPlayersPass
+  handleAllPlayersPass,
+  startNextRound
 } from '../game/state';
 import { canPlayCard, canPlaceBid, canFold } from '../game/validation';
 import { GameState, PlayerPosition, Player, Card, BidAmount } from '../../../shared/src/types/game';
@@ -96,29 +97,31 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
       return;
     }
 
-    // Game has started! Broadcast initial state (DEALING phase)
-    io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
-      gameState,
-      event: 'GAME_STARTED'
-    });
-
-    console.log(`[JOIN_GAME] Player ${playerName} joined active game ${validated.gameId}`);
-    
-    // Auto-transition from DEALING to BIDDING after a brief delay
-    setTimeout(async () => {
-      try {
-        const biddingState = await executeGameAction(validated.gameId, startBidding);
-        io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
-          gameState: biddingState,
-          event: 'BIDDING_STARTED'
-        });
-        console.log(`[AUTO] Game ${validated.gameId} transitioned to BIDDING phase`);
-      } catch (error: any) {
-        console.error(`[AUTO] Failed to transition to BIDDING:`, error.message);
-      }
-    }, 500); // 500ms delay to ensure clients receive DEALING state first
+    // Game has started or player is reconnecting
+    if (gameState.phase === 'DEALING') {
+      // Game just started! Deal cards and transition to BIDDING
+      console.log(`[JOIN_GAME] Game ${validated.gameId} started with 4 players - dealing cards`);
+      
+      // Deal cards synchronously
+      const dealtState = await executeGameAction(validated.gameId, dealNewRound);
+      
+      // Broadcast the dealt state (now in BIDDING phase with cards)
+      io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
+        gameState: dealtState,
+        event: 'GAME_STARTED'
+      });
+      
+      console.log(`[JOIN_GAME] Cards dealt for game ${validated.gameId}, now in BIDDING phase`);
+    } else {
+      // Player reconnecting to game in progress - just send current state
+      socket.emit('GAME_STATE_UPDATE', {
+        gameState,
+        event: 'PLAYER_RECONNECTED'
+      });
+      console.log(`[JOIN_GAME] Player ${playerName} reconnected to game ${validated.gameId} (phase: ${gameState.phase})`);
+    }
   } catch (error: any) {
-    console.error('[JOIN_GAME] Error:', error);
+    console.error(`[JOIN_GAME] Error for player ${socket.data.playerName}:`, error.message || error);
     socket.emit('ERROR', {
       code: 'JOIN_GAME_FAILED',
       message: error.message || 'Failed to join game'
@@ -202,11 +205,12 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
       let nextState = applyBid(currentState, player.position, validated.amount);
 
       // Check if all players passed
-      if (nextState.phase === 'BIDDING' && 
-          nextState.bids.filter((b: { amount: BidAmount }) => b.amount === 'PASS').length === 4) {
-        // All players passed - redeal
+      const allPassed = nextState.phase === 'BIDDING' && 
+          nextState.bids.filter((b: { amount: BidAmount }) => b.amount === 'PASS').length === 4;
+      
+      if (allPassed) {
+        // All players passed - reset to DEALING phase
         nextState = handleAllPlayersPass(nextState);
-        nextState = dealNewRound(nextState);
       }
 
       return nextState;
@@ -215,8 +219,24 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
     // Broadcast update
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
       gameState: newState,
-      event: 'BID_PLACED'
+      event: newState.phase === 'DEALING' ? 'ALL_PASSED' : 'BID_PLACED'
     });
+    
+    // If all players passed, deal new cards asynchronously
+    if (newState.phase === 'DEALING') {
+      setImmediate(async () => {
+        try {
+          const dealtState = await executeGameAction(validated.gameId, dealNewRound);
+          io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
+            gameState: dealtState,
+            event: 'CARDS_DEALT'
+          });
+          console.log(`[PLACE_BID] New round dealt for game ${validated.gameId} after all players passed`);
+        } catch (error: any) {
+          console.error(`[PLACE_BID] Failed to deal new round:`, error.message);
+        }
+      });
+    }
   } catch (error: any) {
     console.error('Error in PLACE_BID:', error);
     socket.emit('ERROR', {
@@ -332,6 +352,13 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
 
     // Execute action through queue
     const newState = await executeGameAction(validated.gameId, async (currentState) => {
+      console.log(`[PLAY_CARD] Incoming`, {
+        gameId: validated.gameId,
+        playerId,
+        phase: currentState.phase,
+        currentPlayerPosition: currentState.currentPlayerPosition,
+        cardsInTrick: currentState.currentTrick.cards.length,
+      });
       // Find player position
       const player = currentState.players.find((p: Player) => p.id === playerId);
       if (!player) {
@@ -373,6 +400,13 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       // Check if trick is complete (4 cards played by non-folded players)
       const activePlayers = nextState.players.filter((p: Player) => !p.folded);
       const cardsInTrick = nextState.currentTrick.cards.length;
+      console.log(`[PLAY_CARD] Applied`, {
+        playedBy: player.position,
+        nextCardsInTrick: cardsInTrick,
+        activePlayers: activePlayers.length,
+        nextPlayer: nextState.currentPlayerPosition,
+        trickNumber: nextState.currentTrick.number,
+      });
       
       if (cardsInTrick === activePlayers.length) {
         // Emit trick complete event for animation
@@ -385,6 +419,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
         if (nextState.tricks.length === 5) {
           // Finish round and calculate scores
           nextState = finishRound(nextState);
+          console.log(`[ROUND] Completed. Moving to ${nextState.phase}`);
 
           // Emit round complete event
           io.to(`game:${validated.gameId}`).emit('ROUND_COMPLETE', {
@@ -400,6 +435,13 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
       gameState: newState,
       event: 'CARD_PLAYED'
+    });
+    console.log(`[PLAY_CARD] Broadcast`, {
+      phase: newState.phase,
+      currentPlayerPosition: newState.currentPlayerPosition,
+      trickNumber: newState.currentTrick.number,
+      cardsInTrick: newState.currentTrick.cards.length,
+      tricksCompleted: newState.tricks.length,
     });
   } catch (error: any) {
     console.error('Error in PLAY_CARD:', error);
@@ -418,10 +460,10 @@ async function handleStartNextRound(io: Server, socket: Socket, payload: unknown
     // Validate payload
     const validated = StartNextRoundSchema.parse(payload);
 
-    // Execute action through queue
-    const newState = await executeGameAction(validated.gameId, async (currentState) => {
+    // Execute action through queue - transition ROUND_OVER → DEALING
+    let dealingState = await executeGameAction(validated.gameId, (currentState) => {
       // Validate phase
-      if (currentState.phase !== 'ROUND_OVER' && currentState.phase !== 'GAME_OVER') {
+      if (currentState.phase !== 'ROUND_OVER') {
         throw new Error('Round is not over');
       }
 
@@ -430,13 +472,16 @@ async function handleStartNextRound(io: Server, socket: Socket, payload: unknown
         throw new Error('Game is over');
       }
 
-      // Deal new round
-      return dealNewRound(currentState);
+      // Start next round (transitions to DEALING)
+      return startNextRound(currentState);
     });
+
+    // Deal cards and transition to BIDDING
+    const biddingState = await executeGameAction(validated.gameId, dealNewRound);
 
     // Broadcast update
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
-      gameState: newState,
+      gameState: biddingState,
       event: 'ROUND_STARTED'
     });
   } catch (error: any) {

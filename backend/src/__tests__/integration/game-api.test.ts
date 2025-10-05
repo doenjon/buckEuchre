@@ -46,7 +46,7 @@ describe('Game REST API Integration Tests', () => {
       const response = await request(app)
         .post('/api/games')
         .set('Authorization', `Bearer ${player.token}`)
-        .expect(200);
+        .expect(201);
 
       expect(response.body).toHaveProperty('gameId');
       expect(typeof response.body.gameId).toBe('string');
@@ -54,17 +54,18 @@ describe('Game REST API Integration Tests', () => {
     });
 
     it('should create unique game IDs', async () => {
-      const player = await createPlayerAndGetToken(app, 'MultiGameCreator');
+      const player1 = await createPlayerAndGetToken(app, 'GameCreator1');
+      const player2 = await createPlayerAndGetToken(app, 'GameCreator2');
 
       const response1 = await request(app)
         .post('/api/games')
-        .set('Authorization', `Bearer ${player.token}`)
-        .expect(200);
+        .set('Authorization', `Bearer ${player1.token}`)
+        .expect(201);
 
       const response2 = await request(app)
         .post('/api/games')
-        .set('Authorization', `Bearer ${player.token}`)
-        .expect(200);
+        .set('Authorization', `Bearer ${player2.token}`)
+        .expect(201);
 
       expect(response1.body.gameId).not.toBe(response2.body.gameId);
     });
@@ -106,7 +107,8 @@ describe('Game REST API Integration Tests', () => {
         .set('Authorization', `Bearer ${player.token}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveProperty('games');
+      expect(Array.isArray(response.body.games)).toBe(true);
     });
 
     it('should include created games in the list', async () => {
@@ -116,7 +118,7 @@ describe('Game REST API Integration Tests', () => {
       const createResponse = await request(app)
         .post('/api/games')
         .set('Authorization', `Bearer ${player.token}`)
-        .expect(200);
+        .expect(201);
 
       const gameId = createResponse.body.gameId;
 
@@ -127,7 +129,8 @@ describe('Game REST API Integration Tests', () => {
         .expect(200);
 
       // Should contain the created game
-      const game = listResponse.body.find((g: any) => g.id === gameId);
+      expect(listResponse.body).toHaveProperty('games');
+      const game = listResponse.body.games.find((g: any) => g.id === gameId);
       expect(game).toBeDefined();
       expect(game).toHaveProperty('status');
       expect(game).toHaveProperty('playerCount');
@@ -147,7 +150,8 @@ describe('Game REST API Integration Tests', () => {
         .set('Authorization', `Bearer ${player.token}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveProperty('games');
+      expect(Array.isArray(response.body.games)).toBe(true);
     });
   });
 
@@ -159,7 +163,7 @@ describe('Game REST API Integration Tests', () => {
       const createResponse = await request(app)
         .post('/api/games')
         .set('Authorization', `Bearer ${player.token}`)
-        .expect(200);
+        .expect(201);
 
       const gameId = createResponse.body.gameId;
 
@@ -198,7 +202,7 @@ describe('Game REST API Integration Tests', () => {
       const createResponse = await request(app)
         .post('/api/games')
         .set('Authorization', `Bearer ${player1.token}`)
-        .expect(200);
+        .expect(201);
 
       const gameId = createResponse.body.gameId;
 
@@ -210,8 +214,10 @@ describe('Game REST API Integration Tests', () => {
         .set('Authorization', `Bearer ${player1.token}`)
         .expect(200);
 
-      expect(response.body.players).toHaveLength(0); // No players joined yet via WebSocket
-      expect(response.body.status).toBe('WAITING_FOR_PLAYERS');
+      expect(response.body.players).toHaveLength(1); // Creator is automatically added as first player
+      expect(response.body.players[0]).toHaveProperty('playerId', player1.playerId);
+      expect(response.body.players[0]).toHaveProperty('position', 0);
+      expect(response.body.status).toBe('WAITING');
     });
   });
 
@@ -235,7 +241,7 @@ describe('Game REST API Integration Tests', () => {
 
       // All should succeed
       responses.forEach(response => {
-        expect(response.status).toBe(200);
+        expect(response.status).toBe(201);
         expect(response.body).toHaveProperty('gameId');
       });
 
@@ -275,7 +281,7 @@ describe('Game REST API Integration Tests', () => {
       const response = await request(app)
         .post('/api/games')
         .set('Authorization', `Bearer ${player.token}`)
-        .expect(200);
+        .expect(201);
 
       // Check response structure
       expect(response.body).toMatchObject({
@@ -289,7 +295,7 @@ describe('Game REST API Integration Tests', () => {
       const response = await request(app)
         .post('/api/games')
         .set('Authorization', `Bearer ${player.token}`)
-        .expect(200);
+        .expect(201);
 
       expect(response.headers['content-type']).toMatch(/application\/json/);
     });

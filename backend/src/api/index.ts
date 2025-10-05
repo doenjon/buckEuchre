@@ -9,7 +9,7 @@ const router = Router();
 router.use(healthRoutes);
 
 // API routes
-router.use('/api', authRoutes);
-router.use('/api', gameRoutes);
+router.use('/api/auth', authRoutes);
+router.use('/api/games', gameRoutes);
 
 export default router;

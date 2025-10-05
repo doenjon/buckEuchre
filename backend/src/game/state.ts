@@ -426,12 +426,29 @@ export function finishRound(state: GameState): GameState {
     });
   }
   
+  // Transition to ROUND_OVER to show scores
+  // (Players will manually start next round via START_NEXT_ROUND event)
+  return withVersion(state, {
+    phase: 'ROUND_OVER',
+    players,
+  });
+}
+
+/**
+ * Starts the next round from ROUND_OVER phase
+ * @param state - Current game state in ROUND_OVER phase
+ * @returns New game state ready for dealing
+ */
+export function startNextRound(state: GameState): GameState {
+  if (state.phase !== 'ROUND_OVER') {
+    throw new Error('Can only start next round from ROUND_OVER phase');
+  }
+  
   // Rotate dealer for next round
   const newDealerPosition = ((state.dealerPosition + 1) % 4) as PlayerPosition;
   
   return withVersion(state, {
     phase: 'DEALING',
-    players,
     dealerPosition: newDealerPosition,
   });
 }

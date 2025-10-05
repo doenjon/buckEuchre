@@ -11,6 +11,7 @@ import {
   applyFoldDecision,
   applyCardPlay,
   finishRound,
+  startNextRound,
 } from '../state';
 import { GameState, PlayerPosition } from '../../../../shared/src/types/game';
 
@@ -251,6 +252,9 @@ describe('state.ts - State Transitions', () => {
       let state = initializeGame(playerIds);
       state = dealNewRound(state);
       
+      // Ensure clubs are not turned up (otherwise it skips folding)
+      state.isClubsTurnUp = false;
+      
       state = applyTrumpDeclaration(state, 'SPADES');
       
       expect(state.phase).toBe('FOLDING_DECISION');
@@ -415,18 +419,19 @@ describe('state.ts - State Transitions', () => {
       expect(state.players[1].score).not.toBe(initialScores[1]);
     });
 
-    it('should rotate dealer', () => {
+    it('should transition to ROUND_OVER', () => {
+      state = finishRound(state);
+      
+      expect(state.phase).toBe('ROUND_OVER');
+    });
+
+    it('should not rotate dealer yet (happens in startNextRound)', () => {
       const initialDealer = state.dealerPosition;
       
       state = finishRound(state);
       
-      expect(state.dealerPosition).toBe((initialDealer + 1) % 4);
-    });
-
-    it('should transition to DEALING for next round', () => {
-      state = finishRound(state);
-      
-      expect(state.phase).toBe('DEALING');
+      // Dealer position unchanged until startNextRound is called
+      expect(state.dealerPosition).toBe(initialDealer);
     });
 
     it('should transition to GAME_OVER when player reaches 0', () => {
@@ -448,6 +453,26 @@ describe('state.ts - State Transitions', () => {
       
       expect(state.winner).toBe(1); // Lowest score
       expect(state.gameOver).toBe(true);
+    });
+  });
+
+  describe('startNextRound', () => {
+    it('should transition from ROUND_OVER to DEALING', () => {
+      let state = initializeGame(playerIds);
+      state.phase = 'ROUND_OVER';
+      const initialDealer = state.dealerPosition;
+      
+      state = startNextRound(state);
+      
+      expect(state.phase).toBe('DEALING');
+      expect(state.dealerPosition).toBe((initialDealer + 1) % 4);
+    });
+
+    it('should throw error if not in ROUND_OVER phase', () => {
+      let state = initializeGame(playerIds);
+      state.phase = 'PLAYING';
+      
+      expect(() => startNextRound(state)).toThrow('Can only start next round from ROUND_OVER phase');
     });
   });
 

@@ -77,15 +77,15 @@ export function canPlayCard(
 /**
  * Validates if a bid can be placed
  * 
- * Rules:
+ * Buck Euchre Rules:
  * 1. Bid must be higher than current highest bid
  * 2. Cannot bid after passing
- * 3. If all others passed, dealer must bid (cannot pass)
+ * 3. All players CAN pass - hand is over, deal passes to next player
  * 
  * @param amount - The bid amount ('PASS' or 2-5)
  * @param currentHighestBid - Current highest bid (null if none yet)
  * @param playerHasPassed - Whether this player already passed
- * @param allOthersPassed - Whether all other players have passed
+ * @param allOthersPassed - Whether all other players have passed (unused in Buck Euchre)
  * @returns Validation result with reason if invalid
  */
 export function canPlaceBid(
@@ -99,12 +99,8 @@ export function canPlaceBid(
     return { valid: false, reason: 'Already passed this round' };
   }
 
-  // If all others passed, must bid (cannot pass)
-  if (allOthersPassed && amount === 'PASS') {
-    return { valid: false, reason: 'Cannot pass when all others have passed' };
-  }
-
-  // Passing is always valid (unless all others passed)
+  // In Buck Euchre, all players can pass (unlike standard Euchre)
+  // Passing is always valid
   if (amount === 'PASS') {
     return { valid: true };
   }

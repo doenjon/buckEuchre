@@ -163,10 +163,10 @@ describe('validation.ts - Move Validation', () => {
       expect(result.reason).toContain('Already passed');
     });
 
-    it('should reject PASS when all others have passed', () => {
-      const result = canPlaceBid('PASS', 3, false, true);
-      expect(result.valid).toBe(false);
-      expect(result.reason).toContain('Cannot pass when all others have passed');
+    it('should allow PASS even when all others have passed (Buck Euchre rule)', () => {
+      const result = canPlaceBid('PASS', null, false, true);
+      expect(result.valid).toBe(true);
+      // In Buck Euchre, if all players pass, the hand is over and deal moves to next player
     });
 
     it('should allow valid bid higher than current', () => {

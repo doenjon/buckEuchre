@@ -13,7 +13,7 @@ import type {
   StartNextRoundPayload
 } from '@buck-euchre/shared';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:3000';
+const WS_URL = import.meta.env.VITE_WS_URL || '';
 
 /**
  * Create a new socket connection with authentication

@@ -25,12 +25,33 @@ export function createDeck(): Card[] {
  */
 export function shuffleDeck(deck: Card[]): Card[] {
   const shuffled = [...deck];
-  
+
+  // Optional deterministic shuffle when SHUFFLE_SEED is provided (tests)
+  const seed = process.env.SHUFFLE_SEED;
+  let seededRandom = Math.random;
+  if (seed) {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < seed.length; i++) {
+      h ^= seed.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    let s = h >>> 0;
+    seededRandom = () => {
+      // xorshift32
+      s ^= s << 13;
+      s ^= s >>> 17;
+      s ^= s << 5;
+      // map to [0,1)
+      return ((s >>> 0) / 4294967296);
+    };
+  }
+
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const r = seed ? seededRandom() : Math.random();
+    const j = Math.floor(r * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  
+
   return shuffled;
 }
 

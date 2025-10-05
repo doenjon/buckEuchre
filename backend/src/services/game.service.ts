@@ -8,10 +8,10 @@ import { setActiveGameState, getActiveGameState, loadGameState } from './state.s
  * Game summary for listing available games
  */
 export interface GameSummary {
-  id: string;
-  createdAt: Date;
+  gameId: string;
+  createdAt: number;
   playerCount: number;
-  maxPlayers: number;
+  maxPlayers: 4;
   status: GameStatus;
   creatorName: string;
 }
@@ -296,11 +296,9 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
       name: updatedGame.players[index].player.name,
     })) as [Player, Player, Player, Player];
 
-    // Deal the first round (moves from DEALING → BIDDING and deals cards)
-    const dealtState = dealNewRound(initialState);
-    
-    // Store dealt state in memory
-    setActiveGameState(gameId, dealtState);
+    // Store initial state in memory (DEALING phase)
+    // Socket handler will deal cards and transition to BIDDING
+    setActiveGameState(gameId, initialState);
 
     // Update game status to IN_PROGRESS
     await prisma.game.update({
@@ -309,7 +307,8 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     });
 
     console.log(`[joinGame] Game ${gameId} started! 4 players joined.`);
-    return dealtState;
+    // Return initial state in DEALING phase - socket handler will deal and transition
+    return initialState;
   }
 
   // Game not full yet, return null (waiting for more players)
@@ -396,8 +395,8 @@ export async function listAvailableGames(): Promise<GameSummary[]> {
   return games
     .filter((game) => game.players.length < 4)
     .map((game) => ({
-      id: game.id,
-      createdAt: game.createdAt,
+      gameId: game.id,
+      createdAt: game.createdAt.getTime(),
       playerCount: game.players.length,
       maxPlayers: 4,
       status: game.status,

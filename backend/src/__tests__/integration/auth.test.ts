@@ -28,7 +28,7 @@ describe('Authentication API Integration Tests', () => {
       const response = await request(app)
         .post('/api/auth/join')
         .send({ playerName: 'TestPlayer' })
-        .expect(200);
+        .expect(201);
 
       expect(response.body).toHaveProperty('playerId');
       expect(response.body).toHaveProperty('playerName', 'TestPlayer');
@@ -41,12 +41,12 @@ describe('Authentication API Integration Tests', () => {
       const response1 = await request(app)
         .post('/api/auth/join')
         .send({ playerName: 'Player1' })
-        .expect(200);
+        .expect(201);
 
       const response2 = await request(app)
         .post('/api/auth/join')
         .send({ playerName: 'Player2' })
-        .expect(200);
+        .expect(201);
 
       expect(response1.body.playerId).not.toBe(response2.body.playerId);
       expect(response1.body.token).not.toBe(response2.body.token);
@@ -56,12 +56,12 @@ describe('Authentication API Integration Tests', () => {
       const response1 = await request(app)
         .post('/api/auth/join')
         .send({ playerName: 'SameName' })
-        .expect(200);
+        .expect(201);
 
       const response2 = await request(app)
         .post('/api/auth/join')
         .send({ playerName: 'SameName' })
-        .expect(200);
+        .expect(201);
 
       expect(response1.body.playerId).not.toBe(response2.body.playerId);
       expect(response1.body.token).not.toBe(response2.body.token);
@@ -97,7 +97,7 @@ describe('Authentication API Integration Tests', () => {
       const response = await request(app)
         .post('/api/auth/join')
         .send({ playerName: '  TestPlayer  ' })
-        .expect(200);
+        .expect(201);
 
       expect(response.body.playerName).toBe('TestPlayer');
     });
@@ -113,7 +113,7 @@ describe('Authentication API Integration Tests', () => {
       const response = await request(app)
         .post('/api/auth/join')
         .send({ playerName: 'Test-Player_123' })
-        .expect(200);
+        .expect(201);
 
       expect(response.body.playerName).toBe('Test-Player_123');
     });
@@ -132,7 +132,7 @@ describe('Authentication API Integration Tests', () => {
       const response = await request(app)
         .post('/api/auth/join')
         .send({ playerName: 'TokenTest' })
-        .expect(200);
+        .expect(201);
 
       const token = response.body.token;
       
@@ -145,7 +145,7 @@ describe('Authentication API Integration Tests', () => {
       const response = await request(app)
         .post('/api/auth/join')
         .send({ playerName: 'TokenInfoTest' })
-        .expect(200);
+        .expect(201);
 
       const token = response.body.token;
       const playerId = response.body.playerId;
@@ -172,7 +172,7 @@ describe('Authentication API Integration Tests', () => {
 
       // All should succeed
       responses.forEach(response => {
-        expect(response.status).toBe(200);
+        expect(response.status).toBe(201);
         expect(response.body).toHaveProperty('playerId');
         expect(response.body).toHaveProperty('token');
       });

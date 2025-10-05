@@ -72,7 +72,8 @@ export async function authenticateToken(
     next();
   } catch (error) {
     console.error('Authentication error:', error);
-    res.status(500).json({ error: 'Internal server error during authentication' });
+    // JWT verification errors should return 401, not 500
+    res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
 
