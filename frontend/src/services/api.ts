@@ -4,7 +4,7 @@
  */
 
 import type { 
-  AuthResponse, 
+  JoinSessionResponse, 
   CreateGameResponse, 
   ListGamesResponse,
   GameState 
@@ -38,7 +38,7 @@ function getAuthHeaders(): HeadersInit {
 /**
  * Join a game session as a new player
  */
-export async function joinSession(playerName: string): Promise<AuthResponse> {
+export async function joinSession(playerName: string): Promise<JoinSessionResponse> {
   const response = await fetch(`${API_URL}/api/auth/join`, {
     method: 'POST',
     headers: {

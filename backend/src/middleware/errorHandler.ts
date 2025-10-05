@@ -5,7 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { AppError, isAppError } from '../utils/errors';
-import { ErrorCode, ErrorResponse } from '@buck-euchre/shared/types/errors';
+import { ErrorCode, ErrorResponse } from '@buck-euchre/shared';
 
 /**
  * Express error handling middleware

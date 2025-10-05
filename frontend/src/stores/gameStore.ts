@@ -70,24 +70,25 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     
     // Check if it's my turn based on current phase
     if (phase === 'BIDDING') {
-      return gameState.currentBidderPosition === myPosition;
+      return gameState.currentBidder === myPosition;
     }
     
     if (phase === 'DECLARING_TRUMP') {
       return gameState.winningBidderPosition === myPosition;
     }
     
-    if (phase === 'FOLDING') {
-      // It's my turn if I'm not the bidder and haven't made a fold decision
+    if (phase === 'FOLDING_DECISION') {
+      // It's my turn if I'm not the bidder and haven't folded yet
       const myPlayer = get().getMyPlayer();
       if (!myPlayer || myPlayer.position === gameState.winningBidderPosition) {
         return false;
       }
-      return myPlayer.foldDecisionMade === false;
+      // Player needs to make decision if not folded (folded means they already decided)
+      return !myPlayer.folded;
     }
     
     if (phase === 'PLAYING') {
-      return gameState.currentTurnPosition === myPosition;
+      return gameState.currentPlayerPosition === myPosition;
     }
     
     return false;
@@ -113,11 +114,11 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     let currentPosition: number | null = null;
     
     if (phase === 'BIDDING') {
-      currentPosition = gameState.currentBidderPosition;
+      currentPosition = gameState.currentBidder;
     } else if (phase === 'DECLARING_TRUMP') {
       currentPosition = gameState.winningBidderPosition;
     } else if (phase === 'PLAYING') {
-      currentPosition = gameState.currentTurnPosition;
+      currentPosition = gameState.currentPlayerPosition;
     }
     
     if (currentPosition === null) return null;

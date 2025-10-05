@@ -3,7 +3,7 @@
  * @description Custom error classes for Buck Euchre backend
  */
 
-import { ErrorCode, ErrorCodeToStatusMap, ErrorMessages } from '@buck-euchre/shared/types/errors';
+import { ErrorCode, ErrorCodeToStatusMap, ErrorMessages } from '@buck-euchre/shared';
 
 /**
  * Base application error class
