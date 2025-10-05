@@ -7,6 +7,7 @@ import express, { Express } from 'express';
 import { createServer, Server as HTTPServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
+import helmet from 'helmet';
 import apiRoutes from './api';
 import { handleConnection } from './sockets/connection';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -35,18 +36,42 @@ export function createAppServer(): {
     transports: ['websocket', 'polling']
   });
 
-  // Middleware
-  app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-    credentials: true
+  // Security middleware
+  app.use(helmet({
+    contentSecurityPolicy: false, // Allow WebSocket connections
+    crossOriginEmbedderPolicy: false
   }));
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
 
-  // Request logging (development only)
+  // CORS configuration
+  const corsOrigins = process.env.CORS_ORIGIN?.split(',').map(o => o.trim()) || ['http://localhost:5173'];
+  app.use(cors({
+    origin: corsOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  }));
+
+  // Body parsing
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Request logging
   if (process.env.NODE_ENV === 'development') {
     app.use((req, _res, next) => {
       console.log(`${req.method} ${req.path}`);
+      next();
+    });
+  } else if (process.env.NODE_ENV === 'production') {
+    // Production logging (could integrate with external logging service)
+    app.use((req, _res, next) => {
+      const timestamp = new Date().toISOString();
+      console.log(JSON.stringify({
+        timestamp,
+        method: req.method,
+        path: req.path,
+        ip: req.ip,
+        userAgent: req.get('user-agent')
+      }));
       next();
     });
   }

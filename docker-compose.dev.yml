@@ -1,0 +1,62 @@
+# ==============================================================================
+# Buck Euchre - Docker Development Environment
+# ==============================================================================
+# 
+# This docker-compose file provides local development services:
+# - PostgreSQL 16 database
+# 
+# Usage:
+#   docker-compose -f docker-compose.dev.yml up -d      # Start services
+#   docker-compose -f docker-compose.dev.yml down       # Stop services
+#   docker-compose -f docker-compose.dev.yml logs -f    # View logs
+#
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: buckeuchre-dev-postgres
+    restart: unless-stopped
+    
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-buckeuchre}
+      POSTGRES_USER: ${POSTGRES_USER:-buckeuchre}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?ERROR: POSTGRES_PASSWORD not set! Create .env.dev file.}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-buckeuchre}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    
+    networks:
+      - buckeuchre-dev
+
+# ------------------------------------------------------------------------------
+# Volumes
+# ------------------------------------------------------------------------------
+volumes:
+  postgres-data:
+    name: buckeuchre-dev-postgres-data
+    driver: local
+
+# ------------------------------------------------------------------------------
+# Networks
+# ------------------------------------------------------------------------------
+networks:
+  buckeuchre-dev:
+    name: buckeuchre-dev-network
+    driver: bridge
