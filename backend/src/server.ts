@@ -9,6 +9,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import apiRoutes from './api';
 import { handleConnection } from './sockets/connection';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
 /**
  * Create and configure Express + Socket.IO server
@@ -53,14 +54,11 @@ export function createAppServer(): {
   // API routes
   app.use('/', apiRoutes);
 
-  // Error handling middleware
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error('Express error:', err);
-    res.status(err.status || 500).json({
-      error: 'Server error',
-      message: err.message || 'An unexpected error occurred'
-    });
-  });
+  // 404 handler
+  app.use(notFoundHandler);
+
+  // Error handling middleware (must be last)
+  app.use(errorHandler);
 
   // Initialize WebSocket handlers
   handleConnection(io);

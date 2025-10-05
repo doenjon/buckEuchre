@@ -18,7 +18,8 @@ import {
   emitDeclareTrump,
   emitFoldDecision,
   emitPlayCard,
-  emitStartNextRound
+  emitStartNextRound,
+  emitRequestState
 } from '@/services/socket';
 
 export function useSocket() {
@@ -52,7 +53,27 @@ export function useSocket() {
       
       onGameStateUpdate: (data) => {
         console.log('Game state update:', data);
+        
+        // Version check: ensure we don't apply stale updates
+        const currentState = useGameStore.getState().gameState;
+        const newVersion = data.gameState?.version || 0;
+        const currentVersion = currentState?.version || 0;
+        
+        if (newVersion > currentVersion) {
+          setGameState(data.gameState);
+        } else if (newVersion < currentVersion) {
+          console.warn('Received stale update, requesting fresh state');
+          if (socketRef.current && data.gameState?.gameId) {
+            emitRequestState(socketRef.current, data.gameState.gameId);
+          }
+        }
+      },
+      
+      onReconnected: (data) => {
+        console.log('Reconnected to game:', data);
         setGameState(data.gameState);
+        setNotification('Reconnected to game');
+        setTimeout(() => setNotification(null), 3000);
       },
       
       onPlayerConnected: (data) => {
@@ -64,6 +85,12 @@ export function useSocket() {
       onPlayerDisconnected: (data) => {
         console.log('Player disconnected:', data);
         setNotification(`Player at position ${data.position} disconnected`);
+        setTimeout(() => setNotification(null), 3000);
+      },
+      
+      onPlayerReconnected: (data) => {
+        console.log('Player reconnected:', data);
+        setNotification(`${data.playerName} reconnected`);
         setTimeout(() => setNotification(null), 3000);
       },
       

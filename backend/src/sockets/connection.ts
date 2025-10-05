@@ -1,6 +1,12 @@
 import { Server, Socket } from 'socket.io';
 import { authenticateSocket } from './middleware';
 import { registerGameHandlers } from './game';
+import { 
+  registerConnection, 
+  handleDisconnect, 
+  handleReconnect,
+  isPlayerConnected 
+} from '../services/connection.service';
 
 /**
  * Initialize WebSocket connection handling
@@ -17,6 +23,17 @@ export function handleConnection(io: Server): void {
 
     console.log(`Player connected: ${playerName} (${playerId})`);
 
+    // Check if this is a reconnection
+    const wasConnected = isPlayerConnected(playerId);
+    
+    // Register this connection
+    registerConnection(socket, playerId);
+
+    if (wasConnected) {
+      // Handle reconnection
+      handleReconnect(socket, playerId, io);
+    }
+
     // Register game event handlers
     registerGameHandlers(io, socket);
 
@@ -24,8 +41,8 @@ export function handleConnection(io: Server): void {
     socket.on('disconnect', (reason) => {
       console.log(`Player disconnected: ${playerName} (${playerId}) - Reason: ${reason}`);
       
-      // MVP: Basic disconnect handling
-      // Phase 6 will add grace period and reconnection logic
+      // Handle disconnect with grace period
+      handleDisconnect(playerId, io);
     });
 
     // Handle connection errors

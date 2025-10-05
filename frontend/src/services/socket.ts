@@ -77,6 +77,13 @@ export function emitStartNextRound(socket: Socket, payload: StartNextRoundPayloa
 }
 
 /**
+ * Request fresh game state (used when version mismatch detected)
+ */
+export function emitRequestState(socket: Socket, gameId: string): void {
+  socket.emit('REQUEST_STATE', { gameId });
+}
+
+/**
  * Setup common socket event listeners
  */
 export function setupSocketListeners(
@@ -86,8 +93,10 @@ export function setupSocketListeners(
     onDisconnect?: () => void;
     onError?: (error: any) => void;
     onGameStateUpdate?: (data: any) => void;
+    onReconnected?: (data: any) => void;
     onPlayerConnected?: (data: any) => void;
     onPlayerDisconnected?: (data: any) => void;
+    onPlayerReconnected?: (data: any) => void;
     onTrickComplete?: (data: any) => void;
     onRoundComplete?: (data: any) => void;
   }
@@ -108,12 +117,20 @@ export function setupSocketListeners(
     socket.on('GAME_STATE_UPDATE', handlers.onGameStateUpdate);
   }
   
+  if (handlers.onReconnected) {
+    socket.on('RECONNECTED', handlers.onReconnected);
+  }
+  
   if (handlers.onPlayerConnected) {
     socket.on('PLAYER_CONNECTED', handlers.onPlayerConnected);
   }
   
   if (handlers.onPlayerDisconnected) {
     socket.on('PLAYER_DISCONNECTED', handlers.onPlayerDisconnected);
+  }
+  
+  if (handlers.onPlayerReconnected) {
+    socket.on('PLAYER_RECONNECTED', handlers.onPlayerReconnected);
   }
   
   if (handlers.onTrickComplete) {
@@ -133,8 +150,10 @@ export function cleanupSocketListeners(socket: Socket): void {
   socket.off('disconnect');
   socket.off('ERROR');
   socket.off('GAME_STATE_UPDATE');
+  socket.off('RECONNECTED');
   socket.off('PLAYER_CONNECTED');
   socket.off('PLAYER_DISCONNECTED');
+  socket.off('PLAYER_RECONNECTED');
   socket.off('TRICK_COMPLETE');
   socket.off('ROUND_COMPLETE');
 }

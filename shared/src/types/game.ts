@@ -97,6 +97,7 @@ export interface GameState {
   // Game Metadata
   gameId: string;
   phase: GamePhase;
+  version: number;        // Version number (incremented on each state change)
   createdAt: number;      // Unix timestamp
   updatedAt: number;      // Unix timestamp
   

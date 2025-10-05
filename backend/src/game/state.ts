@@ -13,6 +13,18 @@ import { determineTrickWinner } from './trick';
 import { calculateRoundScores, checkWinCondition } from './scoring';
 
 /**
+ * Helper function to increment version and updatedAt timestamp
+ */
+function withVersion(state: GameState, updates: Partial<GameState>): GameState {
+  return {
+    ...state,
+    ...updates,
+    version: (state.version || 0) + 1,
+    updatedAt: Date.now(),
+  };
+}
+
+/**
  * Initializes a new game with given player IDs
  * @param playerIds - Array of 4 player IDs
  * @returns Initial game state
@@ -37,6 +49,7 @@ export function initializeGame(playerIds: [string, string, string, string]): Gam
   return {
     gameId: '', // Will be set by caller
     phase: 'DEALING',
+    version: 1,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     
@@ -89,10 +102,8 @@ export function dealNewRound(state: GameState): GameState {
     folded: false,
   })) as [Player, Player, Player, Player];
 
-  return {
-    ...state,
+  return withVersion(state, {
     phase: 'DEALING',
-    updatedAt: Date.now(),
     round: state.round + 1,
     
     players,
@@ -115,7 +126,7 @@ export function dealNewRound(state: GameState): GameState {
       winner: null,
     },
     currentPlayerPosition: null,
-  };
+  });
 }
 
 /**
@@ -128,12 +139,10 @@ export function startBidding(state: GameState): GameState {
     throw new Error(`Cannot start bidding from phase: ${state.phase}`);
   }
   
-  return {
-    ...state,
+  return withVersion(state, {
     phase: 'BIDDING',
     currentBidder: ((state.dealerPosition + 1) % 4) as PlayerPosition,
-    updatedAt: Date.now(),
-  };
+  });
 }
 
 /**
@@ -183,15 +192,13 @@ export function applyBid(
     nextBidder = null;
   }
   
-  return {
-    ...state,
+  return withVersion(state, {
     phase: newPhase,
-    updatedAt: Date.now(),
     bids: newBids,
     currentBidder: nextBidder,
     highestBid: newHighestBid,
     winningBidderPosition: newWinningBidderPosition,
-  };
+  });
 }
 
 /**
@@ -201,17 +208,15 @@ export function applyBid(
  * @returns New game state ready for dealing
  */
 export function handleAllPlayersPass(state: GameState): GameState {
-  return {
-    ...state,
+  return withVersion(state, {
     phase: 'DEALING',
-    updatedAt: Date.now(),
     dealerPosition: ((state.dealerPosition + 1) % 4) as PlayerPosition,
     bids: [],
     currentBidder: null,
     highestBid: null,
     winningBidderPosition: null,
     trumpSuit: null,
-  };
+  });
 }
 
 /**
@@ -241,10 +246,7 @@ export function applyTrumpDeclaration(state: GameState, trumpSuit: Suit): GameSt
     };
   }
   
-  return {
-    ...state,
-    ...updates,
-  };
+  return withVersion(state, updates);
 }
 
 /**
@@ -285,14 +287,12 @@ export function applyFoldDecision(
     };
   }
   
-  return {
-    ...state,
+  return withVersion(state, {
     phase: newPhase,
-    updatedAt: Date.now(),
     players,
     currentPlayerPosition: newCurrentPlayerPosition,
     currentTrick: newCurrentTrick,
-  };
+  });
 }
 
 /**
@@ -356,21 +356,17 @@ export function applyCardPlay(
     
     // Check if round is over (5 tricks played)
     if (newTricks.length === 5) {
-      return {
-        ...state,
+      return withVersion(state, {
         phase: 'ROUND_OVER',
-        updatedAt: Date.now(),
         players: updatedPlayers,
         tricks: newTricks,
         currentTrick: newCurrentTrick,
         currentPlayerPosition: null,
-      };
+      });
     }
     
     // Start next trick
-    return {
-      ...state,
-      updatedAt: Date.now(),
+    return withVersion(state, {
       players: updatedPlayers,
       tricks: newTricks,
       currentTrick: {
@@ -380,7 +376,7 @@ export function applyCardPlay(
         winner: null,
       },
       currentPlayerPosition: winner,
-    };
+    });
   }
   
   // Trick not complete - find next player
@@ -389,13 +385,11 @@ export function applyCardPlay(
     nextPlayer = ((nextPlayer + 1) % 4) as PlayerPosition;
   }
   
-  return {
-    ...state,
-    updatedAt: Date.now(),
+  return withVersion(state, {
     players,
     currentTrick: newCurrentTrick,
     currentPlayerPosition: nextPlayer,
-  };
+  });
 }
 
 /**
@@ -421,24 +415,20 @@ export function finishRound(state: GameState): GameState {
   const { winner, gameOver } = checkWinCondition(players);
   
   if (gameOver) {
-    return {
-      ...state,
+    return withVersion(state, {
       phase: 'GAME_OVER',
-      updatedAt: Date.now(),
       players,
       winner,
       gameOver: true,
-    };
+    });
   }
   
   // Rotate dealer for next round
   const newDealerPosition = ((state.dealerPosition + 1) % 4) as PlayerPosition;
   
-  return {
-    ...state,
+  return withVersion(state, {
     phase: 'DEALING',
-    updatedAt: Date.now(),
     players,
     dealerPosition: newDealerPosition,
-  };
+  });
 }
