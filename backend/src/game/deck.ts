@@ -5,10 +5,11 @@
  * All functions in this module are pure (no I/O, no mutations, no side effects)
  */
 
-import { Card, Suit } from '../../../shared/src/types/game';
+import { Card } from '../../../shared/src/types/game';
 import { FULL_DECK, CARDS_PER_PLAYER, BLIND_SIZE, PLAYER_COUNT } from '../../../shared/src/constants/cards';
-import { BLACK_SUITS, RED_SUITS } from '../../../shared/src/constants/cards';
 import { getShuffleSeed } from './random';
+
+export { getEffectiveSuit, isSameColor } from '../../../shared/src/utils/cards';
 
 /**
  * Creates a fresh 24-card deck
@@ -89,35 +90,4 @@ export function dealCards(deck: Card[]): {
   }
 
   return { hands, blind };
-}
-
-/**
- * Gets the effective suit of a card considering Left Bower rule
- * 
- * The Left Bower (Jack of same color as trump) is considered part of trump suit
- * 
- * @param card - The card to evaluate
- * @param trumpSuit - The current trump suit
- * @returns The effective suit (may differ from card.suit for Left Bower)
- */
-export function getEffectiveSuit(card: Card, trumpSuit: Suit): Suit {
-  // Left Bower: Jack of same color as trump, but different suit
-  if (card.rank === 'JACK' && isSameColor(card.suit, trumpSuit) && card.suit !== trumpSuit) {
-    return trumpSuit;
-  }
-  
-  return card.suit;
-}
-
-/**
- * Checks if two suits are the same color
- * @param suit1 - First suit
- * @param suit2 - Second suit
- * @returns true if both suits are same color
- */
-export function isSameColor(suit1: Suit, suit2: Suit): boolean {
-  const bothBlack = BLACK_SUITS.includes(suit1) && BLACK_SUITS.includes(suit2);
-  const bothRed = RED_SUITS.includes(suit1) && RED_SUITS.includes(suit2);
-  
-  return bothBlack || bothRed;
 }
