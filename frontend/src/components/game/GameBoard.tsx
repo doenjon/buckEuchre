@@ -51,7 +51,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       break;
     case 'FOLDING_DECISION':
       // In folding phase, check if this player needs to decide
-      if (gameState.winningBidderPosition !== myPosition && myPlayer.folded === false) {
+      if (gameState.winningBidderPosition !== myPosition && myPlayer.folded === null) {
         isMyTurn = true;
       }
       activePosition = null; // Multiple players can act
@@ -145,7 +145,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       )}
 
       {/* Player's Hand */}
-      {!myPlayer.folded && (
+      {myPlayer.folded !== true && (
         <PlayerHand 
           cards={myPlayer.hand}
           onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
@@ -153,7 +153,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
         />
       )}
 
-      {myPlayer.folded && (
+      {myPlayer.folded === true && (
         <div className="bg-gray-100 border-2 border-gray-300 rounded-lg p-8 text-center">
           <p className="text-xl font-semibold text-gray-600">
             You have folded this round
@@ -179,4 +179,3 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
     </div>
   );
 }
-

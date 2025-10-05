@@ -64,7 +64,7 @@ export function Scoreboard({
               : currentPlayerPosition === index;
             const isBidder = winningBidderPosition === index;
             const isLeader = player.id === leader.id;
-            const hasFolded = player.folded;
+            const hasFolded = player.folded === true;
             const previousScore = previousScores.current.get(player.id);
             const scoreChanged = previousScore !== undefined && previousScore !== player.score;
             
