@@ -16,6 +16,7 @@ import {
 } from '../game/state';
 import { decideBid, decideTrump, decideFold, decideCardToPlay } from './decision-engine';
 import { Server } from 'socket.io';
+import { canFold, canPlaceBid, canPlayCard } from '../game/validation';
 
 /**
  * Delay for a specified amount of time
@@ -60,9 +61,30 @@ export async function executeAITurn(
   io: Server
 ): Promise<void> {
   try {
+    const initialState = getActiveGameState(gameId);
+    if (!initialState) {
+      console.error(`[AI] Game ${gameId} not found`);
+      return;
+    }
+
+    const initialPosition = findPlayerPosition(initialState, aiPlayerId);
+    if (initialPosition === null) {
+      console.error(`[AI] Player ${aiPlayerId} not found in game ${gameId}`);
+      return;
+    }
+
+    const initialPlayer = initialState.players[initialPosition];
+    const initialPhase = initialState.phase;
+
+    console.log(`[AI] ${initialPlayer.name} is thinking (phase: ${initialPhase})...`);
+
+    // Simulate thinking time
+    const thinkingTime = getThinkingDelay();
+    await delay(thinkingTime);
+
     const state = getActiveGameState(gameId);
     if (!state) {
-      console.error(`[AI] Game ${gameId} not found`);
+      console.error(`[AI] Game ${gameId} not found after delay`);
       return;
     }
 
@@ -75,28 +97,30 @@ export async function executeAITurn(
     const aiPlayer = state.players[aiPosition];
     const phase = state.phase;
 
-    console.log(`[AI] ${aiPlayer.name} is thinking (phase: ${phase})...`);
-
-    // Simulate thinking time
-    const thinkingTime = getThinkingDelay();
-    await delay(thinkingTime);
-
-    // Execute action based on phase
+    // Execute action based on current phase
     switch (phase) {
       case 'BIDDING':
-        await executeAIBid(gameId, aiPlayerId, aiPosition, state, io);
+        if (state.currentBidder === aiPosition) {
+          await executeAIBid(gameId, aiPlayerId, io);
+        }
         break;
 
       case 'DECLARING_TRUMP':
-        await executeAIDeclareTrump(gameId, aiPlayerId, aiPosition, state, io);
+        if (state.winningBidderPosition === aiPosition) {
+          await executeAIDeclareTrump(gameId, aiPlayerId, io);
+        }
         break;
 
       case 'FOLDING_DECISION':
-        await executeAIFoldDecision(gameId, aiPlayerId, aiPosition, state, io);
+        if (aiPlayer.folded === false && state.winningBidderPosition !== aiPosition) {
+          await executeAIFoldDecision(gameId, aiPlayerId, io);
+        }
         break;
 
       case 'PLAYING':
-        await executeAICardPlay(gameId, aiPlayerId, aiPosition, state, io);
+        if (state.currentPlayerPosition === aiPosition) {
+          await executeAICardPlay(gameId, aiPlayerId, io);
+        }
         break;
 
       default:
@@ -114,34 +138,69 @@ export async function executeAITurn(
 async function executeAIBid(
   gameId: string,
   aiPlayerId: string,
-  aiPosition: PlayerPosition,
-  state: GameState,
   io: Server
 ): Promise<void> {
-  // Check if it's AI's turn
-  if (state.currentBidder !== aiPosition) {
+  let bidPlaced: {
+    playerPosition: PlayerPosition;
+    playerName: string;
+    amount: BidAmount;
+  } | null = null;
+
+  const newState = await executeGameAction(gameId, async (currentState) => {
+    const player = currentState.players.find((p: any) => p.id === aiPlayerId);
+    if (!player) {
+      console.warn(`[AI] Player ${aiPlayerId} missing during bid execution for game ${gameId}`);
+      return currentState;
+    }
+
+    if (currentState.phase !== 'BIDDING') {
+      console.log(`[AI] ${player.name} skipping bid - phase is ${currentState.phase}`);
+      return currentState;
+    }
+
+    if (currentState.currentBidder !== player.position) {
+      console.log(`[AI] ${player.name} skipping bid - not current bidder`);
+      return currentState;
+    }
+
+    if (!currentState.turnUpCard) {
+      console.warn(`[AI] ${player.name} cannot bid - missing turn up card`);
+      return currentState;
+    }
+
+    const bid = decideBid(player.hand, currentState.turnUpCard, currentState.highestBid);
+
+    const validation = canPlaceBid(
+      bid,
+      currentState.highestBid,
+      currentState.bids.some((b: any) => b.playerPosition === player.position && b.amount === 'PASS'),
+      currentState.bids.filter((b: any) => b.amount === 'PASS').length === 3
+    );
+
+    if (!validation.valid) {
+      console.warn(`[AI] ${player.name} produced invalid bid ${bid}: ${validation.reason}`);
+      return currentState;
+    }
+
+    console.log(`[AI] ${player.name} bids: ${bid}`);
+
+    bidPlaced = {
+      playerPosition: player.position,
+      playerName: player.name,
+      amount: bid,
+    };
+
+    return applyBid(currentState, player.position, bid);
+  });
+
+  if (!bidPlaced) {
     return;
   }
 
-  const aiPlayer = state.players[aiPosition];
-  const bid = decideBid(aiPlayer.hand, state.turnUpCard!, state.highestBid);
-
-  console.log(`[AI] ${aiPlayer.name} bids: ${bid}`);
-
-  // Apply bid through action queue
-  const newState = await executeGameAction(gameId, async (currentState) => {
-    return applyBid(currentState, aiPosition, bid);
-  });
-
-  // Broadcast update
   io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
     gameState: newState,
     event: 'BID_PLACED',
-    data: {
-      playerPosition: aiPosition,
-      playerName: aiPlayer.name,
-      amount: bid,
-    },
+    data: bidPlaced,
   });
 }
 
@@ -151,34 +210,57 @@ async function executeAIBid(
 async function executeAIDeclareTrump(
   gameId: string,
   aiPlayerId: string,
-  aiPosition: PlayerPosition,
-  state: GameState,
   io: Server
 ): Promise<void> {
-  // Check if AI is the winning bidder
-  if (state.winningBidderPosition !== aiPosition) {
-    return;
-  }
+  let declaration: {
+    playerPosition: PlayerPosition;
+    playerName: string;
+    trumpSuit: Suit;
+  } | null = null;
 
-  const aiPlayer = state.players[aiPosition];
-  const trumpSuit = decideTrump(aiPlayer.hand, state.turnUpCard!);
-
-  console.log(`[AI] ${aiPlayer.name} declares trump: ${trumpSuit}`);
-
-  // Apply trump declaration through action queue
   const newState = await executeGameAction(gameId, async (currentState) => {
+    const player = currentState.players.find((p: any) => p.id === aiPlayerId);
+    if (!player) {
+      console.warn(`[AI] Player ${aiPlayerId} missing during trump declaration for game ${gameId}`);
+      return currentState;
+    }
+
+    if (currentState.phase !== 'DECLARING_TRUMP') {
+      console.log(`[AI] ${player.name} skipping trump declaration - phase is ${currentState.phase}`);
+      return currentState;
+    }
+
+    if (currentState.winningBidderPosition !== player.position) {
+      console.log(`[AI] ${player.name} skipping trump declaration - not winning bidder`);
+      return currentState;
+    }
+
+    if (!currentState.turnUpCard) {
+      console.warn(`[AI] ${player.name} cannot declare trump - missing turn up card`);
+      return currentState;
+    }
+
+    const trumpSuit = decideTrump(player.hand, currentState.turnUpCard);
+
+    console.log(`[AI] ${player.name} declares trump: ${trumpSuit}`);
+
+    declaration = {
+      playerPosition: player.position,
+      playerName: player.name,
+      trumpSuit,
+    };
+
     return applyTrumpDeclaration(currentState, trumpSuit);
   });
 
-  // Broadcast update
+  if (!declaration) {
+    return;
+  }
+
   io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
     gameState: newState,
     event: 'TRUMP_DECLARED',
-    data: {
-      playerPosition: aiPosition,
-      playerName: aiPlayer.name,
-      trumpSuit,
-    },
+    data: declaration,
   });
 }
 
@@ -188,40 +270,67 @@ async function executeAIDeclareTrump(
 async function executeAIFoldDecision(
   gameId: string,
   aiPlayerId: string,
-  aiPosition: PlayerPosition,
-  state: GameState,
   io: Server
 ): Promise<void> {
-  // Check if AI is not the bidder (only non-bidders can fold)
-  if (state.winningBidderPosition === aiPosition) {
-    return;
-  }
+  let decision: {
+    playerPosition: PlayerPosition;
+    playerName: string;
+    folded: boolean;
+  } | null = null;
 
-  // Check if AI already made a fold decision
-  const aiPlayer = state.players[aiPosition];
-  if (aiPlayer.folded !== false) {
-    // Player already decided (either folded or explicitly stayed)
-    return;
-  }
-
-  const shouldFold = decideFold(aiPlayer.hand, state.trumpSuit!, state.isClubsTurnUp);
-
-  console.log(`[AI] ${aiPlayer.name} decides to ${shouldFold ? 'fold' : 'stay'}`);
-
-  // Apply fold decision through action queue
   const newState = await executeGameAction(gameId, async (currentState) => {
-    return applyFoldDecision(currentState, aiPosition, shouldFold);
+    const player = currentState.players.find((p: any) => p.id === aiPlayerId);
+    if (!player) {
+      console.warn(`[AI] Player ${aiPlayerId} missing during fold decision for game ${gameId}`);
+      return currentState;
+    }
+
+    if (currentState.phase !== 'FOLDING_DECISION') {
+      console.log(`[AI] ${player.name} skipping fold decision - phase is ${currentState.phase}`);
+      return currentState;
+    }
+
+    if (currentState.winningBidderPosition === player.position) {
+      console.log(`[AI] ${player.name} skipping fold decision - is winning bidder`);
+      return currentState;
+    }
+
+    if (player.folded !== false) {
+      return currentState;
+    }
+
+    if (!currentState.trumpSuit) {
+      console.warn(`[AI] ${player.name} cannot decide fold - missing trump suit`);
+      return currentState;
+    }
+
+    const validation = canFold(currentState.isClubsTurnUp, player.position === currentState.winningBidderPosition);
+    if (!validation.valid) {
+      console.warn(`[AI] ${player.name} cannot fold: ${validation.reason}`);
+      return currentState;
+    }
+
+    const shouldFold = decideFold(player.hand, currentState.trumpSuit, currentState.isClubsTurnUp);
+
+    console.log(`[AI] ${player.name} decides to ${shouldFold ? 'fold' : 'stay'}`);
+
+    decision = {
+      playerPosition: player.position,
+      playerName: player.name,
+      folded: shouldFold,
+    };
+
+    return applyFoldDecision(currentState, player.position, shouldFold);
   });
 
-  // Broadcast update
+  if (!decision) {
+    return;
+  }
+
   io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
     gameState: newState,
     event: 'FOLD_DECISION',
-    data: {
-      playerPosition: aiPosition,
-      playerName: aiPlayer.name,
-      folded: shouldFold,
-    },
+    data: decision,
   });
 }
 
@@ -231,40 +340,74 @@ async function executeAIFoldDecision(
 async function executeAICardPlay(
   gameId: string,
   aiPlayerId: string,
-  aiPosition: PlayerPosition,
-  state: GameState,
   io: Server
 ): Promise<void> {
-  // Check if it's AI's turn
-  if (state.currentPlayerPosition !== aiPosition) {
-    return;
-  }
+  let play: {
+    playerPosition: PlayerPosition;
+    playerName: string;
+    card: Card;
+  } | null = null;
 
-  const aiPlayer = state.players[aiPosition];
-
-  // Check if AI has folded
-  if (aiPlayer.folded) {
-    console.error(`[AI] ${aiPlayer.name} has folded and cannot play cards`);
-    return;
-  }
-
-  const card = decideCardToPlay(state, aiPosition);
-
-  console.log(`[AI] ${aiPlayer.name} plays: ${card.rank} of ${card.suit}`);
-
-  // Apply card play through action queue
   const newState = await executeGameAction(gameId, async (currentState) => {
-    return applyCardPlay(currentState, aiPosition, card.id);
+    const player = currentState.players.find((p: any) => p.id === aiPlayerId);
+    if (!player) {
+      console.warn(`[AI] Player ${aiPlayerId} missing during card play for game ${gameId}`);
+      return currentState;
+    }
+
+    if (currentState.phase !== 'PLAYING') {
+      console.log(`[AI] ${player.name} skipping card play - phase is ${currentState.phase}`);
+      return currentState;
+    }
+
+    if (currentState.currentPlayerPosition !== player.position) {
+      console.log(`[AI] ${player.name} skipping card play - not current player`);
+      return currentState;
+    }
+
+    if (player.folded) {
+      console.warn(`[AI] ${player.name} has folded and cannot play cards`);
+      return currentState;
+    }
+
+    if (!currentState.trumpSuit) {
+      console.warn(`[AI] ${player.name} cannot play - missing trump suit`);
+      return currentState;
+    }
+
+    const card = decideCardToPlay(currentState, player.position);
+
+    const validation = canPlayCard(
+      card,
+      player.hand,
+      currentState.currentTrick,
+      currentState.trumpSuit,
+      !!player.folded
+    );
+
+    if (!validation.valid) {
+      console.warn(`[AI] ${player.name} selected illegal card ${card.id}: ${validation.reason}`);
+      return currentState;
+    }
+
+    console.log(`[AI] ${player.name} plays: ${card.rank} of ${card.suit}`);
+
+    play = {
+      playerPosition: player.position,
+      playerName: player.name,
+      card,
+    };
+
+    return applyCardPlay(currentState, player.position, card.id);
   });
 
-  // Broadcast update
+  if (!play) {
+    return;
+  }
+
   io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
     gameState: newState,
     event: 'CARD_PLAYED',
-    data: {
-      playerPosition: aiPosition,
-      playerName: aiPlayer.name,
-      card,
-    },
+    data: play,
   });
 }
