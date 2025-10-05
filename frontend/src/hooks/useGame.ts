@@ -56,6 +56,7 @@ export function useGame() {
     // State
     gameState: gameStore.gameState,
     myPosition: gameStore.myPosition,
+    waitingInfo: gameStore.waitingInfo,
     myPlayer,
     isMyTurn,
     playableCards,
@@ -72,5 +73,6 @@ export function useGame() {
     playCard,
     startNextRound,
     clearGame: gameStore.clearGame,
+    setWaitingInfo: gameStore.setWaitingInfo,
   };
 }

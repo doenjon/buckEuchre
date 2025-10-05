@@ -8,12 +8,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useGame } from '@/hooks/useGame';
 import { useAuthStore } from '@/stores/authStore';
+import { WaitingForPlayers } from '@/components/game/WaitingForPlayers';
 
 export function GamePage() {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
   const { checkAuth } = useAuth();
-  const { joinGame, gameState, myPosition, setMyPosition } = useGame();
+  const { joinGame, gameState, myPosition, setMyPosition, waitingInfo } = useGame();
   const { playerId } = useAuthStore();
 
   // Check authentication
@@ -41,6 +42,16 @@ export function GamePage() {
   }, [gameState, playerId, myPosition, setMyPosition]);
 
   if (!gameState) {
+    if (waitingInfo && waitingInfo.gameId === gameId) {
+      return (
+        <WaitingForPlayers
+          gameId={gameId ?? ''}
+          playerCount={waitingInfo.playerCount}
+          playersNeeded={waitingInfo.playersNeeded}
+        />
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-800 to-green-600 flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-xl p-8">
@@ -48,6 +59,19 @@ export function GamePage() {
           <p className="text-gray-600">Connecting to game {gameId}</p>
         </div>
       </div>
+    );
+  }
+
+  if (gameState.phase === 'WAITING_FOR_PLAYERS') {
+    const connectedPlayers = gameState.players.filter(player => player.connected).length;
+    const seatsRemaining = Math.max(0, 4 - connectedPlayers);
+
+    return (
+      <WaitingForPlayers
+        gameId={gameId ?? gameState.gameId}
+        playerCount={connectedPlayers}
+        playersNeeded={seatsRemaining}
+      />
     );
   }
 

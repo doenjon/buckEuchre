@@ -25,7 +25,7 @@ import {
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
   const { token } = useAuthStore();
-  const { setGameState, setError } = useGameStore();
+  const { setGameState, setError, setWaitingInfo } = useGameStore();
   const { setConnected, setNotification } = useUIStore();
 
   // Initialize socket connection
@@ -53,7 +53,7 @@ export function useSocket() {
       
       onGameStateUpdate: (data) => {
         console.log('Game state update:', data);
-        
+
         // Version check: ensure we don't apply stale updates
         const currentState = useGameStore.getState().gameState;
         const newVersion = data.gameState?.version || 0;
@@ -74,6 +74,16 @@ export function useSocket() {
         setGameState(data.gameState);
         setNotification('Reconnected to game');
         setTimeout(() => setNotification(null), 3000);
+      },
+
+      onGameWaiting: (data) => {
+        console.log('Waiting for players:', data);
+        setWaitingInfo({
+          gameId: data.gameId,
+          playerCount: data.playerCount,
+          playersNeeded: data.playersNeeded,
+          message: data.message,
+        });
       },
       
       onPlayerConnected: (data) => {
@@ -109,7 +119,7 @@ export function useSocket() {
       cleanupSocketListeners(socket);
       socket.disconnect();
     };
-  }, [token, setGameState, setError, setConnected, setNotification]);
+  }, [token, setGameState, setError, setConnected, setNotification, setWaitingInfo]);
 
   // Socket event emitters wrapped in callbacks
   const joinGame = useCallback((gameId: string) => {
