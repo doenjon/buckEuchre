@@ -93,6 +93,7 @@ export function setupSocketListeners(
     onDisconnect?: () => void;
     onError?: (error: any) => void;
     onGameStateUpdate?: (data: any) => void;
+    onGameWaiting?: (data: any) => void;
     onReconnected?: (data: any) => void;
     onPlayerConnected?: (data: any) => void;
     onPlayerDisconnected?: (data: any) => void;
@@ -115,6 +116,10 @@ export function setupSocketListeners(
   
   if (handlers.onGameStateUpdate) {
     socket.on('GAME_STATE_UPDATE', handlers.onGameStateUpdate);
+  }
+
+  if (handlers.onGameWaiting) {
+    socket.on('GAME_WAITING', handlers.onGameWaiting);
   }
   
   if (handlers.onReconnected) {
@@ -150,6 +155,7 @@ export function cleanupSocketListeners(socket: Socket): void {
   socket.off('disconnect');
   socket.off('ERROR');
   socket.off('GAME_STATE_UPDATE');
+  socket.off('GAME_WAITING');
   socket.off('RECONNECTED');
   socket.off('PLAYER_CONNECTED');
   socket.off('PLAYER_DISCONNECTED');
