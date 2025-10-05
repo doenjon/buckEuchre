@@ -92,13 +92,13 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     }
     
     if (phase === 'FOLDING_DECISION') {
-      // It's my turn if I'm not the bidder and haven't folded yet
+      // It's my turn if I'm not the bidder and haven't made a decision yet
       const myPlayer = get().getMyPlayer();
       if (!myPlayer || myPlayer.position === gameState.winningBidderPosition) {
         return false;
       }
-      // Player needs to make decision if not folded (folded means they already decided)
-      return !myPlayer.folded;
+      // Player needs to decide if their foldDecision is still undecided
+      return myPlayer.foldDecision === 'UNDECIDED';
     }
     
     if (phase === 'PLAYING') {
@@ -131,6 +131,16 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       currentPosition = gameState.currentBidder;
     } else if (phase === 'DECLARING_TRUMP') {
       currentPosition = gameState.winningBidderPosition;
+    } else if (phase === 'FOLDING_DECISION') {
+      currentPosition = gameState.players.findIndex((player, index) => {
+        return (
+          index !== gameState.winningBidderPosition &&
+          player.foldDecision === 'UNDECIDED'
+        );
+      });
+      if (currentPosition === -1) {
+        currentPosition = null;
+      }
     } else if (phase === 'PLAYING') {
       currentPosition = gameState.currentPlayerPosition;
     }

@@ -172,7 +172,7 @@ export function canFold(
   const player = gameState.players[playerPosition];
 
   // Check if player already made a decision
-  if (player.folded !== false) {
+  if (player.foldDecision !== 'UNDECIDED') {
     return { valid: false, reason: 'You already made your decision' };
   }
 
@@ -240,7 +240,7 @@ export function isPlayerTurn(
       // All non-bidders need to make a decision
       return (
         gameState.winningBidderPosition !== playerPosition &&
-        gameState.players[playerPosition].folded === false
+        gameState.players[playerPosition].foldDecision === 'UNDECIDED'
       );
     
     case 'PLAYING':

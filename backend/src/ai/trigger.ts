@@ -33,12 +33,9 @@ function getCurrentActingPlayer(gameState: GameState): string | null {
 
     case 'FOLDING_DECISION':
       // In folding phase, check which non-bidders haven't decided yet
-      // For simplicity, we'll check all non-bidders in order
       for (let i = 0; i < 4; i++) {
         const player = gameState.players[i];
-        if (i !== gameState.winningBidderPosition && player.folded === false) {
-          // This player hasn't made a decision yet (false = undecided)
-          // Note: true = folded, undefined/null = stayed
+        if (i !== gameState.winningBidderPosition && player.foldDecision === 'UNDECIDED') {
           return player.id;
         }
       }
@@ -80,8 +77,7 @@ function getAIPlayersNeedingFoldDecision(gameState: GameState): string[] {
     }
 
     // Check if this player hasn't decided yet
-    // folded === false means undecided (not the same as stayed)
-    if (player.folded === false && isAIPlayer(player.id)) {
+    if (player.foldDecision === 'UNDECIDED' && isAIPlayer(player.id)) {
       aiPlayers.push(player.id);
     }
   }

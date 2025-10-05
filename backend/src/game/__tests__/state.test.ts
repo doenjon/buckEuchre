@@ -35,6 +35,7 @@ describe('state.ts - State Transitions', () => {
         expect(player.score).toBe(15);
         expect(player.tricksTaken).toBe(0);
         expect(player.folded).toBe(false);
+        expect(player.foldDecision).toBe('UNDECIDED');
       });
     });
 
@@ -106,13 +107,15 @@ describe('state.ts - State Transitions', () => {
       // Modify player states
       state.players[0].tricksTaken = 3;
       state.players[0].folded = true;
-      
+      state.players[0].foldDecision = 'FOLD';
+
       // Deal new round
       state = dealNewRound(state);
       
       state.players.forEach(player => {
         expect(player.tricksTaken).toBe(0);
         expect(player.folded).toBe(false);
+        expect(player.foldDecision).toBe('UNDECIDED');
       });
     });
 
@@ -276,24 +279,44 @@ describe('state.ts - State Transitions', () => {
 
     it('should set player folded status', () => {
       state = applyFoldDecision(state, 0, true);
-      
+
       expect(state.players[0].folded).toBe(true);
+      expect(state.players[0].foldDecision).toBe('FOLD');
     });
 
     it('should transition to PLAYING when all decided', () => {
       state = applyFoldDecision(state, 0, true);
       state = applyFoldDecision(state, 2, false);
       state = applyFoldDecision(state, 3, true);
-      
+
       expect(state.phase).toBe('PLAYING');
+    });
+
+    it('should not transition until every non-bidder decides', () => {
+      state = applyFoldDecision(state, 0, true);
+      expect(state.phase).toBe('FOLDING_DECISION');
+
+      state = applyFoldDecision(state, 2, false);
+      expect(state.phase).toBe('FOLDING_DECISION');
     });
 
     it('should set currentPlayerPosition to bidder when playing starts', () => {
       state = applyFoldDecision(state, 0, true);
       state = applyFoldDecision(state, 2, false);
       state = applyFoldDecision(state, 3, true);
-      
+
       expect(state.currentPlayerPosition).toBe(1);
+    });
+
+    it('should record stay decisions distinctly', () => {
+      state = applyFoldDecision(state, 0, false);
+      expect(state.players[0].folded).toBe(false);
+      expect(state.players[0].foldDecision).toBe('STAY');
+    });
+
+    it('should prevent players from changing decisions', () => {
+      state = applyFoldDecision(state, 0, true);
+      expect(() => applyFoldDecision(state, 0, false)).toThrow('already recorded');
     });
   });
 

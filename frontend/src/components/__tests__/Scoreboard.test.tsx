@@ -19,6 +19,7 @@ const mockPlayers: Player[] = [
     tricksTaken: 0,
     connected: true,
     folded: false,
+    foldDecision: 'STAY',
   },
   {
     id: 'player-2',
@@ -29,6 +30,7 @@ const mockPlayers: Player[] = [
     tricksTaken: 0,
     connected: true,
     folded: false,
+    foldDecision: 'STAY',
   },
   {
     id: 'player-3',
@@ -39,6 +41,7 @@ const mockPlayers: Player[] = [
     tricksTaken: 0,
     connected: true,
     folded: false,
+    foldDecision: 'STAY',
   },
   {
     id: 'player-4',
@@ -49,6 +52,7 @@ const mockPlayers: Player[] = [
     tricksTaken: 0,
     connected: true,
     folded: false,
+    foldDecision: 'STAY',
   },
 ];
 
@@ -174,15 +178,45 @@ describe('Scoreboard Component', () => {
 
     it('should include current turn in aria-label', () => {
       render(
-        <Scoreboard 
-          players={mockPlayers} 
+        <Scoreboard
+          players={mockPlayers}
           currentPlayerPosition={1}
           phase="PLAYING"
         />
       );
-      
+
       const bobItem = screen.getByRole('listitem', { name: /Bob.*current turn/i });
       expect(bobItem).toBeInTheDocument();
+    });
+
+    it('should highlight undecided non-bidders during folding phase', () => {
+      const foldingPlayers = mockPlayers.map(player => ({ ...player }));
+      foldingPlayers[1] = { ...foldingPlayers[1], foldDecision: 'UNDECIDED' };
+      foldingPlayers[2] = { ...foldingPlayers[2], foldDecision: 'STAY' };
+      foldingPlayers[3] = { ...foldingPlayers[3], foldDecision: 'UNDECIDED' };
+
+      render(
+        <Scoreboard
+          players={foldingPlayers}
+          currentPlayerPosition={null}
+          phase="FOLDING_DECISION"
+          winningBidderPosition={0}
+        />
+      );
+
+      const items = screen.getAllByRole('listitem');
+      expect(items[1].className).toContain('border-green-500');
+      expect(items[1].className).toContain('bg-green-50');
+      expect(items[3].className).toContain('border-green-500');
+      expect(items[3].className).toContain('bg-green-50');
+      expect(items[2].className).not.toContain('border-green-500');
+
+      expect(
+        screen.getByRole('listitem', { name: /Bob, score 20, 0 tricks, current turn/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('listitem', { name: /Diana, score 30, 0 tricks, current turn/i })
+      ).toBeInTheDocument();
     });
   });
 
@@ -319,7 +353,7 @@ describe('Scoreboard Component', () => {
 
     it('should show folded badge for folded players', () => {
       const playersWithFolded = [...mockPlayers];
-      playersWithFolded[1] = { ...mockPlayers[1], folded: true };
+      playersWithFolded[1] = { ...mockPlayers[1], folded: true, foldDecision: 'FOLD' };
       
       render(
         <Scoreboard 
@@ -334,7 +368,7 @@ describe('Scoreboard Component', () => {
 
     it('should reduce opacity for folded players', () => {
       const playersWithFolded = [...mockPlayers];
-      playersWithFolded[1] = { ...mockPlayers[1], folded: true };
+      playersWithFolded[1] = { ...mockPlayers[1], folded: true, foldDecision: 'FOLD' };
       
       render(
         <Scoreboard 

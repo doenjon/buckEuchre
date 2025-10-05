@@ -329,7 +329,9 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
       // Validate player can fold
       const validation = canFold(
         currentState.isClubsTurnUp,
-        player.position === currentState.winningBidderPosition
+        player.position === currentState.winningBidderPosition,
+        player.foldDecision,
+        validated.folded
       );
 
       if (!validation.valid) {
