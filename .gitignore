@@ -13,6 +13,8 @@ build/
 .env
 .env.local
 .env.*.local
+# .env.dev is tracked as an EXAMPLE with non-production passwords
+# Individual workspace .env files are ignored
 
 # IDE
 .vscode/
