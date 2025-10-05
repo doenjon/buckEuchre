@@ -90,6 +90,13 @@ export const StartNextRoundSchema = z.object({
 });
 
 /**
+ * Validate RequestStatePayload
+ */
+export const RequestStateSchema = z.object({
+  gameId: uuidSchema
+});
+
+/**
  * Export schema types for TypeScript inference
  */
 export type JoinGameInput = z.infer<typeof JoinGameSchema>;
@@ -99,3 +106,4 @@ export type DeclareTrumpInput = z.infer<typeof DeclareTrumpSchema>;
 export type FoldDecisionInput = z.infer<typeof FoldDecisionSchema>;
 export type PlayCardInput = z.infer<typeof PlayCardSchema>;
 export type StartNextRoundInput = z.infer<typeof StartNextRoundSchema>;
+export type RequestStateInput = z.infer<typeof RequestStateSchema>;
