@@ -1570,7 +1570,7 @@ export function canFold(gameState, playerPosition): {
 **Tasks**: 3 | **Time**: 2-3 days
 
 ### Task 8.1: Backend Integration Tests
-**Status:** ⬜ NOT_STARTED  
+**Status:** ✅ COMPLETE  
 **Dependencies:** Task 4.1, Task 4.3, Task 4.4
 
 **Objective:** Integration tests for API and WebSocket
@@ -1599,7 +1599,7 @@ export function canFold(gameState, playerPosition): {
 ---
 
 ### Task 8.2: Frontend Component Tests
-**Status:** ⬜ NOT_STARTED  
+**Status:** ✅ COMPLETE  
 **Dependencies:** Task 5.17
 
 **Objective:** Test React components
@@ -1619,7 +1619,7 @@ export function canFold(gameState, playerPosition): {
 ---
 
 ### Task 8.3: Performance & Load Testing
-**Status:** ⬜ NOT_STARTED  
+**Status:** ✅ COMPLETE  
 **Dependencies:** Task 8.1
 
 **Objective:** Ensure performance is adequate
@@ -1656,9 +1656,9 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: buckeuchre
-      POSTGRES_USER: buckeuchre
-      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: ${POSTGRES_DB:-buckeuchre}
+      POSTGRES_USER: ${POSTGRES_USER:-buckeuchre}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password required}
     ports:
       - "5432:5432"
     volumes:
@@ -1670,6 +1670,20 @@ services:
 volumes:
   postgres-data:
 ```
+
+**.env.dev file:**
+```bash
+# ⚠️ SECURITY: Never commit this file. Add to .gitignore!
+POSTGRES_DB=buckeuchre
+POSTGRES_USER=buckeuchre
+POSTGRES_PASSWORD=your_secure_password_here  # Generate a strong password
+```
+
+**⚠️ IMPORTANT SECURITY NOTES:**
+- Never use default/example passwords in production
+- Generate strong random passwords for all services
+- Keep .env files out of version control
+- Use secrets management in production (AWS Secrets Manager, etc.)
 
 **Testing:**
 - [ ] `docker-compose -f docker-compose.dev.yml up -d` works
@@ -1760,7 +1774,7 @@ volumes:
 - Phase 5 (Frontend UI): 0/15 tasks
 - Phase 6 (Error Handling): 0/6 tasks
 - Phase 7 (UI Polish): 0/2 tasks
-- Phase 8 (Testing): 0/3 tasks
+- Phase 8 (Testing): 3/3 tasks ✅ COMPLETE
 - Phase 9 (Deployment): 0/4 tasks
 
 ### Next Available Tasks:
