@@ -1671,12 +1671,12 @@ volumes:
   postgres-data:
 ```
 
-**.env.dev file:**
+**.env.dev file (gitignored):**
 ```bash
-# ⚠️ SECURITY: Never commit this file. Add to .gitignore!
+# ⚠️ SECURITY: Never commit this file!
 POSTGRES_DB=buckeuchre
 POSTGRES_USER=buckeuchre
-POSTGRES_PASSWORD=your_secure_password_here  # Generate a strong password
+POSTGRES_PASSWORD=GENERATE_SECURE_PASSWORD_HERE
 ```
 
 **⚠️ IMPORTANT SECURITY NOTES:**

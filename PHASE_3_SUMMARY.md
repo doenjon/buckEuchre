@@ -314,7 +314,7 @@ NODE_ENV="development"           # Environment
 docker run -d --name buckeuchre-postgres \
   -p 5432:5432 \
   -e POSTGRES_USER=buckeuchre \
-  -e POSTGRES_PASSWORD=dev_password_123 \
+  -e POSTGRES_PASSWORD=${DB_PASSWORD:-your_password_here} \
   -e POSTGRES_DB=buckeuchre \
   postgres:16-alpine
 

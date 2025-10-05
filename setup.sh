@@ -21,7 +21,7 @@ echo "📦 Starting PostgreSQL..."
 docker run --name buckeuchre-postgres \
   -e POSTGRES_DB=buckeuchre \
   -e POSTGRES_USER=buckeuchre \
-  -e POSTGRES_PASSWORD=dev_password_123 \
+  -e POSTGRES_PASSWORD=${DB_PASSWORD:-changeme} \
   -p 5432:5432 \
   -d postgres:16-alpine || echo "PostgreSQL container already exists"
 
@@ -48,8 +48,8 @@ echo ""
 echo "🔧 Setting up backend environment..."
 if [ ! -f backend/.env ]; then
   cat > backend/.env << 'EOF'
-DATABASE_URL="postgresql://buckeuchre:dev_password_123@localhost:5432/buckeuchre"
-JWT_SECRET="dev_jwt_secret_for_buck_euchre_do_not_use_in_production_12345678"
+DATABASE_URL="postgresql://buckeuchre:\${DB_PASSWORD:-changeme}@localhost:5432/buckeuchre"
+JWT_SECRET="$(openssl rand -base64 32 2>/dev/null || echo 'CHANGE_ME_TO_SECURE_RANDOM_STRING')"
 JWT_EXPIRES_IN="24h"
 NODE_ENV="development"
 PORT="3000"
