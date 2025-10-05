@@ -190,12 +190,20 @@ describe('state.ts - State Transitions', () => {
     });
 
     it('should transition to DEALING when all pass', () => {
+      state.dealerPosition = 0 as PlayerPosition;
+      state.currentBidder = 1 as PlayerPosition;
+
       state = applyBid(state, 1, 'PASS');
       state = applyBid(state, 2, 'PASS');
       state = applyBid(state, 3, 'PASS');
       state = applyBid(state, 0, 'PASS');
-      
+
       expect(state.phase).toBe('DEALING');
+      expect(state.dealerPosition).toBe(1);
+      expect(state.bids).toHaveLength(0);
+      expect(state.highestBid).toBeNull();
+      expect(state.winningBidderPosition).toBeNull();
+      expect(state.currentBidder).toBeNull();
     });
   });
 
@@ -535,22 +543,25 @@ describe('state.ts - State Transitions', () => {
       expect(state.phase).toBe('ROUND_OVER');
       
       state = finishRound(state);
+      expect(state.phase).toBe('ROUND_OVER');
+
+      state = startNextRound(state);
       expect(state.phase).toBe('DEALING');
     });
 
     it('should handle all players pass scenario', () => {
       let state = initializeGame(playerIds);
       state = dealNewRound(state);
-      
+
       const initialDealer = state.dealerPosition;
-      
+
       state = applyBid(state, 1, 'PASS');
       state = applyBid(state, 2, 'PASS');
       state = applyBid(state, 3, 'PASS');
       state = applyBid(state, 0, 'PASS');
-      
+
       expect(state.phase).toBe('DEALING');
-      expect(state.dealerPosition).toBe(initialDealer); // Dealer should be set by applyBid
+      expect(state.dealerPosition).toBe(((initialDealer + 1) % 4) as PlayerPosition);
     });
   });
 });

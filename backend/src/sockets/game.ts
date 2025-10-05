@@ -31,12 +31,11 @@ import {
   dealNewRound,
   startBidding,
   finishRound,
-  handleAllPlayersPass,
   startNextRound
 } from '../game/state';
 import { canPlayCard, canPlaceBid, canFold } from '../game/validation';
 import { getEffectiveSuit } from '../game/deck';
-import { GameState, PlayerPosition, Player, Card, BidAmount } from '../../../shared/src/types/game';
+import { GameState, PlayerPosition, Player, Card } from '../../../shared/src/types/game';
 import { checkAndTriggerAI } from '../ai/trigger';
 
 /**
@@ -207,18 +206,7 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
       }
 
       // Apply bid
-      let nextState = applyBid(currentState, player.position, validated.amount);
-
-      // Check if all players passed
-      const allPassed = nextState.phase === 'BIDDING' && 
-          nextState.bids.filter((b: { amount: BidAmount }) => b.amount === 'PASS').length === 4;
-      
-      if (allPassed) {
-        // All players passed - reset to DEALING phase
-        nextState = handleAllPlayersPass(nextState);
-      }
-
-      return nextState;
+      return applyBid(currentState, player.position, validated.amount);
     });
 
     // Broadcast update
