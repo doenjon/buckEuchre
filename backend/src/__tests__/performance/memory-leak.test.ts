@@ -28,7 +28,7 @@ async function createPlayer(name: string): Promise<TestPlayer> {
     throw new Error(`Failed to create player: ${response.statusText}`);
   }
 
-  const { playerId, token } = await response.json();
+  const { playerId, token } = await response.json() as { playerId: string; token: string };
 
   return new Promise((resolve, reject) => {
     const socket = ioClient(BACKEND_URL, {
@@ -207,7 +207,7 @@ describe('Memory Leak Detection', () => {
 
     // Check listener count (if API available)
     const listenerCount = (event: string) => {
-      return player.socket.listenerCount(event);
+      return (player.socket as any).listenerCount ? (player.socket as any).listenerCount(event) : 0;
     };
 
     console.log('Listeners attached:');
