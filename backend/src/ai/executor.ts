@@ -19,6 +19,7 @@ import { decideBid, decideTrump, decideFold, decideCardToPlay } from './decision
 import { Server } from 'socket.io';
 import { canFold, canPlaceBid, canPlayCard } from '../game/validation';
 import { checkAndTriggerAI } from './trigger';
+import { scheduleAutoStartNextRound } from '../services/round.service';
 
 /**
  * Delay for a specified amount of time
@@ -440,6 +441,15 @@ async function executeAICardPlay(
       io.to(`game:${gameId}`).emit('ROUND_COMPLETE', {
         roundNumber: finalState.round,
       });
+
+      if (finalState.phase === 'ROUND_OVER' && !finalState.gameOver) {
+        scheduleAutoStartNextRound(
+          gameId,
+          io,
+          { round: finalState.round, version: finalState.version },
+          checkAndTriggerAI
+        );
+      }
     }
   }
 

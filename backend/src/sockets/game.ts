@@ -23,14 +23,13 @@ import {
 } from '../../../shared/src/validators/game';
 import { executeGameAction, getActiveGameState } from '../services/state.service';
 import { joinGame, leaveGame, getGame } from '../services/game.service';
-import { updateConnectionGame, getConnectedPlayersInGame } from '../services/connection.service';
+import { updateConnectionGame } from '../services/connection.service';
 import { 
   applyBid,
   applyTrumpDeclaration,
   applyFoldDecision,
   applyCardPlay,
   dealNewRound,
-  startBidding,
   finishRound,
   startNextRound
 } from '../game/state';
@@ -38,6 +37,7 @@ import { canPlayCard, canPlaceBid, canFold } from '../game/validation';
 import { getEffectiveSuit } from '../game/deck';
 import { GameState, PlayerPosition, Player, Card } from '../../../shared/src/types/game';
 import { checkAndTriggerAI } from '../ai/trigger';
+import { scheduleAutoStartNextRound, cancelAutoStartNextRound } from '../services/round.service';
 
 /**
  * Register all game event handlers
@@ -476,38 +476,13 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
     // Trigger AI if needed
     checkAndTriggerAI(validated.gameId, newState, io);
 
-    // If round just ended, automatically start next round after delay
     if (newState.phase === 'ROUND_OVER' && !newState.gameOver) {
-      setTimeout(async () => {
-        try {
-          const connectedPlayers = getConnectedPlayersInGame(validated.gameId);
-          if (connectedPlayers.length === 0) {
-            console.log(`[ROUND] Skipping auto-start for game ${validated.gameId} (no connected players)`);
-            return;
-          }
-
-          console.log(`[ROUND] Auto-starting next round for game ${validated.gameId}`);
-          
-          // Transition to DEALING
-          const dealingState = await executeGameAction(validated.gameId, startNextRound);
-          
-          // Deal cards and transition to BIDDING
-          const biddingState = await executeGameAction(validated.gameId, dealNewRound);
-          
-          // Broadcast update
-          io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
-            gameState: biddingState,
-            event: 'ROUND_STARTED'
-          });
-          
-          console.log(`[ROUND] Auto-started round ${biddingState.round}`);
-          
-          // Trigger AI for next round
-          await checkAndTriggerAI(validated.gameId, biddingState, io);
-        } catch (error: any) {
-          console.error(`[ROUND] Error auto-starting next round:`, error.message);
-        }
-      }, 5000); // 5 second delay to show scores
+      scheduleAutoStartNextRound(
+        validated.gameId,
+        io,
+        { round: newState.round, version: newState.version },
+        checkAndTriggerAI
+      );
     }
   } catch (error: any) {
     console.error('Error in PLAY_CARD:', error);
@@ -525,6 +500,9 @@ async function handleStartNextRound(io: Server, socket: Socket, payload: unknown
   try {
     // Validate payload
     const validated = StartNextRoundSchema.parse(payload);
+
+    // Prevent any pending auto-start from firing
+    cancelAutoStartNextRound(validated.gameId);
 
     // Execute action through queue - transition ROUND_OVER → DEALING
     let dealingState = await executeGameAction(validated.gameId, (currentState) => {
