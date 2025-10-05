@@ -35,13 +35,13 @@ export function calculateRoundScores(
   for (let i = 0; i < 4; i++) {
     const player = players[i];
 
-    if (player.folded) {
+    if (player.folded === true) {
       // Folded players get 0 score change
       scores[i] = 0;
     } else if (i === winningBidderPosition) {
       // Bidder scoring
       if (bidderTricks >= bid) {
-        // Made contract: score DECREASES (good)
+        // Made contract: subtract tricks actually taken
         scores[i] = -bidderTricks;
       } else {
         // Failed contract: score INCREASES by 5 (bad - got euchred)

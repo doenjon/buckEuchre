@@ -7,6 +7,7 @@
 
 import { io as ioClient, Socket } from 'socket.io-client';
 import { GameState, GamePhase, Card, Suit } from '../../../shared/src/types/game';
+import { FULL_DECK } from '../../../shared/src/constants/cards';
 
 const BACKEND_URL = 'http://localhost:3000';
 
@@ -95,6 +96,40 @@ async function joinGame(player: Player, gameId: string): Promise<void> {
   });
 }
 
+async function setShuffleSeed(seed: string | null): Promise<void> {
+  await fetch(`${BACKEND_URL}/api/test/shuffle-seed`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ seed }),
+  });
+}
+
+async function setCustomDeck(deck: string[] | null): Promise<void> {
+  const response = await fetch(`${BACKEND_URL}/api/test/deck`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deck }),
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Failed to set custom deck: ${response.status} ${body}`);
+  }
+}
+
+async function setDealerPosition(position: number | null): Promise<void> {
+  await fetch(`${BACKEND_URL}/api/test/dealer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ position }),
+  });
+}
+
+async function resetTestControls(): Promise<void> {
+  await setShuffleSeed(null);
+  await setCustomDeck(null);
+  await setDealerPosition(null);
+}
+
 /**
  * Wait for all players to have game state matching condition
  */
@@ -114,7 +149,6 @@ async function waitForGameState(
     
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  
   throw new Error(`Timeout waiting for game state: ${players[0].gameState?.phase || 'null'}`);
 }
 
@@ -141,6 +175,281 @@ function getPlayerByPosition(players: Player[], gameState: GameState, position: 
   if (!gamePlayer) return null;
   return players.find(p => p.playerId === gamePlayer.id) || null;
 }
+
+function getNextActivePosition(state: GameState, startPosition: number): number {
+  let next = (startPosition + 1) % 4;
+  while (state.players[next].folded === true) {
+    next = (next + 1) % 4;
+  }
+  return next;
+}
+
+const ALL_CARD_IDS = FULL_DECK.map(card => card.id);
+
+function composeDeck(
+  playerCards: [string[], string[], string[], string[]],
+  blind: string[]
+): string[] {
+  playerCards.forEach((cards, index) => {
+    if (cards.length !== 5) {
+      throw new Error(`Player ${index} deck must contain 5 cards`);
+    }
+  });
+
+  if (blind.length !== 4) {
+    throw new Error('Blind must contain 4 cards');
+  }
+
+  const used = new Set<string>();
+  [...playerCards.flat(), ...blind].forEach(cardId => {
+    if (!ALL_CARD_IDS.includes(cardId)) {
+      throw new Error(`Invalid card id: ${cardId}`);
+    }
+    if (used.has(cardId)) {
+      throw new Error(`Duplicate card id in custom deck: ${cardId}`);
+    }
+    used.add(cardId);
+  });
+
+  if (used.size !== 24) {
+    throw new Error('Custom deck must contain exactly 24 unique cards');
+  }
+
+  const deck: string[] = [];
+  for (let round = 0; round < 5; round++) {
+    for (let player = 0; player < 4; player++) {
+      deck.push(playerCards[player][round]);
+    }
+  }
+
+  deck.push(...blind);
+  return deck;
+}
+
+function waitForSocketError(socket: Socket, timeoutMs = 3000): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const handler = (error: any) => {
+      clearTimeout(timer);
+      socket.off('ERROR', handler);
+      resolve(error);
+    };
+
+    const timer = setTimeout(() => {
+      socket.off('ERROR', handler);
+      reject(new Error('Timed out waiting for socket error'));
+    }, timeoutMs);
+
+    socket.on('ERROR', handler);
+  });
+}
+
+function createDeckWithAssignments(assignments: Record<number, string>): string[] {
+  const deck: string[] = new Array(ALL_CARD_IDS.length);
+  const remaining = new Set(ALL_CARD_IDS);
+
+  for (const [indexString, cardId] of Object.entries(assignments)) {
+    const index = Number(indexString);
+    if (Number.isNaN(index) || index < 0 || index >= ALL_CARD_IDS.length) {
+      throw new Error(`Invalid deck index: ${indexString}`);
+    }
+    if (!ALL_CARD_IDS.includes(cardId)) {
+      throw new Error(`Invalid card id: ${cardId}`);
+    }
+    if (!remaining.has(cardId)) {
+      throw new Error(`Duplicate card assignment: ${cardId}`);
+    }
+    deck[index] = cardId;
+    remaining.delete(cardId);
+  }
+
+  const iterator = remaining.values();
+  for (let i = 0; i < deck.length; i++) {
+    if (!deck[i]) {
+      const next = iterator.next();
+      if (next.done) {
+        throw new Error('Ran out of cards while building deck');
+      }
+      deck[i] = next.value;
+    }
+  }
+
+  return deck;
+}
+
+async function bidAndDeclareTrump(
+  players: Player[],
+  gameId: string,
+  winningBid: number,
+  trumpSuit: Suit
+): Promise<{
+  bidState: GameState;
+  trumpState: GameState;
+  winningBidderPosition: number;
+}> {
+  const bidState = await waitForPhase(players, 'BIDDING', 10000);
+  const winningBidderPosition = bidState.currentBidder ?? 0;
+  const bidder = getPlayerByPosition(players, bidState, winningBidderPosition);
+  if (!bidder) {
+    throw new Error('Winning bidder not found');
+  }
+
+  bidder.socket.emit('PLACE_BID', { gameId, amount: winningBid });
+
+  for (let i = 1; i < 4; i++) {
+    const position = (winningBidderPosition + i) % 4;
+
+    await waitForGameState(
+      players,
+      (state) => state.phase === 'BIDDING' && state.currentBidder === position,
+      5000
+    );
+
+    const state = players[0].gameState!;
+    const currentPlayer = getPlayerByPosition(players, state, position);
+    if (!currentPlayer) {
+      throw new Error(`Player at position ${position} not found`);
+    }
+    currentPlayer.socket.emit('PLACE_BID', { gameId, amount: 'PASS' });
+  }
+
+  const trumpState = await waitForPhase(players, 'DECLARING_TRUMP', 10000);
+  bidder.socket.emit('DECLARE_TRUMP', { gameId, trumpSuit });
+
+  return { bidState, trumpState, winningBidderPosition };
+}
+
+async function resolveFoldingPhase(
+  players: Player[],
+  gameId: string,
+  winningBidderPosition: number,
+  decisions: Record<number, boolean>
+): Promise<GameState> {
+  const foldState = await waitForPhase(players, 'FOLDING_DECISION', 10000);
+
+  for (let position = 0; position < 4; position++) {
+    if (position === winningBidderPosition) continue;
+    const state = players[0].gameState!;
+    const player = getPlayerByPosition(players, state, position);
+    if (!player) continue;
+    const folded = decisions[position] ?? false;
+    player.socket.emit('FOLD_DECISION', { gameId, folded });
+    await waitForGameState(players, (s) => s.players[position].folded !== null, 5000);
+  }
+
+  return await waitForPhase(players, 'PLAYING', 10000);
+}
+
+async function playOutRound(
+  players: Player[],
+  gameId: string,
+  options: {
+    winningBid?: number;
+    trumpSuit?: Suit;
+    foldDecisions?: Record<number, boolean>;
+  } = {}
+): Promise<{ finalState: GameState; winningBidderPosition: number; dealerPosition: number }>
+{
+  const { winningBid = 3, trumpSuit = 'HEARTS', foldDecisions = {} } = options;
+
+  const { bidState, winningBidderPosition } = await bidAndDeclareTrump(players, gameId, winningBid, trumpSuit);
+  let state = await resolveFoldingPhase(players, gameId, winningBidderPosition, foldDecisions);
+
+  outer: for (let trickNum = 1; trickNum <= 5; trickNum++) {
+    while (true) {
+      state = players[0].gameState!;
+
+      if (state.phase === 'ROUND_OVER' || state.phase === 'GAME_OVER') {
+        break outer;
+      }
+
+      const currentPosition = state.currentPlayerPosition;
+      if (currentPosition === null) {
+        break;
+      }
+
+      const currentPlayer = getPlayerByPosition(players, state, currentPosition);
+      if (!currentPlayer) {
+        break;
+      }
+
+      const hand = getPlayerHand(state, currentPlayer.playerId);
+      const cardToPlay = findValidCard(hand, state);
+      if (!cardToPlay) {
+        break;
+      }
+
+      currentPlayer.socket.emit('PLAY_CARD', { gameId, cardId: cardToPlay.id });
+
+      const previousTrickLength = state.currentTrick.cards.length;
+      await waitForGameState(
+        players,
+        (nextState) =>
+          nextState.phase === 'ROUND_OVER' ||
+          nextState.phase === 'GAME_OVER' ||
+          nextState.currentTrick.cards.length !== previousTrickLength,
+        5000
+      );
+    }
+
+    await waitForGameState(
+      players,
+      (nextState) =>
+        nextState.tricks.length >= trickNum ||
+        nextState.phase === 'ROUND_OVER' ||
+        nextState.phase === 'GAME_OVER',
+      5000
+    );
+  }
+
+  const finalState = await waitForGameState(
+    players,
+    (state) => state.phase === 'ROUND_OVER' || state.phase === 'GAME_OVER',
+    10000
+  );
+  return { finalState, winningBidderPosition, dealerPosition: bidState.dealerPosition };
+}
+
+const FOLLOW_SUIT_DECK = composeDeck(
+  [
+    ['HEARTS_ACE', 'SPADES_10', 'DIAMONDS_KING', 'CLUBS_9', 'HEARTS_QUEEN'],
+    ['HEARTS_KING', 'SPADES_9', 'CLUBS_KING', 'DIAMONDS_QUEEN', 'HEARTS_JACK'],
+    ['SPADES_ACE', 'CLUBS_QUEEN', 'DIAMONDS_ACE', 'SPADES_KING', 'CLUBS_10'],
+    ['CLUBS_ACE', 'DIAMONDS_JACK', 'HEARTS_10', 'SPADES_QUEEN', 'DIAMONDS_10'],
+  ],
+  ['SPADES_JACK', 'HEARTS_9', 'DIAMONDS_9', 'CLUBS_JACK']
+);
+
+const DIRTY_CLUBS_DECK = composeDeck(
+  [
+    ['HEARTS_ACE', 'SPADES_10', 'DIAMONDS_KING', 'CLUBS_QUEEN', 'HEARTS_QUEEN'],
+    ['HEARTS_KING', 'SPADES_9', 'DIAMONDS_QUEEN', 'CLUBS_KING', 'HEARTS_JACK'],
+    ['SPADES_ACE', 'CLUBS_ACE', 'DIAMONDS_ACE', 'SPADES_KING', 'HEARTS_10'],
+    ['DIAMONDS_JACK', 'CLUBS_9', 'SPADES_QUEEN', 'DIAMONDS_10', 'HEARTS_9'],
+  ],
+  ['CLUBS_10', 'SPADES_JACK', 'DIAMONDS_9', 'CLUBS_JACK']
+);
+
+const TRICK_WINNER_DECK = composeDeck(
+  [
+    ['HEARTS_KING', 'SPADES_10', 'DIAMONDS_KING', 'CLUBS_9', 'SPADES_QUEEN'],
+    ['DIAMONDS_JACK', 'SPADES_9', 'CLUBS_KING', 'DIAMONDS_QUEEN', 'CLUBS_10'],
+    ['HEARTS_ACE', 'CLUBS_QUEEN', 'DIAMONDS_ACE', 'SPADES_KING', 'HEARTS_10'],
+    ['CLUBS_ACE', 'HEARTS_QUEEN', 'DIAMONDS_10', 'SPADES_ACE', 'DIAMONDS_9'],
+  ],
+  ['HEARTS_JACK', 'SPADES_JACK', 'HEARTS_9', 'CLUBS_JACK']
+);
+
+const HEARTS_SWEEP_DECK = composeDeck(
+  [
+    ['HEARTS_ACE', 'HEARTS_KING', 'HEARTS_QUEEN', 'HEARTS_JACK', 'DIAMONDS_JACK'],
+    ['HEARTS_10', 'SPADES_9', 'SPADES_10', 'SPADES_JACK', 'SPADES_QUEEN'],
+    ['DIAMONDS_ACE', 'DIAMONDS_KING', 'DIAMONDS_QUEEN', 'CLUBS_ACE', 'CLUBS_KING'],
+    ['DIAMONDS_10', 'CLUBS_QUEEN', 'CLUBS_JACK', 'CLUBS_10', 'SPADES_KING'],
+  ],
+  ['HEARTS_9', 'SPADES_ACE', 'DIAMONDS_9', 'CLUBS_9']
+);
+
+let players: Player[] = [];
 
 /**
  * Get effective suit of a card (handles left bower becoming trump)
@@ -193,11 +502,11 @@ function cleanup(players: Player[]) {
 }
 
 describe('Full Game Flow', () => {
-  let players: Player[] = [];
 
-  afterEach(() => {
+  afterEach(async () => {
     cleanup(players);
     players = [];
+    await resetTestControls();
   });
 
   describe('Complete Game - Happy Path', () => {
@@ -212,32 +521,30 @@ describe('Full Game Flow', () => {
       const diana = await createPlayer('Diana');
       players = [alice, bob, charlie, diana];
 
+
       const gameId = await createGame(alice);
       await Promise.all(players.map(p => joinGame(p, gameId)));
 
-      // DEALING PHASE
-      console.log('\n📋 Phase: DEALING');
-      const dealState = await waitForPhase(players, 'DEALING', 10000);
+      // Round should begin immediately in bidding phase with cards already dealt
+      console.log('\n📋 Phase: BIDDING (after deal)');
+      const bidState = await waitForPhase(players, 'BIDDING', 10000);
       
-      expect(dealState.phase).toBe('DEALING');
-      expect(dealState.round).toBe(1);
-      expect(dealState.blind).toHaveLength(4);
-      expect(dealState.turnUpCard).toBeTruthy();
+      expect(bidState.phase).toBe('BIDDING');
+      expect(bidState.round).toBe(1);
+      expect(bidState.blind).toHaveLength(4);
+      expect(bidState.turnUpCard).toBeTruthy();
       
       // Each player should have 5 cards
-      dealState.players.forEach((p, i) => {
+      bidState.players.forEach((p, i) => {
         expect(p.hand).toHaveLength(5);
         console.log(`  Player ${i} (${p.name}): ${p.hand.length} cards`);
       });
 
-      console.log(`  Turn-up card: ${dealState.turnUpCard?.rank} of ${dealState.turnUpCard?.suit}`);
-      console.log(`  Dirty clubs: ${dealState.isClubsTurnUp}`);
-
-      // Game should auto-advance to BIDDING
-      console.log('\n💰 Phase: BIDDING');
-      const bidState = await waitForPhase(players, 'BIDDING', 10000);
+      console.log(`  Turn-up card: ${bidState.turnUpCard?.rank} of ${bidState.turnUpCard?.suit}`);
+      console.log(`  Dirty clubs: ${bidState.isClubsTurnUp}`);
       
-      expect(bidState.phase).toBe('BIDDING');
+
+      console.log('\n💰 Bidding actions');
       expect(bidState.currentBidder).toBeDefined();
       
       const dealerPos = bidState.dealerPosition;
@@ -285,27 +592,26 @@ describe('Full Game Flow', () => {
       console.log(`  Bidder (Player ${firstBidder}) declares HEARTS as trump`);
       bidder.socket.emit('DECLARE_TRUMP', { gameId, trumpSuit: 'HEARTS' });
 
-      // FOLDING DECISION PHASE (if not dirty clubs)
-      if (!trumpState.isClubsTurnUp) {
-        console.log('\n🎴 Phase: FOLDING DECISION');
-        const foldState = await waitForPhase(players, 'FOLDING_DECISION', 10000);
-        
-        expect(foldState.phase).toBe('FOLDING_DECISION');
-        
-        // Non-bidders make folding decisions
-        for (let i = 0; i < 4; i++) {
-          if (i !== firstBidder) {
-            const player = getPlayerByPosition(players, foldState, i);
-            if (!player) continue;
-            const shouldFold = i % 2 === 0; // Alternate fold/stay for testing
-            console.log(`  Player ${i} (${player.name}): ${shouldFold ? 'FOLDS' : 'STAYS'}`);
-            player.socket.emit('FOLD_DECISION', { gameId, folded: shouldFold });
-            
-            await new Promise(resolve => setTimeout(resolve, 200));
-          }
+      console.log('\n🎴 Phase: FOLDING DECISION');
+      const foldState = await waitForPhase(players, 'FOLDING_DECISION', 10000);
+      expect(foldState.phase).toBe('FOLDING_DECISION');
+
+      // Non-bidders make folding decisions (dirty clubs forces stay)
+      for (let i = 0; i < 4; i++) {
+        if (i !== firstBidder) {
+          const position = i;
+          const currentState = players[0].gameState!;
+          const player = getPlayerByPosition(players, currentState, position);
+          if (!player) continue;
+          const shouldFold = !trumpState.isClubsTurnUp && position % 2 === 0;
+          console.log(`  Player ${position} (${player.name}): ${shouldFold ? 'FOLDS' : 'STAYS'}`);
+          player.socket.emit('FOLD_DECISION', { gameId, folded: shouldFold });
+
+          await waitForGameState(players, state => {
+            const updatedPlayer = state.players[position];
+            return updatedPlayer.folded !== null;
+          }, 5000);
         }
-      } else {
-        console.log('\n🎴 Dirty clubs - skipping folding phase');
       }
 
       // PLAYING PHASE
@@ -402,7 +708,8 @@ describe('Full Game Flow', () => {
       scoreState.players.forEach((p, i) => {
         if (i !== firstBidder && !p.folded) {
           console.log(`  Player ${i} (${p.name}): ${p.tricksTaken} tricks, score: ${p.score}`);
-          expect(p.score).toBe(15 - p.tricksTaken);
+          const expectedScore = p.tricksTaken > 0 ? 15 - p.tricksTaken : 20;
+          expect(p.score).toBe(expectedScore);
         }
       });
 
@@ -425,8 +732,8 @@ describe('Full Game Flow', () => {
       const gameId = await createGame(players[0]);
       await Promise.all(players.map(p => joinGame(p, gameId)));
 
-      await waitForPhase(players, 'DEALING');
       const bidState = await waitForPhase(players, 'BIDDING');
+      const startingRound = bidState.round;
 
       const firstBidder = bidState.currentBidder!;
 
@@ -442,11 +749,15 @@ describe('Full Game Flow', () => {
         await new Promise(resolve => setTimeout(resolve, 200));
       }
 
-      // Should go back to DEALING (new round)
-      const newState = await waitForPhase(players, 'DEALING', 10000);
+      // Should rotate dealer and start a new round (automatically re-dealt into bidding)
+      const nextRoundState = await waitForGameState(
+        players,
+        state => state.round === startingRound + 1 && state.phase === 'BIDDING',
+        10000
+      );
       
-      expect(newState.round).toBe(2);
-      console.log('✅ New round dealt after all players passed');
+      expect(nextRoundState.round).toBe(startingRound + 1);
+      console.log('✅ New round started after all players passed');
 
       cleanup(players);
     }, 30000);
@@ -454,58 +765,382 @@ describe('Full Game Flow', () => {
     it('should prevent folding when clubs are turned up (dirty clubs)', async () => {
       console.log('\n🎮 TEST: Dirty clubs (no folding allowed)\n');
 
-      // Note: This test needs clubs to be turned up, which is random
-      // In a real test suite, we'd either mock the dealing or run this test multiple times
-      
-      console.log('⚠️  This test requires clubs turn-up (random) - skipping for now');
-      console.log('In production tests, mock the dealing function to force clubs');
-      
-      // Placeholder - would need to mock or retry until clubs appears
-    }, 10000);
+      await setDealerPosition(3);
+      await setCustomDeck(DIRTY_CLUBS_DECK);
+
+      const alice = await createPlayer('Alice');
+      const bob = await createPlayer('Bob');
+      const charlie = await createPlayer('Charlie');
+      const diana = await createPlayer('Diana');
+      players = [alice, bob, charlie, diana];
+
+      const gameId = await createGame(alice);
+      await Promise.all(players.map(p => joinGame(p, gameId)));
+
+      const { winningBidderPosition } = await bidAndDeclareTrump(players, gameId, 3, 'HEARTS');
+
+      const foldState = await waitForPhase(players, 'FOLDING_DECISION', 10000);
+      expect(foldState.isClubsTurnUp).toBe(true);
+
+      const foldAttemptPosition = getNextActivePosition(foldState, winningBidderPosition);
+      const foldingPlayer = getPlayerByPosition(players, foldState, foldAttemptPosition);
+      if (!foldingPlayer) throw new Error('Folding player not found');
+
+      const errorPromise = waitForSocketError(foldingPlayer.socket);
+      foldingPlayer.socket.emit('FOLD_DECISION', { gameId, folded: true });
+      const error = await errorPromise;
+      expect(error.code).toBe('FOLD_DECISION_FAILED');
+      expect(error.message).toBe('Cannot fold when Clubs turned up');
+
+      // Respond correctly to advance phase
+      foldingPlayer.socket.emit('FOLD_DECISION', { gameId, folded: false });
+      await waitForGameState(players, state => state.players[foldAttemptPosition].folded === false, 5000);
+    }, 30000);
   });
 
   describe('Game Rules Validation', () => {
+    it('should reject card play when not your turn', async () => {
+      console.log('\n🎮 TEST: Out-of-turn play rejection\n');
+
+      await setDealerPosition(3);
+      await setCustomDeck(FOLLOW_SUIT_DECK);
+
+      const alice = await createPlayer('Alice');
+      const bob = await createPlayer('Bob');
+      const charlie = await createPlayer('Charlie');
+      const diana = await createPlayer('Diana');
+      players = [alice, bob, charlie, diana];
+
+      const gameId = await createGame(alice);
+      await Promise.all(players.map(p => joinGame(p, gameId)));
+
+      const { winningBidderPosition } = await bidAndDeclareTrump(players, gameId, 3, 'HEARTS');
+      const playState = await resolveFoldingPhase(players, gameId, winningBidderPosition, {});
+
+      const currentPosition = playState.currentPlayerPosition!;
+      const nextPosition = getNextActivePosition(playState, currentPosition);
+      const offender = getPlayerByPosition(players, playState, nextPosition)!;
+      const offenderHand = getPlayerHand(playState, offender.playerId);
+
+      const errorPromise = waitForSocketError(offender.socket);
+      offender.socket.emit('PLAY_CARD', { gameId, cardId: offenderHand[0].id });
+      const error = await errorPromise;
+      expect(error.code).toBe('PLAY_CARD_FAILED');
+      expect(error.message).toBe('Not your turn');
+
+      const stateAfter = players[0].gameState!;
+      expect(stateAfter.currentTrick.cards).toHaveLength(0);
+      expect(stateAfter.currentPlayerPosition).toBe(currentPosition);
+    }, 20000);
+
+    it('should reject playing a card not in hand', async () => {
+      console.log('\n🎮 TEST: Invalid card rejection\n');
+
+      await setDealerPosition(3);
+      await setCustomDeck(FOLLOW_SUIT_DECK);
+
+      const alice = await createPlayer('Alice');
+      const bob = await createPlayer('Bob');
+      const charlie = await createPlayer('Charlie');
+      const diana = await createPlayer('Diana');
+      players = [alice, bob, charlie, diana];
+
+      const gameId = await createGame(alice);
+      await Promise.all(players.map(p => joinGame(p, gameId)));
+
+      await bidAndDeclareTrump(players, gameId, 3, 'HEARTS');
+      const playState = await resolveFoldingPhase(players, gameId, players[0].gameState!.winningBidderPosition!, {});
+
+      const leader = getPlayerByPosition(players, playState, playState.currentPlayerPosition!)!;
+      const illegalCardId = 'SPADES_ACE';
+      expect(getPlayerHand(playState, leader.playerId).some(card => card.id === illegalCardId)).toBe(false);
+
+      const errorPromise = waitForSocketError(leader.socket);
+      leader.socket.emit('PLAY_CARD', { gameId, cardId: illegalCardId });
+      const error = await errorPromise;
+      expect(error.code).toBe('PLAY_CARD_FAILED');
+      expect(error.message).toBe('Card not in hand');
+
+      const stateAfter = players[0].gameState!;
+      expect(stateAfter.currentTrick.cards).toHaveLength(0);
+    }, 20000);
+
+    it('should reject multiple fold decisions from the same player', async () => {
+      console.log('\n🎮 TEST: Duplicate fold decision\n');
+
+      await setDealerPosition(3);
+      await setCustomDeck(FOLLOW_SUIT_DECK);
+
+      const alice = await createPlayer('Alice');
+      const bob = await createPlayer('Bob');
+      const charlie = await createPlayer('Charlie');
+      const diana = await createPlayer('Diana');
+      players = [alice, bob, charlie, diana];
+
+      const gameId = await createGame(alice);
+      await Promise.all(players.map(p => joinGame(p, gameId)));
+
+      const { winningBidderPosition, trumpState } = await bidAndDeclareTrump(players, gameId, 3, 'HEARTS');
+      const foldState = await waitForPhase(players, 'FOLDING_DECISION', 10000);
+      expect(foldState.winningBidderPosition).toBe(winningBidderPosition);
+
+      const targetPosition = getNextActivePosition(trumpState, winningBidderPosition);
+      const targetPlayer = getPlayerByPosition(players, foldState, targetPosition)!;
+
+      const firstDecision = waitForGameState(players, state => state.players[targetPosition].folded === false, 5000);
+      targetPlayer.socket.emit('FOLD_DECISION', { gameId, folded: false });
+      await firstDecision;
+
+      const errorPromise = waitForSocketError(targetPlayer.socket);
+      targetPlayer.socket.emit('FOLD_DECISION', { gameId, folded: false });
+      const error = await errorPromise;
+      expect(error.code).toBe('FOLD_DECISION_FAILED');
+      expect(error.message).toBe('You already made your decision');
+    }, 20000);
+
     it('should enforce following suit rules', async () => {
       console.log('\n🎮 TEST: Following suit rules\n');
-      
-      // This would test that players must follow suit if they have cards of the led suit
-      // Would require inspecting player hands and validating card plays
-      
-      console.log('TODO: Implement suit-following validation test');
+
+      await setDealerPosition(3);
+      await setCustomDeck(FOLLOW_SUIT_DECK);
+
+      const alice = await createPlayer('Alice');
+      const bob = await createPlayer('Bob');
+      const charlie = await createPlayer('Charlie');
+      const diana = await createPlayer('Diana');
+      players = [alice, bob, charlie, diana];
+
+      const gameId = await createGame(alice);
+      await Promise.all(players.map(p => joinGame(p, gameId)));
+
+      const { winningBidderPosition } = await bidAndDeclareTrump(players, gameId, 3, 'HEARTS');
+
+      const playState = await resolveFoldingPhase(players, gameId, winningBidderPosition, {});
+
+      let currentState = players[0].gameState!;
+      let currentPlayerPos = currentState.currentPlayerPosition!;
+      let leadCard: Card | null = null;
+
+      const leader = getPlayerByPosition(players, currentState, currentPlayerPos);
+      if (!leader) throw new Error('Leader not found');
+
+      const leaderHand = getPlayerHand(currentState, leader.playerId);
+      const nextPosition = getNextActivePosition(currentState, currentPlayerPos);
+      const nextPlayer = getPlayerByPosition(players, currentState, nextPosition);
+      if (!nextPlayer) throw new Error('Next player not found');
+      const nextHand = getPlayerHand(currentState, nextPlayer.playerId);
+
+      const trumpSuit = currentState.trumpSuit!;
+
+      for (const candidate of leaderHand) {
+        const leadSuit = getEffectiveSuit(candidate, trumpSuit);
+        const nextHasSuit = nextHand.some(card => getEffectiveSuit(card, trumpSuit) === leadSuit);
+        if (nextHasSuit) {
+          leadCard = candidate;
+          break;
+        }
+      }
+
+      if (!leadCard) {
+        throw new Error('Failed to find a lead card that forces follow suit');
+      }
+
+      leader.socket.emit('PLAY_CARD', { gameId, cardId: leadCard.id });
+      await waitForGameState(players, state => state.currentTrick.cards.length === 1, 5000);
+
+      currentState = players[0].gameState!;
+      currentPlayerPos = currentState.currentPlayerPosition!;
+
+      expect(currentPlayerPos).toBe(nextPosition);
+
+      const illegalCard = getPlayerHand(currentState, nextPlayer.playerId)
+        .find(card => getEffectiveSuit(card, trumpSuit) !== getEffectiveSuit(leadCard!, trumpSuit));
+
+      expect(illegalCard).toBeTruthy();
+
+      const errorPromise = waitForSocketError(nextPlayer.socket);
+      nextPlayer.socket.emit('PLAY_CARD', { gameId, cardId: illegalCard!.id });
+      const error = await errorPromise;
+      expect(error.code).toBe('PLAY_CARD_FAILED');
+      expect(error.message).toBe('Must follow suit');
+
+      // Play a legal card instead
+      const legalCard = getPlayerHand(players[0].gameState!, nextPlayer.playerId)
+        .find(card => getEffectiveSuit(card, trumpSuit) === getEffectiveSuit(leadCard!, trumpSuit));
+      expect(legalCard).toBeTruthy();
+
+      nextPlayer.socket.emit('PLAY_CARD', { gameId, cardId: legalCard!.id });
+      await waitForGameState(players, state => state.currentTrick.cards.length === 2, 5000);
     }, 10000);
 
     it('should correctly determine trick winners', async () => {
       console.log('\n🎮 TEST: Trick winner determination\n');
-      
-      // Test trump beats non-trump
-      // Test higher card of led suit wins
-      // Test edge cases
-      
-      console.log('TODO: Implement trick winner test');
+
+      await setDealerPosition(3);
+      await setCustomDeck(TRICK_WINNER_DECK);
+
+      const alice = await createPlayer('Alice');
+      const bob = await createPlayer('Bob');
+      const charlie = await createPlayer('Charlie');
+      const diana = await createPlayer('Diana');
+      players = [alice, bob, charlie, diana];
+
+      const gameId = await createGame(alice);
+      await Promise.all(players.map(p => joinGame(p, gameId)));
+
+      const { winningBidderPosition } = await bidAndDeclareTrump(players, gameId, 3, 'HEARTS');
+      const playState = await resolveFoldingPhase(players, gameId, winningBidderPosition, {});
+
+      let state = playState;
+      const leader = getPlayerByPosition(players, state, state.currentPlayerPosition!);
+      if (!leader) throw new Error('Leader not found');
+
+      const leaderHand = getPlayerHand(state, leader.playerId);
+      const leadCard = leaderHand.find(card => card.id === 'HEARTS_KING') || leaderHand[0];
+      leader.socket.emit('PLAY_CARD', { gameId, cardId: leadCard.id });
+      await waitForGameState(players, s => s.currentTrick.cards.length === 1, 5000);
+
+      state = players[0].gameState!;
+      const secondPosition = getNextActivePosition(state, state.currentTrick.cards[0].playerPosition);
+      const secondPlayer = getPlayerByPosition(players, state, secondPosition);
+      if (!secondPlayer) throw new Error('Second player not found');
+      secondPlayer.socket.emit('PLAY_CARD', { gameId, cardId: 'DIAMONDS_JACK' });
+      await waitForGameState(players, s => s.currentTrick.cards.length === 2, 5000);
+
+      state = players[0].gameState!;
+      const thirdPosition = getNextActivePosition(state, secondPosition);
+      const thirdPlayer = getPlayerByPosition(players, state, thirdPosition)!;
+      thirdPlayer.socket.emit('PLAY_CARD', { gameId, cardId: 'HEARTS_ACE' });
+      await waitForGameState(players, s => s.currentTrick.cards.length === 3, 5000);
+
+      state = players[0].gameState!;
+      const fourthPosition = getNextActivePosition(state, thirdPosition);
+      const fourthPlayer = getPlayerByPosition(players, state, fourthPosition)!;
+      fourthPlayer.socket.emit('PLAY_CARD', { gameId, cardId: 'HEARTS_QUEEN' });
+      await waitForGameState(players, s => s.tricks.length === 1, 5000);
+
+      state = players[0].gameState!;
+      expect(state.tricks).toHaveLength(1);
+      const trick = state.tricks[0];
+      expect(trick.winner).toBe(secondPosition);
+      expect(state.players[secondPosition].tricksTaken).toBe(1);
     }, 10000);
 
     it('should handle player reaching 0 or below (win condition)', async () => {
       console.log('\n🎮 TEST: Win condition\n');
-      
-      // Would need to play multiple rounds until a player reaches 0
-      // Or mock initial scores to be close to 0
-      
-      console.log('TODO: Implement win condition test');
-    }, 10000);
+
+      await setDealerPosition(3);
+      await setCustomDeck(HEARTS_SWEEP_DECK);
+
+      const alice = await createPlayer('Alice');
+      const bob = await createPlayer('Bob');
+      const charlie = await createPlayer('Charlie');
+      const diana = await createPlayer('Diana');
+      players = [alice, bob, charlie, diana];
+
+      const gameId = await createGame(alice);
+      await Promise.all(players.map(p => joinGame(p, gameId)));
+
+      let latestState: GameState | null = null;
+
+      for (let round = 0; round < 3; round++) {
+        if (round > 0) {
+          await setDealerPosition(3);
+          await setCustomDeck(HEARTS_SWEEP_DECK);
+          players[0].socket.emit('START_NEXT_ROUND', { gameId });
+          await waitForPhase(players, 'BIDDING', 10000);
+        }
+
+        const { finalState, winningBidderPosition } = await playOutRound(players, gameId, {
+          winningBid: 5,
+          trumpSuit: 'HEARTS',
+        });
+
+        latestState = finalState;
+
+        console.log(`  Round ${round + 1} scores:`, finalState.players.map(p => p.score), 'phase:', finalState.phase);
+        console.log('  Winning bidder position:', winningBidderPosition);
+
+        if (round < 2) {
+          expect(finalState.phase).toBe('ROUND_OVER');
+          expect(finalState.players[0].score).toBe(15 - (round + 1) * 5);
+        }
+      }
+
+      const gameOverState = await waitForGameState(
+        players,
+        (state) => state.phase === 'GAME_OVER',
+        10000
+      );
+
+      expect(gameOverState.gameOver).toBe(true);
+      expect(gameOverState.winner).toBe(0);
+      expect(gameOverState.players[0].score).toBeLessThanOrEqual(0);
+      expect(gameOverState.players.every((p, idx) => idx === 0 ? p.score <= 0 : p.score > 15)).toBe(true);
+
+      latestState = gameOverState;
+
+      console.log('  Winner:', latestState.winner, 'Scores:', latestState.players.map(p => p.score));
+    }, 40000);
   });
 });
 
 describe('Multi-Round Games', () => {
   it('should handle dealer rotation across rounds', async () => {
     console.log('\n🎮 TEST: Dealer rotation\n');
-    
-    console.log('TODO: Play multiple rounds and verify dealer rotates');
-  }, 10000);
+
+    await setDealerPosition(3);
+    await setCustomDeck(FOLLOW_SUIT_DECK);
+
+    const alice = await createPlayer('Alice');
+    const bob = await createPlayer('Bob');
+    const charlie = await createPlayer('Charlie');
+    const diana = await createPlayer('Diana');
+    players = [alice, bob, charlie, diana];
+
+    const gameId = await createGame(alice);
+    await Promise.all(players.map(p => joinGame(p, gameId)));
+
+    const { dealerPosition: firstDealer } = await playOutRound(players, gameId);
+    const roundOverState = players[0].gameState!;
+    expect(roundOverState.phase).toBe('ROUND_OVER');
+
+    await setCustomDeck(TRICK_WINNER_DECK);
+    players[0].socket.emit('START_NEXT_ROUND', { gameId });
+
+    const nextRoundState = await waitForPhase(players, 'BIDDING', 10000);
+    expect(nextRoundState.round).toBe(2);
+    expect(nextRoundState.dealerPosition).toBe((firstDealer + 1) % 4);
+  }, 30000);
 
   it('should persist scores across rounds', async () => {
     console.log('\n🎮 TEST: Score persistence\n');
     
-    console.log('TODO: Verify scores carry over between rounds');
-  }, 10000);
-});
+    await setDealerPosition(3);
+    await setCustomDeck(FOLLOW_SUIT_DECK);
 
+    const alice = await createPlayer('Alice');
+    const bob = await createPlayer('Bob');
+    const charlie = await createPlayer('Charlie');
+    const diana = await createPlayer('Diana');
+    players = [alice, bob, charlie, diana];
+
+    const gameId = await createGame(alice);
+    await Promise.all(players.map(p => joinGame(p, gameId)));
+
+    const { finalState: firstRoundState } = await playOutRound(players, gameId);
+    const firstRoundScores = firstRoundState.players.map(p => p.score);
+
+    await setCustomDeck(TRICK_WINNER_DECK);
+    players[0].socket.emit('START_NEXT_ROUND', { gameId });
+    const roundTwoBidding = await waitForPhase(players, 'BIDDING', 10000);
+
+    const preRoundTwoScores = roundTwoBidding.players.map(p => p.score);
+    expect(preRoundTwoScores).toEqual(firstRoundScores);
+
+    const { finalState: secondRoundState } = await playOutRound(players, gameId, { trumpSuit: 'HEARTS' });
+    const combinedScores = secondRoundState.players.map(p => p.score);
+
+    expect(combinedScores).not.toEqual(firstRoundScores);
+  }, 30000);
+});

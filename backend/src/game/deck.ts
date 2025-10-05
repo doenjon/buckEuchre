@@ -8,6 +8,7 @@
 import { Card, Suit } from '../../../shared/src/types/game';
 import { FULL_DECK, CARDS_PER_PLAYER, BLIND_SIZE, PLAYER_COUNT } from '../../../shared/src/constants/cards';
 import { BLACK_SUITS, RED_SUITS } from '../../../shared/src/constants/cards';
+import { getShuffleSeed } from './random';
 
 /**
  * Creates a fresh 24-card deck
@@ -27,7 +28,7 @@ export function shuffleDeck(deck: Card[]): Card[] {
   const shuffled = [...deck];
 
   // Optional deterministic shuffle when SHUFFLE_SEED is provided (tests)
-  const seed = process.env.SHUFFLE_SEED;
+  const seed = getShuffleSeed();
   let seededRandom = Math.random;
   if (seed) {
     let h = 2166136261 >>> 0;

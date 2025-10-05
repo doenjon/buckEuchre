@@ -131,7 +131,8 @@ export function canPlaceBid(
  */
 export function canFold(
   isClubsTurnUp: boolean,
-  isBidder: boolean
+  isBidder: boolean,
+  folded: boolean
 ): ValidationResult {
   // Bidder cannot fold
   if (isBidder) {
@@ -139,7 +140,7 @@ export function canFold(
   }
 
   // Cannot fold when Clubs turned up
-  if (isClubsTurnUp) {
+  if (isClubsTurnUp && folded) {
     return { valid: false, reason: 'Cannot fold when Clubs turned up' };
   }
 

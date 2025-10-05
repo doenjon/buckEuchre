@@ -9,6 +9,7 @@
 import { GameState, Player, PlayerPosition, Suit, Card, BidAmount } from '../../../shared/src/types/game';
 import { STARTING_SCORE } from '../../../shared/src/constants/rules';
 import { createDeck, shuffleDeck, dealCards } from './deck';
+import { consumeCustomDeck, consumeDealerOverride } from './random';
 import { determineTrickWinner } from './trick';
 import { calculateRoundScores, checkWinCondition } from './scoring';
 
@@ -38,13 +39,16 @@ export function initializeGame(playerIds: [string, string, string, string]): Gam
     connected: true,
     hand: [],
     tricksTaken: 0,
-    folded: false,
+    folded: null,
   }));
   
   const players = playersArray as unknown as [Player, Player, Player, Player];
 
   // Randomly choose initial dealer
-  const dealerPosition = Math.floor(Math.random() * 4) as PlayerPosition;
+  const override = consumeDealerOverride();
+  const dealerPosition = override !== null
+    ? (override % 4 + 4) % 4 as PlayerPosition
+    : Math.floor(Math.random() * 4) as PlayerPosition;
 
   return {
     gameId: '', // Will be set by caller
@@ -88,7 +92,8 @@ export function initializeGame(playerIds: [string, string, string, string]): Gam
  * @returns New game state with cards dealt
  */
 export function dealNewRound(state: GameState): GameState {
-  const deck = shuffleDeck(createDeck());
+  const overrideDeck = consumeCustomDeck();
+  const deck = overrideDeck ?? shuffleDeck(createDeck());
   const { hands, blind } = dealCards(deck);
   
   const turnUpCard = blind[0];
@@ -99,7 +104,7 @@ export function dealNewRound(state: GameState): GameState {
     ...p,
     hand: hands[i],
     tricksTaken: 0,
-    folded: false,
+    folded: null,
   })) as [Player, Player, Player, Player];
 
   // Automatically transition to BIDDING phase and set currentBidder
@@ -229,26 +234,12 @@ export function handleAllPlayersPass(state: GameState): GameState {
  * @returns New game state with trump declared
  */
 export function applyTrumpDeclaration(state: GameState, trumpSuit: Suit): GameState {
-  // If clubs are turned up (dirty clubs), skip folding and go straight to playing
-  const nextPhase = state.isClubsTurnUp ? 'PLAYING' : 'FOLDING_DECISION';
-  
   const updates: Partial<GameState> = {
-    phase: nextPhase,
+    phase: 'FOLDING_DECISION',
     updatedAt: Date.now(),
     trumpSuit,
   };
-  
-  // If going straight to playing (dirty clubs), set up the first trick
-  if (nextPhase === 'PLAYING') {
-    updates.currentPlayerPosition = state.winningBidderPosition;
-    updates.currentTrick = {
-      number: 1,
-      leadPlayerPosition: state.winningBidderPosition!,
-      cards: [],
-      winner: null,
-    };
-  }
-  
+
   return withVersion(state, updates);
 }
 
@@ -272,7 +263,7 @@ export function applyFoldDecision(
   const nonBidders = state.players.filter(
     (_, i) => i !== state.winningBidderPosition
   );
-  const allDecided = nonBidders.every(p => players[p.position].folded !== false || players[p.position].folded === false);
+  const allDecided = nonBidders.every(p => players[p.position].folded !== null);
   
   let newPhase = state.phase;
   let newCurrentPlayerPosition = state.currentPlayerPosition;
@@ -335,7 +326,7 @@ export function applyCardPlay(
   
   // Get active (non-folded) players
   const activePlayers = state.players
-    .filter(p => !p.folded)
+    .filter(p => p.folded !== true)
     .map(p => p.position);
   
   // Check if trick is complete
@@ -384,7 +375,7 @@ export function applyCardPlay(
   
   // Trick not complete - find next player
   let nextPlayer = ((playerPosition + 1) % 4) as PlayerPosition;
-  while (state.players[nextPlayer].folded) {
+  while (state.players[nextPlayer].folded === true) {
     nextPlayer = ((nextPlayer + 1) % 4) as PlayerPosition;
   }
   

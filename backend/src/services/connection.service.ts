@@ -95,6 +95,19 @@ export function getPlayerGameId(playerId: string): string | null {
 }
 
 /**
+ * Get all connected player IDs for a given game
+ */
+export function getConnectedPlayersInGame(gameId: string): string[] {
+  const players: string[] = [];
+  for (const connection of activeConnections.values()) {
+    if (connection.gameId === gameId) {
+      players.push(connection.playerId);
+    }
+  }
+  return players;
+}
+
+/**
  * Handle player disconnect with grace period
  */
 export function handleDisconnect(

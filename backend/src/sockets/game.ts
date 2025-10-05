@@ -22,7 +22,7 @@ import {
 } from '../../../shared/src/validators/game';
 import { executeGameAction, getActiveGameState } from '../services/state.service';
 import { joinGame, leaveGame, getGame } from '../services/game.service';
-import { updateConnectionGame } from '../services/connection.service';
+import { updateConnectionGame, getConnectedPlayersInGame } from '../services/connection.service';
 import { 
   applyBid,
   applyTrumpDeclaration,
@@ -35,6 +35,7 @@ import {
   startNextRound
 } from '../game/state';
 import { canPlayCard, canPlaceBid, canFold } from '../game/validation';
+import { getEffectiveSuit } from '../game/deck';
 import { GameState, PlayerPosition, Player, Card, BidAmount } from '../../../shared/src/types/game';
 import { checkAndTriggerAI } from '../ai/trigger';
 
@@ -326,10 +327,15 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
         throw new Error('Not in folding decision phase');
       }
 
+      if (player.folded !== null) {
+        throw new Error('You already made your decision');
+      }
+
       // Validate player can fold
       const validation = canFold(
         currentState.isClubsTurnUp,
-        player.position === currentState.winningBidderPosition
+        player.position === currentState.winningBidderPosition,
+        validated.folded
       );
 
       if (!validation.valid) {
@@ -403,10 +409,22 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
         player.hand,
         currentState.currentTrick,
         currentState.trumpSuit!,
-        player.folded
+        player.folded === true
       );
 
       if (!validation.valid) {
+        const ledCard = currentState.currentTrick.cards[0]?.card ?? null;
+        const trumpSuit = currentState.trumpSuit ?? null;
+        console.warn('[PLAY_CARD] Invalid move', {
+          reason: validation.reason,
+          cardId: card.id,
+          cardSuit: trumpSuit ? getEffectiveSuit(card, trumpSuit) : card.suit,
+          ledCardId: ledCard?.id ?? null,
+          ledSuit: ledCard && trumpSuit ? getEffectiveSuit(ledCard, trumpSuit) : ledCard?.suit ?? null,
+          hand: player.hand.map((c: Card) => c.id),
+          trumpSuit,
+          playerPosition: player.position,
+        });
         throw new Error(validation.reason || 'Invalid card play');
       }
 
@@ -414,7 +432,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       let nextState = applyCardPlay(currentState, player.position, validated.cardId);
 
       // Check if trick is complete (4 cards played by non-folded players)
-      const activePlayers = nextState.players.filter((p: Player) => !p.folded);
+      const activePlayers = nextState.players.filter((p: Player) => p.folded !== true);
       const cardsInTrick = nextState.currentTrick.cards.length;
       console.log(`[PLAY_CARD] Applied`, {
         playedBy: player.position,
@@ -471,6 +489,12 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
     if (newState.phase === 'ROUND_OVER' && !newState.gameOver) {
       setTimeout(async () => {
         try {
+          const connectedPlayers = getConnectedPlayersInGame(validated.gameId);
+          if (connectedPlayers.length === 0) {
+            console.log(`[ROUND] Skipping auto-start for game ${validated.gameId} (no connected players)`);
+            return;
+          }
+
           console.log(`[ROUND] Auto-starting next round for game ${validated.gameId}`);
           
           // Transition to DEALING

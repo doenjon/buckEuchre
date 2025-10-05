@@ -67,7 +67,7 @@ export async function executeGameAction<T = GameState>(
   });
 
   // Update queue
-  gameActionQueues.set(gameId, newQueue);
+  gameActionQueues.set(gameId, newQueue.catch(() => undefined));
 
   // Wait for this action to complete and return the new state
   return newQueue;
