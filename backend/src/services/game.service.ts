@@ -1,7 +1,7 @@
 import { prisma } from '../db/client';
 import { Game, GameStatus, GamePlayer } from '@prisma/client';
-import { GameState } from '@buck-euchre/shared';
-import { initializeGame } from '../game/state';
+import { GameState, Player } from '@buck-euchre/shared';
+import { initializeGame, dealNewRound } from '../game/state';
 import { setActiveGameState, getActiveGameState, loadGameState } from './state.service';
 
 /**
@@ -289,12 +289,18 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     
     // CRITICAL: Set the gameId on the state object
     initialState.gameId = gameId;
+    
+    // Update player names from database
+    initialState.players = initialState.players.map((p, index) => ({
+      ...p,
+      name: updatedGame.players[index].player.name,
+    })) as [Player, Player, Player, Player];
 
     // Deal the first round (moves from DEALING → BIDDING and deals cards)
-    initialState = dealNewRound(initialState);
-
-    // Store in memory (SOURCE OF TRUTH)
-    setActiveGameState(gameId, initialState);
+    const dealtState = dealNewRound(initialState);
+    
+    // Store dealt state in memory
+    setActiveGameState(gameId, dealtState);
 
     // Update game status to IN_PROGRESS
     await prisma.game.update({
@@ -303,7 +309,7 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     });
 
     console.log(`[joinGame] Game ${gameId} started! 4 players joined.`);
-    return initialState;
+    return dealtState;
   }
 
   // Game not full yet, return null (waiting for more players)

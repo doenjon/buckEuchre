@@ -28,6 +28,7 @@ import {
   applyFoldDecision,
   applyCardPlay,
   dealNewRound,
+  startBidding,
   finishRound,
   handleAllPlayersPass
 } from '../game/state';
@@ -91,21 +92,27 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
       return;
     }
 
-    // Game has started! Update player names in state
-    const updatedState = await executeGameAction(validated.gameId, async (currentState) => {
-      const players = currentState.players.map((p: Player) => 
-        p.id === playerId ? { ...p, name: playerName } : p
-      ) as [Player, Player, Player, Player];
-      return { ...currentState, players };
-    });
-
-    // Broadcast game state to all players
+    // Game has started! Broadcast initial state (DEALING phase)
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
-      gameState: updatedState,
+      gameState,
       event: 'GAME_STARTED'
     });
 
     console.log(`[JOIN_GAME] Player ${playerName} joined active game ${validated.gameId}`);
+    
+    // Auto-transition from DEALING to BIDDING after a brief delay
+    setTimeout(async () => {
+      try {
+        const biddingState = await executeGameAction(validated.gameId, startBidding);
+        io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
+          gameState: biddingState,
+          event: 'BIDDING_STARTED'
+        });
+        console.log(`[AUTO] Game ${validated.gameId} transitioned to BIDDING phase`);
+      } catch (error: any) {
+        console.error(`[AUTO] Failed to transition to BIDDING:`, error.message);
+      }
+    }, 500); // 500ms delay to ensure clients receive DEALING state first
   } catch (error: any) {
     console.error('[JOIN_GAME] Error:', error);
     socket.emit('ERROR', {

@@ -91,7 +91,7 @@ export function dealNewRound(state: GameState): GameState {
 
   return {
     ...state,
-    phase: 'BIDDING',
+    phase: 'DEALING',
     updatedAt: Date.now(),
     round: state.round + 1,
     
@@ -102,7 +102,7 @@ export function dealNewRound(state: GameState): GameState {
     isClubsTurnUp,
     
     bids: [],
-    currentBidder: ((state.dealerPosition + 1) % 4) as PlayerPosition,
+    currentBidder: null,  // Will be set when transitioning to BIDDING
     highestBid: null,
     winningBidderPosition: null,
     trumpSuit: null,
@@ -115,6 +115,24 @@ export function dealNewRound(state: GameState): GameState {
       winner: null,
     },
     currentPlayerPosition: null,
+  };
+}
+
+/**
+ * Transitions from DEALING to BIDDING phase
+ * @param state - Current game state in DEALING phase
+ * @returns New game state in BIDDING phase
+ */
+export function startBidding(state: GameState): GameState {
+  if (state.phase !== 'DEALING') {
+    throw new Error(`Cannot start bidding from phase: ${state.phase}`);
+  }
+  
+  return {
+    ...state,
+    phase: 'BIDDING',
+    currentBidder: ((state.dealerPosition + 1) % 4) as PlayerPosition,
+    updatedAt: Date.now(),
   };
 }
 
@@ -203,11 +221,29 @@ export function handleAllPlayersPass(state: GameState): GameState {
  * @returns New game state with trump declared
  */
 export function applyTrumpDeclaration(state: GameState, trumpSuit: Suit): GameState {
-  return {
-    ...state,
-    phase: 'FOLDING_DECISION',
+  // If clubs are turned up (dirty clubs), skip folding and go straight to playing
+  const nextPhase = state.isClubsTurnUp ? 'PLAYING' : 'FOLDING_DECISION';
+  
+  const updates: Partial<GameState> = {
+    phase: nextPhase,
     updatedAt: Date.now(),
     trumpSuit,
+  };
+  
+  // If going straight to playing (dirty clubs), set up the first trick
+  if (nextPhase === 'PLAYING') {
+    updates.currentPlayerPosition = state.winningBidderPosition;
+    updates.currentTrick = {
+      number: 1,
+      leadPlayerPosition: state.winningBidderPosition!,
+      cards: [],
+      winner: null,
+    };
+  }
+  
+  return {
+    ...state,
+    ...updates,
   };
 }
 

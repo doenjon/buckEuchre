@@ -134,7 +134,38 @@ function getPlayerHand(gameState: GameState, playerId: string): Card[] {
 }
 
 /**
- * Find a valid card to play (following suit rules)
+ * Find player by their game position
+ */
+function getPlayerByPosition(players: Player[], gameState: GameState, position: number): Player | null {
+  const gamePlayer = gameState.players.find(p => p.position === position);
+  if (!gamePlayer) return null;
+  return players.find(p => p.playerId === gamePlayer.id) || null;
+}
+
+/**
+ * Get effective suit of a card (handles left bower becoming trump)
+ */
+function getEffectiveSuit(card: Card, trumpSuit: Suit | null): Suit {
+  if (!trumpSuit) return card.suit;
+  
+  // Left bower (Jack of same color as trump) becomes trump
+  if (card.rank === 'JACK') {
+    const sameColorSuits: Record<Suit, Suit> = {
+      'HEARTS': 'DIAMONDS',
+      'DIAMONDS': 'HEARTS',
+      'CLUBS': 'SPADES',
+      'SPADES': 'CLUBS',
+    };
+    if (card.suit === sameColorSuits[trumpSuit]) {
+      return trumpSuit;
+    }
+  }
+  
+  return card.suit;
+}
+
+/**
+ * Find a valid card to play (following suit rules with trump logic)
  */
 function findValidCard(hand: Card[], gameState: GameState): Card | null {
   if (hand.length === 0) return null;
@@ -144,9 +175,10 @@ function findValidCard(hand: Card[], gameState: GameState): Card | null {
     return hand[0];
   }
   
-  // Must follow suit if possible
-  const leadSuit = gameState.currentTrick.cards[0].card.suit;
-  const suitCards = hand.filter(c => c.suit === leadSuit);
+  // Must follow suit if possible (using effective suit for trump logic)
+  const leadCard = gameState.currentTrick.cards[0].card;
+  const leadSuit = getEffectiveSuit(leadCard, gameState.trumpSuit);
+  const suitCards = hand.filter(c => getEffectiveSuit(c, gameState.trumpSuit) === leadSuit);
   
   if (suitCards.length > 0) {
     return suitCards[0];
@@ -216,9 +248,10 @@ describe('Full Game Flow', () => {
       console.log(`  First bidder: Player ${firstBidder}`);
 
       // Simulate bidding: Player after dealer bids 3, others pass
-      const bidder = players[firstBidder];
+      const bidder = getPlayerByPosition(players, bidState, firstBidder);
+      if (!bidder) throw new Error('Bidder not found');
       console.log(`  ${bidder.name} bids 3`);
-      bidder.socket.emit('PLACE_BID', { bid: 3 });
+      bidder.socket.emit('PLACE_BID', { gameId, amount: 3 });
 
       // Wait for next player's turn
       await waitForGameState(players, state => 
@@ -227,9 +260,12 @@ describe('Full Game Flow', () => {
 
       // Other players pass
       for (let i = 1; i < 4; i++) {
-        const currentPlayer = players[(firstBidder + i) % 4];
+        const nextPos = (firstBidder + i) % 4;
+        const currentState = players[0].gameState!;
+        const currentPlayer = getPlayerByPosition(players, currentState, nextPos);
+        if (!currentPlayer) throw new Error(`Player at position ${nextPos} not found`);
         console.log(`  ${currentPlayer.name} passes`);
-        currentPlayer.socket.emit('PLACE_BID', { bid: 0 });
+        currentPlayer.socket.emit('PLACE_BID', { gameId, amount: 'PASS' });
         
         if (i < 3) {
           await waitForGameState(players, state =>
@@ -247,7 +283,7 @@ describe('Full Game Flow', () => {
       expect(trumpState.highestBid).toBe(3);
       
       console.log(`  Bidder (Player ${firstBidder}) declares HEARTS as trump`);
-      bidder.socket.emit('DECLARE_TRUMP', { suit: 'HEARTS' });
+      bidder.socket.emit('DECLARE_TRUMP', { gameId, trumpSuit: 'HEARTS' });
 
       // FOLDING DECISION PHASE (if not dirty clubs)
       if (!trumpState.isClubsTurnUp) {
@@ -259,9 +295,11 @@ describe('Full Game Flow', () => {
         // Non-bidders make folding decisions
         for (let i = 0; i < 4; i++) {
           if (i !== firstBidder) {
+            const player = getPlayerByPosition(players, foldState, i);
+            if (!player) continue;
             const shouldFold = i % 2 === 0; // Alternate fold/stay for testing
-            console.log(`  Player ${i} (${players[i].name}): ${shouldFold ? 'FOLDS' : 'STAYS'}`);
-            players[i].socket.emit('FOLD_DECISION', { fold: shouldFold });
+            console.log(`  Player ${i} (${player.name}): ${shouldFold ? 'FOLDS' : 'STAYS'}`);
+            player.socket.emit('FOLD_DECISION', { gameId, folded: shouldFold });
             
             await new Promise(resolve => setTimeout(resolve, 200));
           }
@@ -282,27 +320,50 @@ describe('Full Game Flow', () => {
 
       // Play all 5 tricks
       for (let trickNum = 1; trickNum <= 5; trickNum++) {
+        console.log(`  [DEBUG] Starting trick ${trickNum}, current phase: ${players[0].gameState?.phase}`);
         console.log(`\n  --- Trick ${trickNum} ---`);
         
-        // Play cards for this trick (4 cards total, or fewer if players folded)
-        const activePlayers = playState.players.filter(p => !p.folded);
-        
-        for (let cardNum = 0; cardNum < activePlayers.length; cardNum++) {
+        // Play cards until trick is complete or round ends
+        while (true) {
           const currentState = players[0].gameState!;
+          console.log(`    [DEBUG] Loop iteration - phase: ${currentState.phase}, currentPlayer: ${currentState.currentPlayerPosition}, tricksCompleted: ${currentState.tricks.length}, cardsInTrick: ${currentState.currentTrick.cards.length}`);
+          
+          // Check if round is over
+          if (currentState.phase === 'ROUND_OVER') {
+            console.log(`  Round over after ${currentState.tricks.length} tricks!`);
+            break;
+          }
+          
           const currentPlayerPos = currentState.currentPlayerPosition;
           
-          if (currentPlayerPos === null) break;
+          // Check if trick is complete (currentPlayerPosition becomes null briefly then resets for next trick)
+          if (currentPlayerPos === null) {
+            console.log(`    [DEBUG] currentPlayerPos is null, breaking`);
+            break;
+          }
           
-          const currentPlayer = players[currentPlayerPos];
+          const currentPlayer = getPlayerByPosition(players, currentState, currentPlayerPos);
+          if (!currentPlayer) {
+            console.log(`    [DEBUG] Could not find player at position ${currentPlayerPos}`);
+            break;
+          }
+          
           const hand = getPlayerHand(currentState, currentPlayer.playerId);
           const cardToPlay = findValidCard(hand, currentState);
           
           if (cardToPlay) {
             console.log(`    Player ${currentPlayerPos} (${currentPlayer.name}) plays ${cardToPlay.rank} of ${cardToPlay.suit}`);
-            currentPlayer.socket.emit('PLAY_CARD', { cardId: cardToPlay.id });
+            currentPlayer.socket.emit('PLAY_CARD', { gameId, cardId: cardToPlay.id });
             
-            // Wait for next player or trick completion
-            await new Promise(resolve => setTimeout(resolve, 300));
+            // Wait for game state to update (card played or trick completed)
+            const prevTrickLength = currentState.currentTrick.cards.length;
+            console.log(`    [DEBUG] Waiting for state update... prevTrickLength: ${prevTrickLength}`);
+            await waitForGameState(players, state =>
+              state.currentTrick.cards.length !== prevTrickLength || 
+              state.tricks.length > currentState.tricks.length ||
+              state.phase === 'ROUND_OVER'
+            , 3000);
+            console.log(`    [DEBUG] State updated!`);
           }
         }
         
@@ -310,6 +371,11 @@ describe('Full Game Flow', () => {
         await waitForGameState(players, state => 
           state.tricks.length === trickNum || state.phase === 'ROUND_OVER'
         , 3000);
+        
+        // Break outer loop if round is over
+        if (players[0].gameState!.phase === 'ROUND_OVER') {
+          break;
+        }
       }
 
       // ROUND OVER PHASE (Scoring)
@@ -367,9 +433,12 @@ describe('Full Game Flow', () => {
       // All players pass
       console.log('All players passing...');
       for (let i = 0; i < 4; i++) {
-        const currentPlayer = players[(firstBidder + i) % 4];
+        const currentPos = (firstBidder + i) % 4;
+        const currentState = players[0].gameState!;
+        const currentPlayer = getPlayerByPosition(players, currentState, currentPos);
+        if (!currentPlayer) throw new Error(`Player at position ${currentPos} not found`);
         console.log(`  ${currentPlayer.name} passes`);
-        currentPlayer.socket.emit('PLACE_BID', { bid: 0 });
+        currentPlayer.socket.emit('PLACE_BID', { gameId, amount: 'PASS' });
         await new Promise(resolve => setTimeout(resolve, 200));
       }
 
