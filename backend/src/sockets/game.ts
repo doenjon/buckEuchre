@@ -18,7 +18,8 @@ import {
   DeclareTrumpSchema,
   FoldDecisionSchema,
   PlayCardSchema,
-  StartNextRoundSchema
+  StartNextRoundSchema,
+  RequestStateSchema
 } from '../../../shared/src/validators/game';
 import { executeGameAction, getActiveGameState } from '../services/state.service';
 import { joinGame, leaveGame, getGame } from '../services/game.service';
@@ -49,6 +50,7 @@ export function registerGameHandlers(io: Server, socket: Socket): void {
   socket.on('FOLD_DECISION', (payload) => handleFoldDecision(io, socket, payload));
   socket.on('PLAY_CARD', (payload) => handlePlayCard(io, socket, payload));
   socket.on('START_NEXT_ROUND', (payload) => handleStartNextRound(io, socket, payload));
+  socket.on('REQUEST_STATE', (payload) => handleRequestState(socket, payload));
 }
 
 /**
@@ -511,6 +513,38 @@ async function handleStartNextRound(io: Server, socket: Socket, payload: unknown
     socket.emit('ERROR', {
       code: 'START_NEXT_ROUND_FAILED',
       message: error.message || 'Failed to start next round'
+    });
+  }
+}
+
+/**
+ * Handle REQUEST_STATE event
+ */
+async function handleRequestState(socket: Socket, payload: unknown): Promise<void> {
+  try {
+    const validated = RequestStateSchema.parse(payload);
+    const gameState = getActiveGameState(validated.gameId);
+
+    if (!gameState) {
+      console.warn(
+        `[REQUEST_STATE] No active state found for game ${validated.gameId} (player: ${socket.data.playerName})`
+      );
+      socket.emit('ERROR', {
+        code: 'STATE_NOT_AVAILABLE',
+        message: 'Game state not available'
+      });
+      return;
+    }
+
+    socket.emit('GAME_STATE_UPDATE', {
+      gameState,
+      event: 'STATE_RESYNC'
+    });
+  } catch (error: any) {
+    console.error('[REQUEST_STATE] Error handling state request:', error.message || error);
+    socket.emit('ERROR', {
+      code: 'REQUEST_STATE_FAILED',
+      message: error.message || 'Failed to fetch game state'
     });
   }
 }
