@@ -29,6 +29,7 @@ export interface JoinSessionResponse {
   playerName: string;
   token: string;  // JWT token for authentication
   expiresAt: number;  // Unix timestamp
+  isGuest?: boolean;  // Indicates if the session was created for a guest user
 }
 
 // ============================================================================

@@ -56,6 +56,25 @@ export async function joinSession(playerName: string): Promise<JoinSessionRespon
 }
 
 /**
+ * Join a session as a guest player
+ */
+export async function joinAsGuest(): Promise<JoinSessionResponse> {
+  const response = await fetch(`${API_URL}/api/auth/guest`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to join as guest');
+  }
+
+  return response.json();
+}
+
+/**
  * Create a new game
  */
 export async function createGame(): Promise<CreateGameResponse> {
