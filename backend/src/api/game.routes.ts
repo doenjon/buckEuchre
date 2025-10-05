@@ -6,6 +6,7 @@ import {
   getGameState,
   getGame
 } from '../services/game.service';
+import { addAIToGame } from '../services/ai-player.service';
 
 const router = Router();
 
@@ -88,6 +89,54 @@ router.get('/:gameId', authenticateToken, async (req: Request, res: Response) =>
     res.status(500).json({
       error: 'Server error',
       message: 'Failed to get game'
+    });
+  }
+});
+
+/**
+ * POST /api/games/:gameId/ai
+ * Add an AI player to a game
+ * Requires authentication
+ */
+router.post('/:gameId/ai', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { gameId } = req.params;
+    const { difficulty, name } = req.body;
+
+    // Validate game exists
+    const game = await getGame(gameId);
+    if (!game) {
+      return res.status(404).json({
+        error: 'Not found',
+        message: 'Game not found'
+      });
+    }
+
+    // Check if game is full
+    if (game.players.length >= 4) {
+      return res.status(400).json({
+        error: 'Bad request',
+        message: 'Game is full'
+      });
+    }
+
+    // Add AI to game
+    const gameState = await addAIToGame(gameId, {
+      difficulty: difficulty || 'medium',
+      name: name || undefined,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'AI player added',
+      gameStarted: gameState !== null,
+      gameState: gameState || undefined
+    });
+  } catch (error: any) {
+    console.error('Error adding AI player:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message || 'Failed to add AI player'
     });
   }
 });

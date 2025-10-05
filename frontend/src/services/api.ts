@@ -107,6 +107,27 @@ export async function getGameState(gameId: string): Promise<GameState> {
 }
 
 /**
+ * Add an AI player to a game
+ */
+export async function addAIToGame(
+  gameId: string,
+  options?: { difficulty?: 'easy' | 'medium' | 'hard'; name?: string }
+): Promise<{ success: boolean; message: string; gameStarted: boolean; gameState?: GameState }> {
+  const response = await fetch(`${API_URL}/api/games/${gameId}/ai`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(options || {}),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to add AI player');
+  }
+
+  return response.json();
+}
+
+/**
  * Check server health
  */
 export async function checkHealth(): Promise<{ status: string; timestamp: number; database: string }> {

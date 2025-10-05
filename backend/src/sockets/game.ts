@@ -36,6 +36,7 @@ import {
 } from '../game/state';
 import { canPlayCard, canPlaceBid, canFold } from '../game/validation';
 import { GameState, PlayerPosition, Player, Card, BidAmount } from '../../../shared/src/types/game';
+import { checkAndTriggerAI } from '../ai/trigger';
 
 /**
  * Register all game event handlers
@@ -112,6 +113,9 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
       });
       
       console.log(`[JOIN_GAME] Cards dealt for game ${validated.gameId}, now in BIDDING phase`);
+      
+      // Trigger AI if needed
+      checkAndTriggerAI(validated.gameId, dealtState, io);
     } else {
       // Player reconnecting to game in progress - just send current state
       socket.emit('GAME_STATE_UPDATE', {
@@ -222,6 +226,9 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
       event: newState.phase === 'DEALING' ? 'ALL_PASSED' : 'BID_PLACED'
     });
     
+    // Trigger AI if needed
+    checkAndTriggerAI(validated.gameId, newState, io);
+    
     // If all players passed, deal new cards asynchronously
     if (newState.phase === 'DEALING') {
       setImmediate(async () => {
@@ -232,6 +239,9 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
             event: 'CARDS_DEALT'
           });
           console.log(`[PLACE_BID] New round dealt for game ${validated.gameId} after all players passed`);
+          
+          // Trigger AI after dealing
+          checkAndTriggerAI(validated.gameId, dealtState, io);
         } catch (error: any) {
           console.error(`[PLACE_BID] Failed to deal new round:`, error.message);
         }
@@ -282,6 +292,9 @@ async function handleDeclareTrump(io: Server, socket: Socket, payload: unknown):
       gameState: newState,
       event: 'TRUMP_DECLARED'
     });
+    
+    // Trigger AI if needed
+    checkAndTriggerAI(validated.gameId, newState, io);
   } catch (error: any) {
     console.error('Error in DECLARE_TRUMP:', error);
     socket.emit('ERROR', {
@@ -332,6 +345,9 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
       gameState: newState,
       event: 'FOLD_DECISION_MADE'
     });
+    
+    // Trigger AI if needed
+    checkAndTriggerAI(validated.gameId, newState, io);
   } catch (error: any) {
     console.error('Error in FOLD_DECISION:', error);
     socket.emit('ERROR', {
@@ -443,6 +459,9 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       cardsInTrick: newState.currentTrick.cards.length,
       tricksCompleted: newState.tricks.length,
     });
+    
+    // Trigger AI if needed
+    checkAndTriggerAI(validated.gameId, newState, io);
   } catch (error: any) {
     console.error('Error in PLAY_CARD:', error);
     socket.emit('ERROR', {
@@ -484,6 +503,9 @@ async function handleStartNextRound(io: Server, socket: Socket, payload: unknown
       gameState: biddingState,
       event: 'ROUND_STARTED'
     });
+    
+    // Trigger AI if needed
+    checkAndTriggerAI(validated.gameId, biddingState, io);
   } catch (error: any) {
     console.error('Error in START_NEXT_ROUND:', error);
     socket.emit('ERROR', {

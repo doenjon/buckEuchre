@@ -9,6 +9,7 @@ import { listGames } from '@/services/api';
 import type { GameSummary } from '@buck-euchre/shared';
 import { useUIStore } from '@/stores/uiStore';
 import { Users, Clock, Play } from 'lucide-react';
+import { AddAIButton } from './AddAIButton';
 
 export function GameList() {
   const navigate = useNavigate();
@@ -140,15 +141,22 @@ export function GameList() {
                 </div>
               </div>
 
-              <button
-                onClick={() => handleJoinGame(game.gameId)}
-                disabled={game.status === 'COMPLETED'}
-                className="ml-4 flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                aria-label={`Join game ${game.gameId}`}
-              >
-                <Play className="h-4 w-4" />
-                {game.status === 'WAITING' ? 'Join' : 'Watch'}
-              </button>
+              <div className="ml-4 flex items-center gap-2">
+                {/* Show Add AI button only for waiting games that aren't full */}
+                {game.status === 'WAITING' && game.playerCount < game.maxPlayers && (
+                  <AddAIButton gameId={game.gameId!} onAIAdded={fetchGames} />
+                )}
+                
+                <button
+                  onClick={() => handleJoinGame(game.gameId)}
+                  disabled={game.status === 'COMPLETED'}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  aria-label={`Join game ${game.gameId}`}
+                >
+                  <Play className="h-4 w-4" />
+                  {game.status === 'WAITING' ? 'Join' : 'Watch'}
+                </button>
+              </div>
             </div>
           </div>
         ))}
