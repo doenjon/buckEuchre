@@ -102,8 +102,11 @@ export function dealNewRound(state: GameState): GameState {
     folded: false,
   })) as [Player, Player, Player, Player];
 
+  // Automatically transition to BIDDING phase and set currentBidder
+  const currentBidder = ((state.dealerPosition + 1) % 4) as PlayerPosition;
+
   return withVersion(state, {
-    phase: 'DEALING',
+    phase: 'BIDDING',
     round: state.round + 1,
     
     players,
@@ -113,7 +116,7 @@ export function dealNewRound(state: GameState): GameState {
     isClubsTurnUp,
     
     bids: [],
-    currentBidder: null,  // Will be set when transitioning to BIDDING
+    currentBidder,
     highestBid: null,
     winningBidderPosition: null,
     trumpSuit: null,

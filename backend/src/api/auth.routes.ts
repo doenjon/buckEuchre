@@ -13,7 +13,7 @@ const JoinRequestSchema = z.object({
  * POST /api/auth/join
  * Create a new player session with just a name
  */
-router.post('/auth/join', async (req: Request, res: Response) => {
+router.post('/join', async (req: Request, res: Response) => {
   try {
     // Validate request body
     const validation = JoinRequestSchema.safeParse(req.body);

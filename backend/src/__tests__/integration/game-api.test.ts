@@ -6,8 +6,8 @@
 
 import request from 'supertest';
 import express from 'express';
-import { authRouter } from '../../api/auth.routes';
-import { gameRouter } from '../../api/game.routes';
+import authRouter from '../../api/auth.routes';
+import gameRouter from '../../api/game.routes';
 import { authenticateToken } from '../../auth/middleware';
 
 // Create a test app with auth and game routes

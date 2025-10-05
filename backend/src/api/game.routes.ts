@@ -13,7 +13,7 @@ const router = Router();
  * Create a new game
  * Requires authentication
  */
-router.post('/games', authenticateToken, async (req: Request, res: Response) => {
+router.post('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const playerId = req.player!.id;
 
@@ -39,7 +39,7 @@ router.post('/games', authenticateToken, async (req: Request, res: Response) => 
  * List all available games
  * Requires authentication
  */
-router.get('/games', authenticateToken, async (_req: Request, res: Response) => {
+router.get('/', authenticateToken, async (_req: Request, res: Response) => {
   try {
     const games = await listAvailableGames();
 
@@ -60,7 +60,7 @@ router.get('/games', authenticateToken, async (_req: Request, res: Response) => 
  * Get current game state
  * Requires authentication
  */
-router.get('/games/:gameId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/:gameId', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { gameId } = req.params;
 
