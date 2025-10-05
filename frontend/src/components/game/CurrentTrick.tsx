@@ -12,8 +12,6 @@ export interface CurrentTrickProps {
   currentPlayerPosition: number;
 }
 
-const positionLabels = ['North', 'East', 'South', 'West'];
-
 export function CurrentTrick({ trick, players, currentPlayerPosition }: CurrentTrickProps) {
   if (!trick || trick.cards.length === 0) {
     return (

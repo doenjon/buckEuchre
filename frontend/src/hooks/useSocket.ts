@@ -138,7 +138,7 @@ export function useSocket() {
 
   const makeFoldDecision = useCallback((gameId: string, fold: boolean) => {
     if (socketRef.current) {
-      emitFoldDecision(socketRef.current, { gameId, fold });
+      emitFoldDecision(socketRef.current, { gameId, folded: fold });
     }
   }, []);
 
