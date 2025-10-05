@@ -33,12 +33,9 @@ function getCurrentActingPlayer(gameState: GameState): string | null {
 
     case 'FOLDING_DECISION':
       // In folding phase, check which non-bidders haven't decided yet
-      // For simplicity, we'll check all non-bidders in order
       for (let i = 0; i < 4; i++) {
         const player = gameState.players[i];
-        if (i !== gameState.winningBidderPosition && player.folded === false) {
-          // This player hasn't made a decision yet (false = undecided)
-          // Note: true = folded, undefined/null = stayed
+        if (i !== gameState.winningBidderPosition && player.foldDecision === 'UNDECIDED') {
           return player.id;
         }
       }
@@ -80,8 +77,7 @@ function getAIPlayersNeedingFoldDecision(gameState: GameState): string[] {
     }
 
     // Check if this player hasn't decided yet
-    // folded === false means undecided (not the same as stayed)
-    if (player.folded === false && isAIPlayer(player.id)) {
+    if (player.foldDecision === 'UNDECIDED' && isAIPlayer(player.id)) {
       aiPlayers.push(player.id);
     }
   }
@@ -105,6 +101,8 @@ export async function checkAndTriggerAI(
   io: Server
 ): Promise<void> {
   try {
+    console.log(`[AI Trigger] Checking AI trigger for game ${gameId}, phase: ${gameState.phase}, currentBidder: ${gameState.currentBidder}`);
+    
     // Special handling for FOLDING_DECISION phase
     // All non-bidders need to decide, and they can all decide simultaneously
     if (gameState.phase === 'FOLDING_DECISION') {
@@ -131,13 +129,17 @@ export async function checkAndTriggerAI(
     // For other phases, check if current acting player is AI
     const currentPlayerId = getCurrentActingPlayer(gameState);
 
+    console.log(`[AI Trigger] Current acting player: ${currentPlayerId}, isAI: ${currentPlayerId ? isAIPlayer(currentPlayerId) : 'N/A'}`);
+
     if (!currentPlayerId) {
       // No one needs to act right now
+      console.log(`[AI Trigger] No current acting player found`);
       return;
     }
 
     if (!isAIPlayer(currentPlayerId)) {
       // Current player is human, don't trigger
+      console.log(`[AI Trigger] Current player ${currentPlayerId} is human, not triggering AI`);
       return;
     }
 

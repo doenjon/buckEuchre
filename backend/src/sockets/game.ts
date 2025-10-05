@@ -18,11 +18,12 @@ import {
   DeclareTrumpSchema,
   FoldDecisionSchema,
   PlayCardSchema,
-  StartNextRoundSchema
+  StartNextRoundSchema,
+  RequestStateSchema
 } from '../../../shared/src/validators/game';
 import { executeGameAction, getActiveGameState } from '../services/state.service';
 import { joinGame, leaveGame, getGame } from '../services/game.service';
-import { updateConnectionGame } from '../services/connection.service';
+import { updateConnectionGame, getConnectedPlayersInGame } from '../services/connection.service';
 import { 
   applyBid,
   applyTrumpDeclaration,
@@ -31,11 +32,11 @@ import {
   dealNewRound,
   startBidding,
   finishRound,
-  handleAllPlayersPass,
   startNextRound
 } from '../game/state';
 import { canPlayCard, canPlaceBid, canFold } from '../game/validation';
-import { GameState, PlayerPosition, Player, Card, BidAmount } from '../../../shared/src/types/game';
+import { getEffectiveSuit } from '../game/deck';
+import { GameState, PlayerPosition, Player, Card } from '../../../shared/src/types/game';
 import { checkAndTriggerAI } from '../ai/trigger';
 
 /**
@@ -49,6 +50,7 @@ export function registerGameHandlers(io: Server, socket: Socket): void {
   socket.on('FOLD_DECISION', (payload) => handleFoldDecision(io, socket, payload));
   socket.on('PLAY_CARD', (payload) => handlePlayCard(io, socket, payload));
   socket.on('START_NEXT_ROUND', (payload) => handleStartNextRound(io, socket, payload));
+  socket.on('REQUEST_STATE', (payload) => handleRequestState(socket, payload));
 }
 
 /**
@@ -206,18 +208,7 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
       }
 
       // Apply bid
-      let nextState = applyBid(currentState, player.position, validated.amount);
-
-      // Check if all players passed
-      const allPassed = nextState.phase === 'BIDDING' && 
-          nextState.bids.filter((b: { amount: BidAmount }) => b.amount === 'PASS').length === 4;
-      
-      if (allPassed) {
-        // All players passed - reset to DEALING phase
-        nextState = handleAllPlayersPass(nextState);
-      }
-
-      return nextState;
+      return applyBid(currentState, player.position, validated.amount);
     });
 
     // Broadcast update
@@ -326,10 +317,16 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
         throw new Error('Not in folding decision phase');
       }
 
+      if (player.foldDecision !== 'UNDECIDED') {
+        throw new Error('You already made your decision');
+      }
+
       // Validate player can fold
       const validation = canFold(
         currentState.isClubsTurnUp,
-        player.position === currentState.winningBidderPosition
+        player.position === currentState.winningBidderPosition,
+        player.foldDecision,
+        validated.folded
       );
 
       if (!validation.valid) {
@@ -403,10 +400,22 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
         player.hand,
         currentState.currentTrick,
         currentState.trumpSuit!,
-        player.folded
+        player.folded === true
       );
 
       if (!validation.valid) {
+        const ledCard = currentState.currentTrick.cards[0]?.card ?? null;
+        const trumpSuit = currentState.trumpSuit ?? null;
+        console.warn('[PLAY_CARD] Invalid move', {
+          reason: validation.reason,
+          cardId: card.id,
+          cardSuit: trumpSuit ? getEffectiveSuit(card, trumpSuit) : card.suit,
+          ledCardId: ledCard?.id ?? null,
+          ledSuit: ledCard && trumpSuit ? getEffectiveSuit(ledCard, trumpSuit) : ledCard?.suit ?? null,
+          hand: player.hand.map((c: Card) => c.id),
+          trumpSuit,
+          playerPosition: player.position,
+        });
         throw new Error(validation.reason || 'Invalid card play');
       }
 
@@ -414,7 +423,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       let nextState = applyCardPlay(currentState, player.position, validated.cardId);
 
       // Check if trick is complete (4 cards played by non-folded players)
-      const activePlayers = nextState.players.filter((p: Player) => !p.folded);
+      const activePlayers = nextState.players.filter((p: Player) => p.folded !== true);
       const cardsInTrick = nextState.currentTrick.cards.length;
       console.log(`[PLAY_CARD] Applied`, {
         playedBy: player.position,
@@ -422,26 +431,30 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
         activePlayers: activePlayers.length,
         nextPlayer: nextState.currentPlayerPosition,
         trickNumber: nextState.currentTrick.number,
+        phase: nextState.phase,
+        tricksCompleted: nextState.tricks.length,
       });
       
-      if (cardsInTrick === activePlayers.length) {
-        // Emit trick complete event for animation
+      // Check if applyCardPlay transitioned to ROUND_OVER (5 tricks complete)
+      if (nextState.phase === 'ROUND_OVER') {
+        // Finish round and calculate scores
+        nextState = finishRound(nextState);
+        console.log(`[ROUND] Completed. Moving to ${nextState.phase}`, {
+          gameOver: nextState.gameOver,
+          scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
+        });
+
+        // Emit round complete event
+        io.to(`game:${validated.gameId}`).emit('ROUND_COMPLETE', {
+          roundNumber: nextState.round,
+          scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
+        });
+      } else if (cardsInTrick === activePlayers.length) {
+        // Trick complete but round continues - emit trick complete for animation
         io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
           trick: nextState.currentTrick,
           delayMs: 2000
         });
-
-        // Check if round is complete (5 tricks played)
-        if (nextState.tricks.length === 5) {
-          // Finish round and calculate scores
-          nextState = finishRound(nextState);
-          console.log(`[ROUND] Completed. Moving to ${nextState.phase}`);
-
-          // Emit round complete event
-          io.to(`game:${validated.gameId}`).emit('ROUND_COMPLETE', {
-            roundNumber: nextState.round
-          });
-        }
       }
 
       return nextState;
@@ -462,6 +475,40 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
     
     // Trigger AI if needed
     checkAndTriggerAI(validated.gameId, newState, io);
+
+    // If round just ended, automatically start next round after delay
+    if (newState.phase === 'ROUND_OVER' && !newState.gameOver) {
+      setTimeout(async () => {
+        try {
+          const connectedPlayers = getConnectedPlayersInGame(validated.gameId);
+          if (connectedPlayers.length === 0) {
+            console.log(`[ROUND] Skipping auto-start for game ${validated.gameId} (no connected players)`);
+            return;
+          }
+
+          console.log(`[ROUND] Auto-starting next round for game ${validated.gameId}`);
+          
+          // Transition to DEALING
+          const dealingState = await executeGameAction(validated.gameId, startNextRound);
+          
+          // Deal cards and transition to BIDDING
+          const biddingState = await executeGameAction(validated.gameId, dealNewRound);
+          
+          // Broadcast update
+          io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
+            gameState: biddingState,
+            event: 'ROUND_STARTED'
+          });
+          
+          console.log(`[ROUND] Auto-started round ${biddingState.round}`);
+          
+          // Trigger AI for next round
+          await checkAndTriggerAI(validated.gameId, biddingState, io);
+        } catch (error: any) {
+          console.error(`[ROUND] Error auto-starting next round:`, error.message);
+        }
+      }, 5000); // 5 second delay to show scores
+    }
   } catch (error: any) {
     console.error('Error in PLAY_CARD:', error);
     socket.emit('ERROR', {
@@ -511,6 +558,38 @@ async function handleStartNextRound(io: Server, socket: Socket, payload: unknown
     socket.emit('ERROR', {
       code: 'START_NEXT_ROUND_FAILED',
       message: error.message || 'Failed to start next round'
+    });
+  }
+}
+
+/**
+ * Handle REQUEST_STATE event
+ */
+async function handleRequestState(socket: Socket, payload: unknown): Promise<void> {
+  try {
+    const validated = RequestStateSchema.parse(payload);
+    const gameState = getActiveGameState(validated.gameId);
+
+    if (!gameState) {
+      console.warn(
+        `[REQUEST_STATE] No active state found for game ${validated.gameId} (player: ${socket.data.playerName})`
+      );
+      socket.emit('ERROR', {
+        code: 'STATE_NOT_AVAILABLE',
+        message: 'Game state not available'
+      });
+      return;
+    }
+
+    socket.emit('GAME_STATE_UPDATE', {
+      gameState,
+      event: 'STATE_RESYNC'
+    });
+  } catch (error: any) {
+    console.error('[REQUEST_STATE] Error handling state request:', error.message || error);
+    socket.emit('ERROR', {
+      code: 'REQUEST_STATE_FAILED',
+      message: error.message || 'Failed to fetch game state'
     });
   }
 }

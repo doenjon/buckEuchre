@@ -32,7 +32,7 @@ async function createPlayer(name: string): Promise<TestPlayer> {
     throw new Error(`Failed to create player: ${response.statusText}`);
   }
 
-  const { playerId, token } = await response.json();
+  const { playerId, token } = await response.json() as { playerId: string; token: string };
 
   return new Promise((resolve, reject) => {
     const socket = ioClient(BACKEND_URL, {
@@ -72,7 +72,7 @@ async function createGame(token: string): Promise<string> {
     throw new Error(`Failed to create game: ${response.statusText}`);
   }
 
-  const { gameId } = await response.json();
+  const { gameId } = await response.json() as { gameId: string };
   return gameId;
 }
 

@@ -9,6 +9,7 @@
 import { GameState, Player, PlayerPosition, Suit, Card, BidAmount } from '../../../shared/src/types/game';
 import { STARTING_SCORE } from '../../../shared/src/constants/rules';
 import { createDeck, shuffleDeck, dealCards } from './deck';
+import { consumeCustomDeck, consumeDealerOverride } from './random';
 import { determineTrickWinner } from './trick';
 import { calculateRoundScores, checkWinCondition } from './scoring';
 
@@ -39,12 +40,16 @@ export function initializeGame(playerIds: [string, string, string, string]): Gam
     hand: [],
     tricksTaken: 0,
     folded: false,
+    foldDecision: 'UNDECIDED',
   }));
   
   const players = playersArray as unknown as [Player, Player, Player, Player];
 
   // Randomly choose initial dealer
-  const dealerPosition = Math.floor(Math.random() * 4) as PlayerPosition;
+  const override = consumeDealerOverride();
+  const dealerPosition = override !== null
+    ? (override % 4 + 4) % 4 as PlayerPosition
+    : Math.floor(Math.random() * 4) as PlayerPosition;
 
   return {
     gameId: '', // Will be set by caller
@@ -88,7 +93,8 @@ export function initializeGame(playerIds: [string, string, string, string]): Gam
  * @returns New game state with cards dealt
  */
 export function dealNewRound(state: GameState): GameState {
-  const deck = shuffleDeck(createDeck());
+  const overrideDeck = consumeCustomDeck();
+  const deck = overrideDeck ?? shuffleDeck(createDeck());
   const { hands, blind } = dealCards(deck);
   
   const turnUpCard = blind[0];
@@ -100,6 +106,7 @@ export function dealNewRound(state: GameState): GameState {
     hand: hands[i],
     tricksTaken: 0,
     folded: false,
+    foldDecision: 'UNDECIDED',
   })) as [Player, Player, Player, Player];
 
   // Automatically transition to BIDDING phase and set currentBidder
@@ -174,7 +181,21 @@ export function applyBid(
   const passedPlayers = new Set(
     newBids.filter(b => b.amount === 'PASS').map(b => b.playerPosition)
   );
-  
+
+  if (passedPlayers.size === 4) {
+    const nextDealerPosition = ((state.dealerPosition + 1) % 4) as PlayerPosition;
+
+    return withVersion(state, {
+      phase: 'DEALING',
+      dealerPosition: nextDealerPosition,
+      bids: [],
+      currentBidder: null,
+      highestBid: null,
+      winningBidderPosition: null,
+      trumpSuit: null,
+    });
+  }
+
   let nextBidder: PlayerPosition | null = null;
   for (let i = 1; i <= 4; i++) {
     const candidatePosition = ((playerPosition + i) % 4) as PlayerPosition;
@@ -183,18 +204,15 @@ export function applyBid(
       break;
     }
   }
-  
+
   // Check if bidding is complete
   let newPhase = state.phase;
-  if (passedPlayers.size === 4) {
-    // All players passed - deal passes to next dealer
-    newPhase = 'DEALING';
-  } else if (passedPlayers.size === 3 && newWinningBidderPosition !== null) {
+  if (passedPlayers.size === 3 && newWinningBidderPosition !== null) {
     // One winner, three passed - bidding complete
     newPhase = 'DECLARING_TRUMP';
     nextBidder = null;
   }
-  
+
   return withVersion(state, {
     phase: newPhase,
     bids: newBids,
@@ -229,26 +247,12 @@ export function handleAllPlayersPass(state: GameState): GameState {
  * @returns New game state with trump declared
  */
 export function applyTrumpDeclaration(state: GameState, trumpSuit: Suit): GameState {
-  // If clubs are turned up (dirty clubs), skip folding and go straight to playing
-  const nextPhase = state.isClubsTurnUp ? 'PLAYING' : 'FOLDING_DECISION';
-  
   const updates: Partial<GameState> = {
-    phase: nextPhase,
+    phase: 'FOLDING_DECISION',
     updatedAt: Date.now(),
     trumpSuit,
   };
-  
-  // If going straight to playing (dirty clubs), set up the first trick
-  if (nextPhase === 'PLAYING') {
-    updates.currentPlayerPosition = state.winningBidderPosition;
-    updates.currentTrick = {
-      number: 1,
-      leadPlayerPosition: state.winningBidderPosition!,
-      cards: [],
-      winner: null,
-    };
-  }
-  
+
   return withVersion(state, updates);
 }
 
@@ -264,32 +268,53 @@ export function applyFoldDecision(
   playerPosition: PlayerPosition,
   folded: boolean
 ): GameState {
-  const players = state.players.map((p, i) =>
-    i === playerPosition ? { ...p, folded } : p
-  ) as [Player, Player, Player, Player];
-  
-  // Check if all non-bidders have decided
-  const nonBidders = state.players.filter(
-    (_, i) => i !== state.winningBidderPosition
-  );
-  const allDecided = nonBidders.every(p => players[p.position].folded !== false || players[p.position].folded === false);
-  
+  const currentPlayer = state.players[playerPosition];
+  if (currentPlayer.foldDecision !== 'UNDECIDED') {
+    throw new Error('Fold decision already recorded');
+  }
+
+  const players = state.players.map((p, i) => {
+    if (i !== playerPosition) {
+      return p;
+    }
+
+    return {
+      ...p,
+      folded,
+      foldDecision: folded ? 'FOLD' : 'STAY',
+    };
+  }) as [Player, Player, Player, Player];
+
+  const winningBidder = state.winningBidderPosition;
+
+  // Only non-bidders need to make a decision. Bidder is always considered decided.
+  const allDecided = players.every((player, position) => {
+    if (position === winningBidder) {
+      return true;
+    }
+
+    return player.foldDecision !== 'UNDECIDED';
+  });
   let newPhase = state.phase;
   let newCurrentPlayerPosition = state.currentPlayerPosition;
   let newCurrentTrick = state.currentTrick;
-  
+
   if (allDecided) {
+    if (winningBidder === null) {
+      throw new Error('Cannot start playing without a winning bidder');
+    }
+
     // Start playing phase
     newPhase = 'PLAYING';
-    newCurrentPlayerPosition = state.winningBidderPosition;
+    newCurrentPlayerPosition = winningBidder;
     newCurrentTrick = {
       number: 1,
-      leadPlayerPosition: state.winningBidderPosition!,
+      leadPlayerPosition: winningBidder,
       cards: [],
       winner: null,
     };
   }
-  
+
   return withVersion(state, {
     phase: newPhase,
     players,
@@ -310,6 +335,12 @@ export function applyCardPlay(
   playerPosition: PlayerPosition,
   cardId: string
 ): GameState {
+  // Find the card FIRST (before removing it)
+  const card = state.players[playerPosition].hand.find(c => c.id === cardId);
+  if (!card) {
+    throw new Error(`Card ${cardId} not found in player ${playerPosition}'s hand`);
+  }
+  
   // Remove card from player's hand
   const players = state.players.map((p, i) => {
     if (i === playerPosition) {
@@ -321,12 +352,6 @@ export function applyCardPlay(
     return p;
   }) as [Player, Player, Player, Player];
   
-  // Find the card
-  const card = state.players[playerPosition].hand.find(c => c.id === cardId);
-  if (!card) {
-    throw new Error(`Card ${cardId} not found in player ${playerPosition}'s hand`);
-  }
-  
   // Add card to current trick
   const newCurrentTrick = {
     ...state.currentTrick,
@@ -335,7 +360,7 @@ export function applyCardPlay(
   
   // Get active (non-folded) players
   const activePlayers = state.players
-    .filter(p => !p.folded)
+    .filter(p => p.folded !== true)
     .map(p => p.position);
   
   // Check if trick is complete
@@ -384,7 +409,7 @@ export function applyCardPlay(
   
   // Trick not complete - find next player
   let nextPlayer = ((playerPosition + 1) % 4) as PlayerPosition;
-  while (state.players[nextPlayer].folded) {
+  while (state.players[nextPlayer].folded === true) {
     nextPlayer = ((nextPlayer + 1) % 4) as PlayerPosition;
   }
   

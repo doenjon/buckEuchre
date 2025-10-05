@@ -211,26 +211,37 @@ describe('validation.ts - Move Validation', () => {
 
   describe('canFold', () => {
     it('should allow non-bidder to fold when not Clubs', () => {
-      const result = canFold(false, false);
+      const result = canFold(false, false, 'UNDECIDED', true);
       expect(result.valid).toBe(true);
     });
 
     it('should reject fold when Clubs turned up', () => {
-      const result = canFold(true, false);
+      const result = canFold(true, false, 'UNDECIDED', true);
       expect(result.valid).toBe(false);
       expect(result.reason).toContain('Clubs turned up');
     });
 
     it('should reject fold when player is bidder', () => {
-      const result = canFold(false, true);
+      const result = canFold(false, true, 'UNDECIDED', true);
       expect(result.valid).toBe(false);
       expect(result.reason).toContain('Bidder cannot fold');
     });
 
     it('should reject fold when both Clubs and bidder', () => {
-      const result = canFold(true, true);
+      const result = canFold(true, true, 'UNDECIDED', true);
       expect(result.valid).toBe(false);
       expect(result.reason).toContain('Bidder cannot fold');
+    });
+
+    it('should allow stay response even when Clubs are turned up', () => {
+      const result = canFold(true, false, 'UNDECIDED', false);
+      expect(result.valid).toBe(true);
+    });
+
+    it('should reject second decision once recorded', () => {
+      const result = canFold(false, false, 'STAY', true);
+      expect(result.valid).toBe(false);
+      expect(result.reason).toContain('already');
     });
   });
 });

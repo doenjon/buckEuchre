@@ -294,6 +294,7 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     initialState.players = initialState.players.map((p, index) => ({
       ...p,
       name: updatedGame.players[index].player.name,
+      foldDecision: p.foldDecision, // Ensure foldDecision is preserved
     })) as [Player, Player, Player, Player];
 
     // Store initial state in memory (DEALING phase)

@@ -8,6 +8,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useGame } from '@/hooks/useGame';
 import { useAuthStore } from '@/stores/authStore';
+import { GameBoard } from '@/components/game/GameBoard';
 import { WaitingForPlayers } from '@/components/game/WaitingForPlayers';
 
 export function GamePage() {
@@ -82,17 +83,13 @@ export function GamePage() {
           Buck Euchre - Game {gameId?.slice(0, 8)}
         </h1>
         
-        <div className="bg-white rounded-lg shadow-xl p-8">
-          <p className="text-gray-600 text-center mb-4">
-            Game components will be added in next tasks
-          </p>
-          
-          <div className="space-y-2">
-            <p><strong>Phase:</strong> {gameState.phase}</p>
-            <p><strong>Players:</strong> {gameState.players.length}/4</p>
-            <p><strong>Your Position:</strong> {myPosition !== null ? myPosition : 'Unknown'}</p>
+        {myPosition !== null ? (
+          <GameBoard gameState={gameState} myPosition={myPosition} />
+        ) : (
+          <div className="bg-white rounded-lg shadow-xl p-8 text-center">
+            <p className="text-gray-600">Finding your position in the game...</p>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

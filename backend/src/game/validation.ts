@@ -5,7 +5,7 @@
  * All functions in this module are pure (no I/O, no mutations, no side effects)
  */
 
-import { Card, Trick, Suit } from '../../../shared/src/types/game';
+import { Card, Trick, Suit, FoldDecision } from '../../../shared/src/types/game';
 import { getEffectiveSuit } from './deck';
 
 /**
@@ -131,15 +131,22 @@ export function canPlaceBid(
  */
 export function canFold(
   isClubsTurnUp: boolean,
-  isBidder: boolean
+  isBidder: boolean,
+  currentDecision: FoldDecision,
+  requestedFold: boolean
 ): ValidationResult {
+  // Player cannot change their mind once a decision has been made
+  if (currentDecision !== 'UNDECIDED') {
+    return { valid: false, reason: 'Fold decision already made' };
+  }
+
   // Bidder cannot fold
   if (isBidder) {
     return { valid: false, reason: 'Bidder cannot fold' };
   }
 
   // Cannot fold when Clubs turned up
-  if (isClubsTurnUp) {
+  if (isClubsTurnUp && requestedFold) {
     return { valid: false, reason: 'Cannot fold when Clubs turned up' };
   }
 

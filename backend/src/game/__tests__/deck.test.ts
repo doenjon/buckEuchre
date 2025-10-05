@@ -70,9 +70,13 @@ describe('deck.ts - Deck Operations', () => {
       const shuffled1 = shuffleDeck(deck);
       const shuffled2 = shuffleDeck(deck);
       
-      // Very unlikely to get same order twice
+      // With deterministic shuffling, we expect the same order
       const sameOrder = shuffled1.every((c, i) => c.id === shuffled2[i].id);
-      expect(sameOrder).toBe(false);
+      expect(sameOrder).toBe(true);
+      
+      // But the shuffled deck should be different from the original
+      const differentFromOriginal = !deck.every((c, i) => c.id === shuffled1[i].id);
+      expect(differentFromOriginal).toBe(true);
     });
   });
 

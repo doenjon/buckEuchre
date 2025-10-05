@@ -207,7 +207,7 @@ describe('Buck Euchre Game Flow', () => {
       expect(gameState).toBeTruthy();
       expect(gameState!.gameId).toBe(gameId);
       expect(gameState!.players).toHaveLength(4);
-      expect(gameState!.phase).toBe('DEALING');
+      expect(gameState!.phase).toBe('BIDDING');
 
       console.log(`✅ Game started in phase: ${gameState!.phase}`);
       console.log(`✅ Dealer: Player ${gameState!.dealerPosition}`);
@@ -322,4 +322,3 @@ describe('Backend Health', () => {
     player.socket.disconnect();
   }, 10000);
 });
-

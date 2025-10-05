@@ -54,10 +54,17 @@ export function Scoreboard({
       <CardContent>
         <div className="space-y-2" role="list" aria-label="Player scores">
           {players.map((player, index) => {
-            const isCurrentTurn = currentPlayerPosition === index;
+            const needsFoldDecision = (
+              phase === 'FOLDING_DECISION' &&
+              index !== winningBidderPosition &&
+              player.foldDecision === 'UNDECIDED'
+            );
+            const isCurrentTurn = phase === 'FOLDING_DECISION'
+              ? needsFoldDecision
+              : currentPlayerPosition === index;
             const isBidder = winningBidderPosition === index;
             const isLeader = player.id === leader.id;
-            const hasFolded = player.folded;
+            const hasFolded = player.folded === true;
             const previousScore = previousScores.current.get(player.id);
             const scoreChanged = previousScore !== undefined && previousScore !== player.score;
             

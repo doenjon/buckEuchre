@@ -180,7 +180,7 @@ function getPlayableCards(gameState: GameState, aiPosition: PlayerPosition): Car
   const trumpSuit = gameState.trumpSuit!;
   
   return player.hand.filter(card => 
-    canPlayCard(card, player.hand, gameState.currentTrick, trumpSuit, player.folded).valid
+    canPlayCard(card, player.hand, gameState.currentTrick, trumpSuit, player.folded === true).valid
   );
 }
 
