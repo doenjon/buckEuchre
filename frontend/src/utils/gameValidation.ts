@@ -6,7 +6,8 @@
  * These are for UI feedback only
  */
 
-import type { GameState, Card, PlayerPosition, BidAmount } from '@buck-euchre/shared';
+import { getEffectiveSuit } from '@buck-euchre/shared';
+import type { GameState, Card, PlayerPosition, BidAmount, Suit } from '@buck-euchre/shared';
 
 /**
  * Result of a validation check
@@ -50,8 +51,12 @@ export function getPlayableCards(
   }
 
   // Follow suit rules apply
-  const leadSuit = currentTrick.cards[0].card.suit;
-  const cardsOfLeadSuit = hand.filter(card => card.suit === leadSuit);
+  const trumpSuit = gameState.trumpSuit;
+  const ledCard = currentTrick.cards[0].card;
+  const ledSuit: Suit = trumpSuit ? getEffectiveSuit(ledCard, trumpSuit) : ledCard.suit;
+  const cardsOfLeadSuit = hand.filter(card =>
+    trumpSuit ? getEffectiveSuit(card, trumpSuit) === ledSuit : card.suit === ledSuit
+  );
 
   // If player has cards of lead suit, they must play one
   if (cardsOfLeadSuit.length > 0) {
@@ -92,8 +97,10 @@ export function canPlayCard(
     // Must be a follow-suit violation
     const currentTrick = gameState.currentTrick;
     if (currentTrick.cards.length > 0) {
-      const leadSuit = currentTrick.cards[0].card.suit;
-      return { valid: false, reason: `Must follow suit (${leadSuit})` };
+      const trumpSuit = gameState.trumpSuit;
+      const ledCard = currentTrick.cards[0].card;
+      const ledSuit: Suit = trumpSuit ? getEffectiveSuit(ledCard, trumpSuit) : ledCard.suit;
+      return { valid: false, reason: `Must follow suit (${ledSuit})` };
     }
     
     return { valid: false, reason: 'Cannot play this card' };
