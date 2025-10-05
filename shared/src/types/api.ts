@@ -8,7 +8,7 @@
  * - Request/response structures
  */
 
-import { ClientGameState, GameSummary, BidAmount, Suit, PlayerPosition } from './game';
+import { ClientGameState, GameSummary, BidAmount, Suit, PlayerPosition, GameState } from './game';
 
 // ============================================================================
 // Authentication API Types
@@ -63,6 +63,19 @@ export interface ListGamesResponse {
  */
 export interface GetGameStateResponse {
   gameState: ClientGameState;
+}
+
+/**
+ * Response after adding an AI player to a game
+ */
+export interface AddAIPlayerResponse {
+  success: boolean;
+  message: string;
+  gameStarted: boolean;
+  gameState?: GameState;
+  playerCount?: number;
+  playersNeeded?: number;
+  waitingMessage?: string;
 }
 
 // ============================================================================

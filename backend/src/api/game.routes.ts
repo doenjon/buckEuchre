@@ -7,6 +7,8 @@ import {
   getGame
 } from '../services/game.service';
 import { addAIToGame } from '../services/ai-player.service';
+import { getSocketServer } from '../utils/socketManager';
+import type { AddAIPlayerResponse } from '@buck-euchre/shared';
 
 const router = Router();
 
@@ -126,12 +128,36 @@ router.post('/:gameId/ai', authenticateToken, async (req: Request, res: Response
       name: name || undefined,
     });
 
-    res.status(201).json({
+    const updatedGame = await getGame(gameId);
+    const playerCount = updatedGame ? updatedGame.players.length : Math.min(4, game.players.length + 1);
+    const playersNeeded = Math.max(0, 4 - playerCount);
+    const waitingMessage = playersNeeded > 0
+      ? `Waiting for ${playersNeeded} more player${playersNeeded === 1 ? '' : 's'}...`
+      : 'All seats filled. Starting shortly...';
+
+    if (!gameState) {
+      const io = getSocketServer();
+      if (io) {
+        io.to(`game:${gameId}`).emit('GAME_WAITING', {
+          gameId,
+          playerCount,
+          playersNeeded,
+          message: waitingMessage,
+        });
+      }
+    }
+
+    const response: AddAIPlayerResponse = {
       success: true,
       message: 'AI player added',
       gameStarted: gameState !== null,
-      gameState: gameState || undefined
-    });
+      gameState: gameState || undefined,
+      playerCount,
+      playersNeeded,
+      waitingMessage,
+    };
+
+    res.status(201).json(response);
   } catch (error: any) {
     console.error('Error adding AI player:', error);
     res.status(500).json({

@@ -3,11 +3,12 @@
  * @description REST API client for Buck Euchre backend
  */
 
-import type { 
-  JoinSessionResponse, 
-  CreateGameResponse, 
+import type {
+  JoinSessionResponse,
+  CreateGameResponse,
   ListGamesResponse,
-  GameState 
+  GameState,
+  AddAIPlayerResponse
 } from '@buck-euchre/shared';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -131,7 +132,7 @@ export async function getGameState(gameId: string): Promise<GameState> {
 export async function addAIToGame(
   gameId: string,
   options?: { difficulty?: 'easy' | 'medium' | 'hard'; name?: string }
-): Promise<{ success: boolean; message: string; gameStarted: boolean; gameState?: GameState }> {
+): Promise<AddAIPlayerResponse> {
   const response = await fetch(`${API_URL}/api/games/${gameId}/ai`, {
     method: 'POST',
     headers: getAuthHeaders(),
