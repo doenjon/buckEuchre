@@ -1656,9 +1656,9 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: buckeuchre
-      POSTGRES_USER: buckeuchre
-      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: ${POSTGRES_DB:-buckeuchre}
+      POSTGRES_USER: ${POSTGRES_USER:-buckeuchre}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password required}
     ports:
       - "5432:5432"
     volumes:
@@ -1670,6 +1670,20 @@ services:
 volumes:
   postgres-data:
 ```
+
+**.env.dev file:**
+```bash
+# ⚠️ SECURITY: Never commit this file. Add to .gitignore!
+POSTGRES_DB=buckeuchre
+POSTGRES_USER=buckeuchre
+POSTGRES_PASSWORD=your_secure_password_here  # Generate a strong password
+```
+
+**⚠️ IMPORTANT SECURITY NOTES:**
+- Never use default/example passwords in production
+- Generate strong random passwords for all services
+- Keep .env files out of version control
+- Use secrets management in production (AWS Secrets Manager, etc.)
 
 **Testing:**
 - [ ] `docker-compose -f docker-compose.dev.yml up -d` works
