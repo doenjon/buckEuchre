@@ -105,6 +105,8 @@ export async function checkAndTriggerAI(
   io: Server
 ): Promise<void> {
   try {
+    console.log(`[AI Trigger] Checking AI trigger for game ${gameId}, phase: ${gameState.phase}, currentBidder: ${gameState.currentBidder}`);
+    
     // Special handling for FOLDING_DECISION phase
     // All non-bidders need to decide, and they can all decide simultaneously
     if (gameState.phase === 'FOLDING_DECISION') {
@@ -131,13 +133,17 @@ export async function checkAndTriggerAI(
     // For other phases, check if current acting player is AI
     const currentPlayerId = getCurrentActingPlayer(gameState);
 
+    console.log(`[AI Trigger] Current acting player: ${currentPlayerId}, isAI: ${currentPlayerId ? isAIPlayer(currentPlayerId) : 'N/A'}`);
+
     if (!currentPlayerId) {
       // No one needs to act right now
+      console.log(`[AI Trigger] No current acting player found`);
       return;
     }
 
     if (!isAIPlayer(currentPlayerId)) {
       // Current player is human, don't trigger
+      console.log(`[AI Trigger] Current player ${currentPlayerId} is human, not triggering AI`);
       return;
     }
 

@@ -422,26 +422,30 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
         activePlayers: activePlayers.length,
         nextPlayer: nextState.currentPlayerPosition,
         trickNumber: nextState.currentTrick.number,
+        phase: nextState.phase,
+        tricksCompleted: nextState.tricks.length,
       });
       
-      if (cardsInTrick === activePlayers.length) {
-        // Emit trick complete event for animation
+      // Check if applyCardPlay transitioned to ROUND_OVER (5 tricks complete)
+      if (nextState.phase === 'ROUND_OVER') {
+        // Finish round and calculate scores
+        nextState = finishRound(nextState);
+        console.log(`[ROUND] Completed. Moving to ${nextState.phase}`, {
+          gameOver: nextState.gameOver,
+          scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
+        });
+
+        // Emit round complete event
+        io.to(`game:${validated.gameId}`).emit('ROUND_COMPLETE', {
+          roundNumber: nextState.round,
+          scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
+        });
+      } else if (cardsInTrick === activePlayers.length) {
+        // Trick complete but round continues - emit trick complete for animation
         io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
           trick: nextState.currentTrick,
           delayMs: 2000
         });
-
-        // Check if round is complete (5 tricks played)
-        if (nextState.tricks.length === 5) {
-          // Finish round and calculate scores
-          nextState = finishRound(nextState);
-          console.log(`[ROUND] Completed. Moving to ${nextState.phase}`);
-
-          // Emit round complete event
-          io.to(`game:${validated.gameId}`).emit('ROUND_COMPLETE', {
-            roundNumber: nextState.round
-          });
-        }
       }
 
       return nextState;
@@ -462,6 +466,34 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
     
     // Trigger AI if needed
     checkAndTriggerAI(validated.gameId, newState, io);
+
+    // If round just ended, automatically start next round after delay
+    if (newState.phase === 'ROUND_OVER' && !newState.gameOver) {
+      setTimeout(async () => {
+        try {
+          console.log(`[ROUND] Auto-starting next round for game ${validated.gameId}`);
+          
+          // Transition to DEALING
+          const dealingState = await executeGameAction(validated.gameId, startNextRound);
+          
+          // Deal cards and transition to BIDDING
+          const biddingState = await executeGameAction(validated.gameId, dealNewRound);
+          
+          // Broadcast update
+          io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
+            gameState: biddingState,
+            event: 'ROUND_STARTED'
+          });
+          
+          console.log(`[ROUND] Auto-started round ${biddingState.round}`);
+          
+          // Trigger AI for next round
+          await checkAndTriggerAI(validated.gameId, biddingState, io);
+        } catch (error: any) {
+          console.error(`[ROUND] Error auto-starting next round:`, error.message);
+        }
+      }, 5000); // 5 second delay to show scores
+    }
   } catch (error: any) {
     console.error('Error in PLAY_CARD:', error);
     socket.emit('ERROR', {

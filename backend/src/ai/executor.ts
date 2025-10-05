@@ -13,9 +13,13 @@ import {
   applyTrumpDeclaration,
   applyFoldDecision,
   applyCardPlay,
+  finishRound,
+  startNextRound,
+  dealNewRound,
 } from '../game/state';
 import { decideBid, decideTrump, decideFold, decideCardToPlay } from './decision-engine';
 import { Server } from 'socket.io';
+import { checkAndTriggerAI } from './trigger';
 
 /**
  * Delay for a specified amount of time
@@ -143,6 +147,9 @@ async function executeAIBid(
       amount: bid,
     },
   });
+
+  // Trigger next AI if needed
+  await checkAndTriggerAI(gameId, newState, io);
 }
 
 /**
@@ -180,6 +187,9 @@ async function executeAIDeclareTrump(
       trumpSuit,
     },
   });
+
+  // Trigger next AI if needed
+  await checkAndTriggerAI(gameId, newState, io);
 }
 
 /**
@@ -223,6 +233,9 @@ async function executeAIFoldDecision(
       folded: shouldFold,
     },
   });
+
+  // Trigger next AI if needed
+  await checkAndTriggerAI(gameId, newState, io);
 }
 
 /**
@@ -253,9 +266,27 @@ async function executeAICardPlay(
   console.log(`[AI] ${aiPlayer.name} plays: ${card.rank} of ${card.suit}`);
 
   // Apply card play through action queue
-  const newState = await executeGameAction(gameId, async (currentState) => {
+  let newState = await executeGameAction(gameId, async (currentState) => {
     return applyCardPlay(currentState, aiPosition, card.id);
   });
+
+  // Check if round ended and finish it
+  if (newState.phase === 'ROUND_OVER') {
+    newState = await executeGameAction(gameId, async (currentState) => {
+      return finishRound(currentState);
+    });
+    
+    console.log(`[AI] Round completed`, {
+      gameOver: newState.gameOver,
+      scores: newState.players.map(p => ({ name: p.name, score: p.score }))
+    });
+
+    // Emit round complete event
+    io.to(`game:${gameId}`).emit('ROUND_COMPLETE', {
+      roundNumber: newState.round,
+      scores: newState.players.map(p => ({ name: p.name, score: p.score }))
+    });
+  }
 
   // Broadcast update
   io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
@@ -267,4 +298,35 @@ async function executeAICardPlay(
       card,
     },
   });
+
+  // Trigger next AI if needed
+  await checkAndTriggerAI(gameId, newState, io);
+
+  // If round just ended, automatically start next round after delay
+  if (newState.phase === 'ROUND_OVER' && !newState.gameOver) {
+    setTimeout(async () => {
+      try {
+        console.log(`[AI] Auto-starting next round for game ${gameId}`);
+        
+        // Transition to DEALING
+        const dealingState = await executeGameAction(gameId, startNextRound);
+        
+        // Deal cards and transition to BIDDING
+        const biddingState = await executeGameAction(gameId, dealNewRound);
+        
+        // Broadcast update
+        io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
+          gameState: biddingState,
+          event: 'ROUND_STARTED'
+        });
+        
+        console.log(`[AI] Auto-started round ${biddingState.round}`);
+        
+        // Trigger AI for next round
+        await checkAndTriggerAI(gameId, biddingState, io);
+      } catch (error: any) {
+        console.error(`[AI] Error auto-starting next round:`, error.message);
+      }
+    }, 5000); // 5 second delay to show scores
+  }
 }

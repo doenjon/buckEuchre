@@ -310,6 +310,12 @@ export function applyCardPlay(
   playerPosition: PlayerPosition,
   cardId: string
 ): GameState {
+  // Find the card FIRST (before removing it)
+  const card = state.players[playerPosition].hand.find(c => c.id === cardId);
+  if (!card) {
+    throw new Error(`Card ${cardId} not found in player ${playerPosition}'s hand`);
+  }
+  
   // Remove card from player's hand
   const players = state.players.map((p, i) => {
     if (i === playerPosition) {
@@ -320,12 +326,6 @@ export function applyCardPlay(
     }
     return p;
   }) as [Player, Player, Player, Player];
-  
-  // Find the card
-  const card = state.players[playerPosition].hand.find(c => c.id === cardId);
-  if (!card) {
-    throw new Error(`Card ${cardId} not found in player ${playerPosition}'s hand`);
-  }
   
   // Add card to current trick
   const newCurrentTrick = {

@@ -20,7 +20,7 @@ interface GameBoardProps {
 }
 
 export function GameBoard({ gameState, myPosition }: GameBoardProps) {
-  const { phase, currentPlayerPosition, players } = gameState;
+  const { phase, currentPlayerPosition, currentBidder, players } = gameState;
   const { playCard } = useGame();
 
   // Wait for all players
@@ -35,15 +35,44 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
   }
 
   const myPlayer = players[myPosition];
-  const isMyTurn = currentPlayerPosition === myPosition;
-  const currentPlayer = currentPlayerPosition !== null ? players[currentPlayerPosition] : null;
+  
+  // Determine whose turn it is based on the phase
+  let isMyTurn = false;
+  let activePosition: number | null = null;
+  
+  switch (phase) {
+    case 'BIDDING':
+      activePosition = currentBidder;
+      isMyTurn = currentBidder === myPosition;
+      break;
+    case 'DECLARING_TRUMP':
+      activePosition = gameState.winningBidderPosition;
+      isMyTurn = gameState.winningBidderPosition === myPosition;
+      break;
+    case 'FOLDING_DECISION':
+      // In folding phase, check if this player needs to decide
+      if (gameState.winningBidderPosition !== myPosition && myPlayer.folded === false) {
+        isMyTurn = true;
+      }
+      activePosition = null; // Multiple players can act
+      break;
+    case 'PLAYING':
+      activePosition = currentPlayerPosition;
+      isMyTurn = currentPlayerPosition === myPosition;
+      break;
+    default:
+      activePosition = null;
+      isMyTurn = false;
+  }
+  
+  const currentPlayer = activePosition !== null ? players[activePosition] : null;
 
   return (
     <div className="space-y-6">
       {/* Scoreboard */}
       <Scoreboard 
         players={players} 
-        currentPlayerPosition={currentPlayerPosition}
+        currentPlayerPosition={activePosition}
         phase={phase}
         trumpSuit={gameState.trumpSuit}
         winningBidderPosition={gameState.winningBidderPosition}
@@ -111,7 +140,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
         <CurrentTrick 
           trick={gameState.currentTrick}
           players={players}
-          currentPlayerPosition={currentPlayerPosition!}
+          currentPlayerPosition={activePosition || 0}
         />
       )}
 
