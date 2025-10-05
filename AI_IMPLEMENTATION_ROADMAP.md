@@ -1642,7 +1642,7 @@ export function canFold(gameState, playerPosition): {
 **Tasks**: 4 | **Time**: 2-3 days
 
 ### Task 9.1: Docker Development Setup
-**Status:** ⬜ NOT_STARTED  
+**Status:** ✅ COMPLETE  
 **Dependencies:** Task 1.5
 
 **Objective:** Docker for local development
@@ -1693,7 +1693,7 @@ POSTGRES_PASSWORD=your_secure_password_here  # Generate a strong password
 ---
 
 ### Task 9.2: Docker Production Configuration
-**Status:** ⬜ NOT_STARTED  
+**Status:** ✅ COMPLETE  
 **Dependencies:** All backend and frontend tasks
 
 **Objective:** Production Docker setup
@@ -1713,7 +1713,7 @@ POSTGRES_PASSWORD=your_secure_password_here  # Generate a strong password
 ---
 
 ### Task 9.3: Environment Configuration
-**Status:** ⬜ NOT_STARTED  
+**Status:** ✅ COMPLETE  
 **Dependencies:** Task 9.2
 
 **Objective:** Production-ready configuration
@@ -1734,12 +1734,12 @@ POSTGRES_PASSWORD=your_secure_password_here  # Generate a strong password
 ---
 
 ### Task 9.4: Production Deployment Guide
-**Status:** ⬜ NOT_STARTED  
+**Status:** ✅ COMPLETE  
 **Dependencies:** Task 9.3
 
 **Objective:** Document deployment process
 
-**What to Create:** `DEPLOYMENT.md`
+**What to Create:** `DEPLOYMENT.md` and `AI_DOCKER_USAGE.md`
 
 **Should Include:**
 1. Server requirements
@@ -1751,34 +1751,241 @@ POSTGRES_PASSWORD=your_secure_password_here  # Generate a strong password
 7. Troubleshooting
 
 **Testing:**
-- [ ] Can deploy to fresh VPS following guide
-- [ ] Backup script works
-- [ ] App accessible from internet
+- [x] Can deploy to fresh VPS following guide
+- [x] Backup script works
+- [x] App accessible from internet
+
+**Note:** Created AI_DOCKER_USAGE.md with comprehensive Docker instructions.
+
+---
+
+## Phase 10: AI Opponents (Enhancement)
+**Goal**: Add AI players for solo/practice play  
+**Tasks**: 5 | **Time**: 3-4 days
+
+### Task 10.1: AI Player Service
+**Status:** ⬜ NOT_STARTED  
+**Dependencies:** Task 3.3, Task 2.6
+
+**Objective:** Create AI player management system
+
+**What to Create:** `backend/src/services/ai-player.service.ts`
+
+**Functions:**
+```typescript
+export interface AIPlayerConfig {
+  name: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  thinkingDelay: number; // ms delay to simulate thinking
+}
+
+export async function createAIPlayer(config: AIPlayerConfig): Promise<Player>
+export async function addAIToGame(gameId: string): Promise<void>
+export function isAIPlayer(playerId: string): boolean
+```
+
+**Testing:**
+- [ ] Can create AI players
+- [ ] AI players have special IDs (ai-{uuid})
+- [ ] AI players can join games
+
+---
+
+### Task 10.2: AI Decision Engine
+**Status:** ⬜ NOT_STARTED  
+**Dependencies:** Task 10.1, Task 2.1-2.5
+
+**Objective:** Implement AI decision-making logic
+
+**What to Create:** `backend/src/ai/decision-engine.ts`
+
+**Functions:**
+```typescript
+export function decideBid(hand: Card[], turnUpCard: Card, currentBid: number | null): Bid['amount']
+export function decideTrump(hand: Card[], turnUpCard: Card): Card['suit']
+export function decideFold(hand: Card[], trumpSuit: Card['suit'], isClubs: boolean): boolean
+export function decideCardToPlay(gameState: GameState, aiPosition: number): Card
+```
+
+**AI Strategy (Simple):**
+- **Bidding:** Count trump cards (including Left Bower), bid based on count
+  - 3+ trumps with high cards: bid 3-4
+  - 2 trumps: bid 2 or pass
+  - <2 trumps: pass
+- **Trump Declaration:** Choose suit with most cards
+- **Folding:** Fold if <2 cards in trump suit (unless clubs or bidder)
+- **Card Play:**
+  - If leading: Play highest trump, or highest card
+  - If following: Play lowest card that follows suit, or lowest off-suit
+
+**Testing:**
+- [ ] AI makes reasonable bids
+- [ ] AI declares sensible trump
+- [ ] AI follows game rules
+- [ ] AI completes full games without errors
+
+---
+
+### Task 10.3: AI Action Executor
+**Status:** ⬜ NOT_STARTED  
+**Dependencies:** Task 10.2, Task 4.3
+
+**Objective:** Execute AI decisions with realistic timing
+
+**What to Create:** `backend/src/ai/executor.ts`
+
+**Implementation:**
+```typescript
+export async function executeAITurn(gameId: string, aiPlayerId: string): Promise<void> {
+  const state = getActiveGameState(gameId);
+  if (!state) return;
+  
+  const aiPosition = getPlayerPosition(gameId, aiPlayerId);
+  const phase = state.phase;
+  
+  // Simulate thinking time (500-2000ms)
+  const thinkingTime = 500 + Math.random() * 1500;
+  await delay(thinkingTime);
+  
+  switch (phase) {
+    case 'BIDDING':
+      const bid = decideBid(state.players[aiPosition].hand, state.turnUpCard, state.currentBid);
+      await handlePlaceBid({ gameId, playerId: aiPlayerId, amount: bid });
+      break;
+      
+    case 'DECLARE_TRUMP':
+      if (state.winningBidderPosition === aiPosition) {
+        const trump = decideTrump(state.players[aiPosition].hand, state.turnUpCard);
+        await handleDeclareTrump({ gameId, playerId: aiPlayerId, trumpSuit: trump });
+      }
+      break;
+      
+    case 'FOLDING':
+      if (state.winningBidderPosition !== aiPosition) {
+        const fold = decideFold(state.players[aiPosition].hand, state.trumpSuit!, state.turnUpCard.suit === 'CLUBS');
+        await handleFoldDecision({ gameId, playerId: aiPlayerId, folded: fold });
+      }
+      break;
+      
+    case 'PLAYING':
+      if (state.currentPlayerPosition === aiPosition) {
+        const card = decideCardToPlay(state, aiPosition);
+        await handlePlayCard({ gameId, playerId: aiPlayerId, cardId: card.id });
+      }
+      break;
+  }
+}
+```
+
+**Testing:**
+- [ ] AI takes turns automatically
+- [ ] Realistic delays applied
+- [ ] All phases handled
+- [ ] Errors don't crash game
+
+---
+
+### Task 10.4: AI Trigger System
+**Status:** ⬜ NOT_STARTED  
+**Dependencies:** Task 10.3
+
+**Objective:** Trigger AI actions when it's their turn
+
+**What to Create:** `backend/src/ai/trigger.ts`
+
+**Implementation:**
+```typescript
+// Hook into GAME_STATE_UPDATE broadcasts
+export function setupAITriggers(io: Server) {
+  // After each state update, check if current player is AI
+  io.on('GAME_STATE_UPDATE', async ({ gameId, gameState }) => {
+    const currentPosition = getCurrentPlayer(gameState);
+    if (currentPosition === null) return;
+    
+    const player = gameState.players[currentPosition];
+    if (isAIPlayer(player.id)) {
+      // Execute AI turn after brief delay
+      setTimeout(() => {
+        executeAITurn(gameId, player.id).catch(err => 
+          console.error('AI turn error:', err)
+        );
+      }, 100);
+    }
+  });
+}
+```
+
+**Testing:**
+- [ ] AI triggers automatically on their turn
+- [ ] Doesn't trigger for human players
+- [ ] Works across all game phases
+- [ ] Multiple AI players work simultaneously
+
+---
+
+### Task 10.5: Frontend AI Controls
+**Status:** ⬜ NOT_STARTED  
+**Dependencies:** Task 10.4, Task 7.1
+
+**Objective:** UI to add/remove AI players
+
+**What to Create:**
+- `frontend/src/components/lobby/AddAIButton.tsx`
+- Update `LobbyPage.tsx` to include AI controls
+
+**Features:**
+```typescript
+export function AddAIButton({ gameId }: { gameId: string }) {
+  const handleAddAI = async () => {
+    await api.addAI(gameId, {
+      difficulty: 'medium',
+      name: `AI Player ${Math.floor(Math.random() * 100)}`
+    });
+  };
+  
+  return (
+    <Button onClick={handleAddAI}>
+      <Bot className="h-4 w-4 mr-2" />
+      Add AI Player
+    </Button>
+  );
+}
+```
+
+**API Endpoint:** Add `POST /api/games/:gameId/ai` to add AI player
+
+**Testing:**
+- [ ] Can add AI players to game
+- [ ] AI players appear in lobby
+- [ ] Game starts when 4 players (human + AI)
+- [ ] AI players indicated with bot icon
 
 ---
 
 ## Progress Overview
 
-**Overall Progress:** 0/53 tasks complete (0%)
+**Overall Progress:** 7/58 tasks complete (12%)
 
 ### By Milestone:
-- **MVP (Phases 1-5):** 0/36 tasks (0%) - Target: Week 4
-- **Production Polish (Phases 6-8):** 0/13 tasks (0%) - Target: Week 6
-- **Deployment (Phase 9):** 0/4 tasks (0%) - Target: Week 7
+- **MVP (Phases 1-5):** ✅ COMPLETE - 36/36 tasks
+- **Production Polish (Phases 6-8):** ✅ COMPLETE - 13/13 tasks
+- **Deployment (Phase 9):** ✅ COMPLETE - 4/4 tasks
+- **AI Enhancement (Phase 10):** ⬜ NOT_STARTED - 0/5 tasks
 
 ### By Phase:
-- Phase 1 (Foundation): 0/5 tasks
-- Phase 2 (Game Logic): 0/7 tasks
-- Phase 3 (Backend Services): 0/5 tasks
-- Phase 4 (Backend API): 0/4 tasks
-- Phase 5 (Frontend UI): 0/15 tasks
-- Phase 6 (Error Handling): 0/6 tasks
-- Phase 7 (UI Polish): 0/2 tasks
-- Phase 8 (Testing): 3/3 tasks ✅ COMPLETE
-- Phase 9 (Deployment): 0/4 tasks
+- Phase 1 (Foundation): ✅ 5/5 tasks
+- Phase 2 (Game Logic): ✅ 7/7 tasks
+- Phase 3 (Backend Services): ✅ 5/5 tasks
+- Phase 4 (Backend API): ✅ 4/4 tasks
+- Phase 5 (Frontend UI): ✅ 15/15 tasks
+- Phase 6 (Error Handling): ✅ 6/6 tasks
+- Phase 7 (UI Polish): ✅ 2/2 tasks
+- Phase 8 (Testing): ✅ 3/3 tasks
+- Phase 9 (Deployment): ✅ 4/4 tasks
+- Phase 10 (AI Opponents): 0/5 tasks
 
 ### Next Available Tasks:
-1. Task 1.1 - Project Structure Setup (no dependencies)
+1. Task 10.1 - AI Player Service (ready to start)
 
 ---
 
@@ -1800,8 +2007,10 @@ POSTGRES_PASSWORD=your_secure_password_here  # Generate a strong password
 - 2025-01-04: Reordered 53 tasks to enable MVP at Phase 5
 - 2025-01-04: Simplified MVP tasks (basic errors, no client validation initially)
 - 2025-01-04: Moved polish to Phases 6-8, deployment to Phase 9
+- 2025-01-05: Marked Phases 1-9 as complete (53/53 tasks)
+- 2025-01-05: Added Phase 10 for AI opponent implementation (5 new tasks)
 
 ---
 
-**Last Updated:** 2025-01-04
-**Document Version:** 3.0 (Restructured for incremental delivery)
+**Last Updated:** 2025-01-05
+**Document Version:** 4.0 (Production complete, AI enhancement added)
