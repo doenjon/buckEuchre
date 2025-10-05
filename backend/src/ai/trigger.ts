@@ -43,7 +43,13 @@ function getCurrentActingPlayer(gameState: GameState): string | null {
 
     case 'PLAYING':
       if (gameState.currentPlayerPosition !== null) {
-        return gameState.players[gameState.currentPlayerPosition].id;
+        const player = gameState.players[gameState.currentPlayerPosition];
+        // Don't trigger AI if player has no cards left
+        if (!player.hand || player.hand.length === 0) {
+          console.log(`[AI Trigger] Player ${player.id} has no cards left, skipping AI trigger`);
+          return null;
+        }
+        return player.id;
       }
       break;
 

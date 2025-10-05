@@ -384,6 +384,11 @@ async function executeAICardPlay(
       return currentState;
     }
 
+    if (!player.hand || player.hand.length === 0) {
+      console.log(`[AI] ${player.name} has no cards left to play`);
+      return currentState;
+    }
+
     if (!currentState.trumpSuit) {
       console.warn(`[AI] ${player.name} cannot play - missing trump suit`);
       return currentState;

@@ -50,8 +50,11 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       isMyTurn = gameState.winningBidderPosition === myPosition;
       break;
     case 'FOLDING_DECISION':
-      // In folding phase, check if this player needs to decide
-      if (gameState.winningBidderPosition !== myPosition && myPlayer.folded === null) {
+      // In folding phase, player acts if they haven't decided yet and aren't the bidder
+      if (
+        gameState.winningBidderPosition !== myPosition &&
+        myPlayer.foldDecision === 'UNDECIDED'
+      ) {
         isMyTurn = true;
       }
       activePosition = null; // Multiple players can act
@@ -60,12 +63,29 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       activePosition = currentPlayerPosition;
       isMyTurn = currentPlayerPosition === myPosition;
       break;
+    case 'ROUND_OVER':
+      activePosition = gameState.currentTrick?.winner ?? null;
+      isMyTurn = false;
+      break;
     default:
       activePosition = null;
       isMyTurn = false;
   }
-  
+
   const currentPlayer = activePosition !== null ? players[activePosition] : null;
+  const completedTrick =
+    gameState.tricks.length > 0
+      ? gameState.tricks[gameState.tricks.length - 1]
+      : null;
+  const displayTrick =
+    gameState.currentTrick && gameState.currentTrick.cards.length > 0
+      ? gameState.currentTrick
+      : completedTrick;
+  const showCurrentTrick = !!displayTrick && displayTrick.cards.length > 0;
+  const trickHighlightPosition =
+    activePosition !== null
+      ? activePosition
+      : displayTrick?.cards[displayTrick.cards.length - 1]?.playerPosition ?? 0;
 
   return (
     <div className="space-y-6">
@@ -136,11 +156,11 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       )}
 
       {/* Current Trick */}
-      {phase === 'PLAYING' && gameState.currentTrick && (
+      {showCurrentTrick && (
         <CurrentTrick 
-          trick={gameState.currentTrick}
+          trick={displayTrick}
           players={players}
-          currentPlayerPosition={activePosition || 0}
+          currentPlayerPosition={trickHighlightPosition}
         />
       )}
 

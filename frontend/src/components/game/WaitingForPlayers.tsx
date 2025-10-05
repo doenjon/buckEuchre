@@ -17,6 +17,7 @@ interface WaitingForPlayersProps {
   playerCount: number;
   playersNeeded: number;
   onAIAdded?: (result: AddAIToGameResult) => void;
+  message?: string;
 }
 
 type AddAIToGameResult = Awaited<ReturnType<typeof addAIToGame>>;
@@ -26,6 +27,7 @@ export function WaitingForPlayers({
   playerCount,
   playersNeeded,
   onAIAdded,
+  message,
 }: WaitingForPlayersProps) {
   const [copied, setCopied] = useState(false);
   const [addingAI, setAddingAI] = useState(false);
@@ -95,9 +97,11 @@ export function WaitingForPlayers({
               Waiting for Players
             </h2>
             <p className="text-muted-foreground">
-              {playersNeeded === 1 
-                ? 'Waiting for 1 more player...'
-                : `Waiting for ${playersNeeded} more players...`
+              {message
+                ? message
+                : playersNeeded === 1
+                  ? 'Waiting for 1 more player...'
+                  : `Waiting for ${playersNeeded} more players...`
               }
             </p>
           </div>

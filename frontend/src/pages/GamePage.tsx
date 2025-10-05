@@ -43,23 +43,25 @@ export function GamePage() {
   }, [gameState, playerId, myPosition, setMyPosition]);
 
   if (!gameState) {
-    if (waitingInfo && waitingInfo.gameId === gameId) {
-      return (
-        <WaitingForPlayers
-          gameId={gameId ?? ''}
-          playerCount={waitingInfo.playerCount}
-          playersNeeded={waitingInfo.playersNeeded}
-        />
-      );
-    }
+    const fallbackWaiting =
+      waitingInfo && (!gameId || waitingInfo.gameId === gameId)
+        ? waitingInfo
+        : {
+            gameId: gameId ?? '',
+            playerCount: waitingInfo?.playerCount ?? (playerId ? 1 : 0),
+            playersNeeded:
+              waitingInfo?.playersNeeded ??
+              Math.max(0, 4 - (waitingInfo?.playerCount ?? (playerId ? 1 : 0))),
+            message: waitingInfo?.message ?? 'Waiting for more players to join...'
+          };
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-800 to-green-600 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-xl p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Loading game...</h2>
-          <p className="text-gray-600">Connecting to game {gameId}</p>
-        </div>
-      </div>
+      <WaitingForPlayers
+        gameId={fallbackWaiting.gameId}
+        playerCount={fallbackWaiting.playerCount}
+        playersNeeded={fallbackWaiting.playersNeeded}
+        message={fallbackWaiting.message}
+      />
     );
   }
 
@@ -72,6 +74,7 @@ export function GamePage() {
         gameId={gameId ?? gameState.gameId}
         playerCount={connectedPlayers}
         playersNeeded={seatsRemaining}
+        message={waitingInfo?.message}
       />
     );
   }
