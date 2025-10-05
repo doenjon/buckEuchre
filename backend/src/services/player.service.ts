@@ -1,6 +1,7 @@
 import { prisma } from '../db/client';
 import { Player } from '@prisma/client';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 
 /**
  * JWT Payload structure
@@ -58,6 +59,34 @@ export async function createPlayer(name: string): Promise<{
   const token = jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn } as jwt.SignOptions);
 
   return { player, token };
+}
+
+/**
+ * Generate a guest player session with a random display name.
+ *
+ * Ensures that the generated name is unlikely to collide with
+ * an existing player by attempting several random numeric suffixes
+ * before falling back to a UUID-based suffix.
+ */
+export async function createGuestPlayer(): Promise<{
+  player: Player;
+  token: string;
+}> {
+  const MAX_ATTEMPTS = 5;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+    const candidate = `Guest ${Math.floor(1000 + Math.random() * 9000)}`;
+    const existing = await prisma.player.count({
+      where: { name: candidate },
+    });
+
+    if (existing === 0) {
+      return createPlayer(candidate);
+    }
+  }
+
+  const fallback = `Guest ${randomUUID().slice(0, 8).toUpperCase()}`;
+  return createPlayer(fallback);
 }
 
 /**

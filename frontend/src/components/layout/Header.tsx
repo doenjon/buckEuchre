@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
 export function Header() {
-  const { playerName, logout } = useAuth();
+  const { playerName, isGuest, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -25,11 +25,18 @@ export function Header() {
         
         {playerName && (
           <div className="flex items-center gap-4">
-            <span className="text-sm">
-              Playing as: <strong>{playerName}</strong>
+            <span className="text-sm flex items-center gap-2">
+              <span>
+                Playing as: <strong>{playerName}</strong>
+              </span>
+              {isGuest && (
+                <span className="inline-flex items-center rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide">
+                  Guest
+                </span>
+              )}
             </span>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={handleLogout}
               className="text-white hover:bg-green-600"

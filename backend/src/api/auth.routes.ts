@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { createPlayer } from '../services/player.service';
+import { createGuestPlayer, createPlayer } from '../services/player.service';
 
 const router = Router();
 
@@ -29,21 +29,45 @@ router.post('/join', async (req: Request, res: Response) => {
 
     // Create player and generate token
     const { player, token } = await createPlayer(playerName);
-
-    // Calculate expiration timestamp (24 hours from now)
-    const expiresAt = Date.now() + (24 * 60 * 60 * 1000);
+    const expiresAt = player.expiresAt.getTime();
 
     res.status(201).json({
       playerId: player.id,
       playerName: player.name,
       token,
-      expiresAt
+      expiresAt,
+      isGuest: false
     });
   } catch (error) {
     console.error('Error creating player:', error);
     res.status(500).json({
       error: 'Server error',
       message: 'Failed to create player session'
+    });
+  }
+});
+
+/**
+ * POST /api/auth/guest
+ * Create a guest player session
+ */
+router.post('/guest', async (_req: Request, res: Response) => {
+  try {
+    const { player, token } = await createGuestPlayer();
+    const expiresAt = player.expiresAt.getTime();
+
+    res.status(201).json({
+      playerId: player.id,
+      playerName: player.name,
+      token,
+      expiresAt,
+      isGuest: true
+    });
+  } catch (error) {
+    console.error('Error creating guest player:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: 'Failed to create guest session'
     });
   }
 });
