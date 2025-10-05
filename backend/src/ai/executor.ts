@@ -209,7 +209,7 @@ async function executeAIFoldDecision(
 
   // Check if AI already made a fold decision
   const aiPlayer = state.players[aiPosition];
-  if (aiPlayer.folded !== false) {
+  if (aiPlayer.foldDecision !== 'UNDECIDED') {
     // Player already decided (either folded or explicitly stayed)
     return;
   }

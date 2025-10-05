@@ -6,7 +6,7 @@
 import { useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
-import { joinSession } from '@/services/api';
+import { joinAsGuest, joinSession } from '@/services/api';
 
 export function useAuth() {
   const authStore = useAuthStore();
@@ -21,6 +21,22 @@ export function useAuth() {
       return response;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to join session';
+      setError(message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [authStore, setError, setLoading]);
+
+  const loginAsGuest = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await joinAsGuest();
+      authStore.login(response);
+      return response;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to join as guest';
       setError(message);
       throw error;
     } finally {
@@ -50,7 +66,9 @@ export function useAuth() {
     playerName: authStore.playerName,
     token: authStore.token,
     isAuthenticated: authStore.isAuthenticated,
+    isGuest: authStore.isGuest,
     login,
+    loginAsGuest,
     logout,
     checkAuth,
   };

@@ -50,6 +50,11 @@ export interface Card {
 }
 
 /**
+ * Folding decision state for non-bidders
+ */
+export type FoldDecision = 'UNDECIDED' | 'STAY' | 'FOLD';
+
+/**
  * Represents a player in the game
  */
 export interface Player {
@@ -61,6 +66,7 @@ export interface Player {
   hand: Card[];           // Cards in player's hand (5 cards)
   tricksTaken: number;    // Tricks won this round
   folded: boolean;        // Whether player folded this round
+  foldDecision: FoldDecision; // Current folding decision state
 }
 
 /**
@@ -142,6 +148,7 @@ export interface PublicPlayer {
   handSize: number;       // Number of cards, but not the cards themselves
   tricksTaken: number;
   folded: boolean;
+  foldDecision: FoldDecision;
 }
 
 /**

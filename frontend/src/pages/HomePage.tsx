@@ -10,7 +10,7 @@ import { useUIStore } from '@/stores/uiStore';
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login, loginAsGuest, isAuthenticated } = useAuth();
   const { isLoading, error, setError } = useUIStore();
   const [name, setName] = useState('');
 
@@ -26,6 +26,16 @@ export function HomePage() {
       navigate('/lobby');
     } catch (err) {
       console.error('Failed to join:', err);
+    }
+  };
+
+  const handleGuestJoin = async () => {
+    try {
+      setError(null);
+      await loginAsGuest();
+      navigate('/lobby');
+    } catch (err) {
+      console.error('Failed to join as guest:', err);
     }
   };
 
@@ -72,7 +82,25 @@ export function HomePage() {
             >
               {isLoading ? 'Joining...' : 'Join Session'}
             </button>
+
+            <div className="relative flex items-center justify-center text-sm text-gray-500">
+              <span className="absolute inset-x-0 h-px bg-gray-200" aria-hidden="true" />
+              <span className="relative px-3 bg-white">or</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGuestJoin}
+              disabled={isLoading}
+              className="w-full border border-green-600 text-green-700 py-2 px-4 rounded-md hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {isLoading ? 'Creating guest...' : 'Continue as Guest'}
+            </button>
           </form>
+
+          <p className="mt-6 text-xs text-center text-gray-500">
+            Guest sessions last for 24 hours and can be upgraded by joining with a name later.
+          </p>
         </div>
       </div>
     );

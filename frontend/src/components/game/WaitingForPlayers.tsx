@@ -3,30 +3,75 @@
  * @description Component shown while waiting for players to join
  */
 
-import { Users, Copy, CheckCircle2 } from 'lucide-react';
+import { Users, Copy, CheckCircle2, Bot, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
+import { addAIToGame } from '@/services/api';
+import { useUIStore } from '@/stores/uiStore';
+import { useGameStore } from '@/stores/gameStore';
 
 interface WaitingForPlayersProps {
   gameId: string;
   playerCount: number;
   playersNeeded: number;
+  onAIAdded?: (result: AddAIToGameResult) => void;
 }
 
-export function WaitingForPlayers({ 
-  gameId, 
-  playerCount, 
-  playersNeeded 
+type AddAIToGameResult = Awaited<ReturnType<typeof addAIToGame>>;
+
+export function WaitingForPlayers({
+  gameId,
+  playerCount,
+  playersNeeded,
+  onAIAdded,
 }: WaitingForPlayersProps) {
   const [copied, setCopied] = useState(false);
+  const [addingAI, setAddingAI] = useState(false);
+  const { setError } = useUIStore();
+  const waitingInfo = useGameStore(state => state.waitingInfo);
+  const setWaitingInfo = useGameStore(state => state.setWaitingInfo);
+  const setGameState = useGameStore(state => state.setGameState);
 
   const handleCopyGameUrl = async () => {
     const gameUrl = `${window.location.origin}/game/${gameId}`;
     await navigator.clipboard.writeText(gameUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleAddAI = async () => {
+    try {
+      setAddingAI(true);
+      const result = await addAIToGame(gameId, { difficulty: 'medium' });
+
+      if (result.gameState) {
+        setGameState(result.gameState);
+      } else if (waitingInfo && waitingInfo.gameId === gameId) {
+        const updatedCount = Math.min(4, waitingInfo.playerCount + 1);
+        const updatedNeeded = Math.max(0, waitingInfo.playersNeeded - 1);
+        setWaitingInfo({
+          ...waitingInfo,
+          playerCount: updatedCount,
+          playersNeeded: updatedNeeded,
+          message:
+            updatedNeeded > 0
+              ? `Waiting for ${updatedNeeded} more player${updatedNeeded === 1 ? '' : 's'}...`
+              : 'All seats filled. Starting shortly...',
+        });
+      }
+
+      if (onAIAdded) {
+        onAIAdded(result);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to add AI player';
+      setError(message);
+    } finally {
+      setAddingAI(false);
+    }
   };
 
   return (
@@ -112,6 +157,32 @@ export function WaitingForPlayers({
             <div className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
             <div className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
+
+          {playersNeeded > 0 && (
+            <div className="w-full space-y-2">
+              <p className="text-sm text-center text-muted-foreground">
+                Want to start now? Add AI players to fill the empty seats.
+              </p>
+              <Button
+                onClick={handleAddAI}
+                disabled={addingAI}
+                variant="secondary"
+                className="w-full"
+              >
+                {addingAI ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Adding AI...
+                  </>
+                ) : (
+                  <>
+                    <Bot className="mr-2 h-4 w-4" />
+                    Add AI Players
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       </Card>
     </div>

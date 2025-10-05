@@ -13,7 +13,7 @@ import { LogOut, User } from 'lucide-react';
 
 export function LobbyPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, playerName, logout } = useAuth();
+  const { isAuthenticated, playerName, isGuest, logout } = useAuth();
   const { error, clearError } = useUIStore();
 
   useEffect(() => {
@@ -45,7 +45,14 @@ export function LobbyPage() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-gray-700">
                 <User className="h-5 w-5" />
-                <span className="font-medium">{playerName}</span>
+                <span className="font-medium flex items-center gap-2">
+                  {playerName}
+                  {isGuest && (
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-green-700">
+                      Guest
+                    </span>
+                  )}
+                </span>
               </div>
               <button
                 onClick={handleLogout}

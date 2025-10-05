@@ -15,6 +15,7 @@ describe('scoring.ts - Scoring Logic', () => {
     hand: [],
     tricksTaken,
     folded,
+    foldDecision: folded ? 'FOLD' : 'STAY',
   });
 
   describe('calculateRoundScores', () => {

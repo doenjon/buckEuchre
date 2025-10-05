@@ -327,7 +327,7 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
         throw new Error('Not in folding decision phase');
       }
 
-      if (player.folded !== null) {
+      if (player.foldDecision !== 'UNDECIDED') {
         throw new Error('You already made your decision');
       }
 
@@ -335,6 +335,7 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
       const validation = canFold(
         currentState.isClubsTurnUp,
         player.position === currentState.winningBidderPosition,
+        player.foldDecision,
         validated.folded
       );
 

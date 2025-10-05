@@ -6,10 +6,18 @@
 import { create } from 'zustand';
 import type { GameState, Card, Player } from '@buck-euchre/shared';
 
+export interface WaitingInfo {
+  gameId: string;
+  playerCount: number;
+  playersNeeded: number;
+  message?: string;
+}
+
 export interface GameStoreState {
   gameState: GameState | null;
   myPosition: number | null;
   error: string | null;
+  waitingInfo: WaitingInfo | null;
 }
 
 export interface GameStoreActions {
@@ -17,7 +25,8 @@ export interface GameStoreActions {
   setMyPosition: (position: number) => void;
   setError: (error: string | null) => void;
   clearGame: () => void;
-  
+  setWaitingInfo: (info: WaitingInfo | null) => void;
+
   // Computed getters (selectors)
   getMyPlayer: () => Player | null;
   isMyTurn: () => boolean;
@@ -31,6 +40,7 @@ const initialState: GameStoreState = {
   gameState: null,
   myPosition: null,
   error: null,
+  waitingInfo: null,
 };
 
 /**
@@ -40,7 +50,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
   ...initialState,
 
   setGameState: (gameState) => {
-    set({ gameState, error: null });
+    set({ gameState, error: null, waitingInfo: null });
   },
 
   setMyPosition: (position) => {
@@ -53,6 +63,10 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
   clearGame: () => {
     set(initialState);
+  },
+
+  setWaitingInfo: (info) => {
+    set({ waitingInfo: info });
   },
 
   // Computed getters
@@ -78,13 +92,13 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     }
     
     if (phase === 'FOLDING_DECISION') {
-      // It's my turn if I'm not the bidder and haven't folded yet
+      // It's my turn if I'm not the bidder and haven't made a decision yet
       const myPlayer = get().getMyPlayer();
       if (!myPlayer || myPlayer.position === gameState.winningBidderPosition) {
         return false;
       }
-      // Player needs to make decision if not folded (folded means they already decided)
-      return !myPlayer.folded;
+      // Player needs to decide if their foldDecision is still undecided
+      return myPlayer.foldDecision === 'UNDECIDED';
     }
     
     if (phase === 'PLAYING') {
@@ -117,6 +131,16 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       currentPosition = gameState.currentBidder;
     } else if (phase === 'DECLARING_TRUMP') {
       currentPosition = gameState.winningBidderPosition;
+    } else if (phase === 'FOLDING_DECISION') {
+      currentPosition = gameState.players.findIndex((player, index) => {
+        return (
+          index !== gameState.winningBidderPosition &&
+          player.foldDecision === 'UNDECIDED'
+        );
+      });
+      if (currentPosition === -1) {
+        currentPosition = null;
+      }
     } else if (phase === 'PLAYING') {
       currentPosition = gameState.currentPlayerPosition;
     }

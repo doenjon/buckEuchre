@@ -39,7 +39,8 @@ export function initializeGame(playerIds: [string, string, string, string]): Gam
     connected: true,
     hand: [],
     tricksTaken: 0,
-    folded: null,
+    folded: false,
+    foldDecision: 'UNDECIDED',
   }));
   
   const players = playersArray as unknown as [Player, Player, Player, Player];
@@ -104,7 +105,8 @@ export function dealNewRound(state: GameState): GameState {
     ...p,
     hand: hands[i],
     tricksTaken: 0,
-    folded: null,
+    folded: false,
+    foldDecision: 'UNDECIDED',
   })) as [Player, Player, Player, Player];
 
   // Automatically transition to BIDDING phase and set currentBidder
@@ -255,32 +257,53 @@ export function applyFoldDecision(
   playerPosition: PlayerPosition,
   folded: boolean
 ): GameState {
-  const players = state.players.map((p, i) =>
-    i === playerPosition ? { ...p, folded } : p
-  ) as [Player, Player, Player, Player];
-  
-  // Check if all non-bidders have decided
-  const nonBidders = state.players.filter(
-    (_, i) => i !== state.winningBidderPosition
-  );
-  const allDecided = nonBidders.every(p => players[p.position].folded !== null);
-  
+  const currentPlayer = state.players[playerPosition];
+  if (currentPlayer.foldDecision !== 'UNDECIDED') {
+    throw new Error('Fold decision already recorded');
+  }
+
+  const players = state.players.map((p, i) => {
+    if (i !== playerPosition) {
+      return p;
+    }
+
+    return {
+      ...p,
+      folded,
+      foldDecision: folded ? 'FOLD' : 'STAY',
+    };
+  }) as [Player, Player, Player, Player];
+
+  const winningBidder = state.winningBidderPosition;
+
+  // Only non-bidders need to make a decision. Bidder is always considered decided.
+  const allDecided = players.every((player, position) => {
+    if (position === winningBidder) {
+      return true;
+    }
+
+    return player.foldDecision !== 'UNDECIDED';
+  });
   let newPhase = state.phase;
   let newCurrentPlayerPosition = state.currentPlayerPosition;
   let newCurrentTrick = state.currentTrick;
-  
+
   if (allDecided) {
+    if (winningBidder === null) {
+      throw new Error('Cannot start playing without a winning bidder');
+    }
+
     // Start playing phase
     newPhase = 'PLAYING';
-    newCurrentPlayerPosition = state.winningBidderPosition;
+    newCurrentPlayerPosition = winningBidder;
     newCurrentTrick = {
       number: 1,
-      leadPlayerPosition: state.winningBidderPosition!,
+      leadPlayerPosition: winningBidder,
       cards: [],
       winner: null,
     };
   }
-  
+
   return withVersion(state, {
     phase: newPhase,
     players,
