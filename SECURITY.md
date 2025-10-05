@@ -1,223 +1,354 @@
 # Security Guidelines
 
-## ⚠️ Important Security Information
+## Overview
 
 This document outlines security best practices for the Buck Euchre application.
 
 ---
 
-## Secrets Management
+## Environment Variables & Secrets
 
-### ❌ NEVER commit these files to Git:
+### ⚠️ CRITICAL: Never Commit Secrets
 
+**Files that must NEVER be committed:**
 - `.env`
 - `.env.local`
-- `.env.production`
+- `.env.*.local`
 - Any file containing passwords, API keys, or secrets
 
-### ✅ Files Safe to Commit:
-
-- `.env.example` - Template with placeholder values only
-- Documentation with clearly marked example credentials
-
----
-
-## Example Credentials in This Repository
-
-The following files contain **EXAMPLE ONLY** credentials that **MUST BE CHANGED**:
-
-### 📄 `env.example`
-- Contains placeholder values like `CHANGE_THIS_PASSWORD`
-- **Action Required:** Copy to `.env` and replace all values
-
-### 📄 `setup.sh`
-- Contains development-only example passwords
-- **For local development only**
-- Never use these credentials in production
-
-### 📄 Documentation Files
-- May contain example credentials in code blocks
-- Always clearly marked as examples
-- Never use in real deployments
-
----
-
-## Setting Up Secure Credentials
-
-### 1. Generate Strong Passwords
-
-```bash
-# Generate a random password
-openssl rand -base64 32
-
-# Or use a password manager
-# - 1Password
-# - LastPass
-# - Bitwarden
+**Already protected by `.gitignore`:**
 ```
-
-### 2. Generate JWT Secret
-
-```bash
-# Generate a secure JWT secret
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-```
-
-### 3. Create Your .env File
-
-```bash
-# Copy the example file
-cp env.example .env
-
-# Edit with your secure values
-nano .env  # or your preferred editor
-```
-
-### 4. Verify .gitignore
-
-Ensure `.env` is in your `.gitignore`:
-
-```gitignore
-# Environment files
 .env
 .env.local
-.env.production
 .env.*.local
+**/.env
+**/.env.local
+```
+
+### Setting Up Secrets
+
+1. **Copy the example file:**
+   ```bash
+   cp env.example .env
+   ```
+
+2. **Generate secure passwords:**
+   ```bash
+   # Generate a secure random password
+   openssl rand -base64 32
+   
+   # Or use a password manager
+   ```
+
+3. **Set required environment variables:**
+   ```bash
+   # In .env file
+   DB_PASSWORD="your_secure_random_password_here"
+   JWT_SECRET="your_secure_random_jwt_secret_min_32_chars"
+   ```
+
+### Required Secrets
+
+| Variable | Purpose | Requirements |
+|----------|---------|--------------|
+| `DB_PASSWORD` | PostgreSQL password | Strong random string (16+ chars) |
+| `JWT_SECRET` | JWT token signing | Random string (32+ chars recommended) |
+| `DATABASE_URL` | Full DB connection | Includes DB_PASSWORD |
+
+---
+
+## Database Security
+
+### PostgreSQL Configuration
+
+**Development:**
+```bash
+# Use environment variables
+docker run -d --name buckeuchre-postgres \
+  -e POSTGRES_USER=buckeuchre \
+  -e POSTGRES_PASSWORD=${DB_PASSWORD} \
+  -e POSTGRES_DB=buckeuchre \
+  postgres:16-alpine
+```
+
+**Production:**
+- Use managed database services (AWS RDS, Google Cloud SQL, etc.)
+- Enable SSL/TLS connections
+- Restrict network access (firewall rules)
+- Regular automated backups
+- Strong password policies
+
+### Connection String Security
+
+❌ **NEVER do this:**
+```bash
+DATABASE_URL="postgresql://user:password123@localhost/db"
+```
+
+✅ **DO this:**
+```bash
+DB_PASSWORD="$(openssl rand -base64 32)"
+DATABASE_URL="postgresql://user:${DB_PASSWORD}@localhost/db"
 ```
 
 ---
 
-## Production Security Checklist
+## JWT Token Security
 
-### Before Deploying to Production:
+### Secret Key Requirements
 
-- [ ] All secrets are environment-specific and secure
-- [ ] No hard-coded credentials in code
-- [ ] `.env` files are not committed to Git
-- [ ] JWT_SECRET is cryptographically random (64+ characters)
-- [ ] Database passwords are strong (20+ characters)
-- [ ] CORS origins are restricted to your domain
-- [ ] Rate limiting is enabled
-- [ ] HTTPS/TLS is configured
-- [ ] Database connections use SSL
-- [ ] Security headers are configured
-- [ ] Dependencies are up to date (run `npm audit`)
+- **Minimum length:** 32 characters
+- **Character set:** Alphanumeric + special characters
+- **Generation:** Use cryptographically secure random generation
+- **Rotation:** Rotate secrets periodically (every 90 days recommended)
 
-### Environment Variables Requiring Strong Secrets:
+### Generate Secure JWT Secret
 
 ```bash
-# Database
-DB_PASSWORD=<strong-random-password>
+# Option 1: OpenSSL
+openssl rand -base64 32
 
-# JWT Authentication  
-JWT_SECRET=<64-character-random-hex>
+# Option 2: Node.js
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
-# Production URLs (no localhost!)
-FRONTEND_URL=https://your-domain.com
-BACKEND_URL=https://api.your-domain.com
+# Option 3: /dev/urandom (Linux/Mac)
+head -c 32 /dev/urandom | base64
 ```
 
----
+### JWT Best Practices
 
-## Development vs Production
-
-### Development (Local)
-- ✅ Simple passwords OK for local database
-- ✅ Can use example credentials from setup.sh
-- ✅ Localhost URLs acceptable
-- ⚠️ Still add .env to .gitignore
-
-### Production
-- ❌ Never use default/example credentials
-- ❌ Never use weak passwords
-- ❌ Never hardcode secrets
-- ✅ Use secrets management service
-- ✅ Rotate secrets regularly
-- ✅ Use strong authentication
+- ✅ Short expiration times (24h for development, 15m-1h for production)
+- ✅ Store secrets in environment variables only
+- ✅ Use HTTPS in production
+- ✅ Implement refresh token rotation
+- ❌ Never log JWT tokens
+- ❌ Never store tokens in localStorage (use httpOnly cookies)
 
 ---
 
-## Secrets Management Services
+## API Security
 
-For production deployments, use a secrets management service:
+### CORS Configuration
 
-### Cloud Providers:
-- **AWS:** AWS Secrets Manager, Parameter Store
-- **Google Cloud:** Secret Manager
-- **Azure:** Key Vault
-- **Heroku:** Config Vars
-- **Vercel:** Environment Variables (encrypted)
+**Development:**
+```bash
+CORS_ORIGIN="http://localhost:5173"
+```
 
-### Self-Hosted:
-- **HashiCorp Vault**
-- **Docker Secrets**
-- **Kubernetes Secrets**
+**Production:**
+```bash
+CORS_ORIGIN="https://yourdomain.com"
+```
 
----
+### Rate Limiting
 
-## Environment Variables Reference
-
-### Required Secrets:
-
-| Variable | Description | Security Level | Example |
-|----------|-------------|----------------|---------|
-| `DB_PASSWORD` | PostgreSQL password | 🔴 Critical | `<random-32-chars>` |
-| `JWT_SECRET` | JWT signing key | 🔴 Critical | `<random-64-hex>` |
-
-### Configuration (Non-Secret):
-
-| Variable | Description | Security Level | Example |
-|----------|-------------|----------------|---------|
-| `DB_HOST` | Database host | 🟡 Moderate | `localhost` |
-| `DB_PORT` | Database port | 🟢 Low | `5432` |
-| `DB_NAME` | Database name | 🟢 Low | `buckeuchre` |
-| `DB_USER` | Database user | 🟡 Moderate | `buckeuchre` |
-| `NODE_ENV` | Environment | 🟢 Low | `production` |
-| `PORT` | Server port | 🟢 Low | `3000` |
+Consider implementing rate limiting for production:
+- Authentication endpoints: 5 requests/minute
+- API endpoints: 100 requests/minute
+- WebSocket connections: 10 connections/IP
 
 ---
 
-## Reporting Security Issues
+## WebSocket Security
 
-If you discover a security vulnerability:
+### Authentication
 
-1. **DO NOT** open a public GitHub issue
-2. Email security concerns to: [your-email@example.com]
-3. Include:
-   - Description of the vulnerability
-   - Steps to reproduce
-   - Potential impact
-   - Suggested fix (if any)
+- ✅ Authenticate on connection (JWT in handshake)
+- ✅ Validate tokens on every message
+- ✅ Disconnect on authentication failure
+- ✅ Implement connection timeouts
+
+### Message Validation
+
+- ✅ Validate all incoming messages
+- ✅ Sanitize user input
+- ✅ Rate limit messages per connection
+- ✅ Implement message size limits
 
 ---
 
-## Security Updates
+## Input Validation
 
-- Regularly run `npm audit` and fix vulnerabilities
-- Keep dependencies up to date
-- Review security advisories for used packages
-- Test security patches before deploying
+### Player Names
+
+```typescript
+// ✅ Validated and sanitized
+const playerName = input.trim();
+if (playerName.length === 0 || playerName.length > 50) {
+  throw new ValidationError('Invalid player name');
+}
+```
+
+### Game Actions
+
+- ✅ Validate card IDs against player's hand
+- ✅ Validate game phase for actions
+- ✅ Validate player turn
+- ✅ Sanitize all user input
+
+---
+
+## Production Deployment
+
+### Environment Setup
+
+**Required for production:**
+```bash
+NODE_ENV=production
+JWT_SECRET=<strong-random-secret>
+DB_PASSWORD=<strong-random-password>
+DATABASE_URL=<connection-with-ssl>
+CORS_ORIGIN=<your-production-domain>
+```
+
+### Security Headers
+
+Implement security headers in production:
+```javascript
+// Helmet.js recommended
+app.use(helmet());
+
+// Manual configuration
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+  next();
+});
+```
+
+### HTTPS
+
+- ✅ Always use HTTPS in production
+- ✅ Redirect HTTP to HTTPS
+- ✅ Use TLS 1.2 or higher
+- ✅ Valid SSL certificates
+
+---
+
+## Monitoring & Logging
+
+### What to Log
+
+✅ **DO log:**
+- Authentication attempts (without passwords)
+- Authorization failures
+- Game state changes
+- Error stack traces (server-side only)
+- Performance metrics
+
+❌ **NEVER log:**
+- Passwords
+- JWT tokens
+- Session IDs
+- Credit card numbers
+- Personal identifiable information (PII)
+
+### Log Security
+
+- Store logs securely
+- Implement log rotation
+- Restrict log access
+- Monitor for suspicious activity
+
+---
+
+## Dependency Security
+
+### Regular Updates
 
 ```bash
 # Check for vulnerabilities
 npm audit
 
-# Fix automatically (when possible)
-npm audit fix
-
 # Update dependencies
 npm update
+
+# Fix vulnerabilities
+npm audit fix
 ```
+
+### Best Practices
+
+- ✅ Review dependencies before adding
+- ✅ Keep dependencies updated
+- ✅ Monitor security advisories
+- ✅ Use lock files (package-lock.json)
+- ❌ Don't use unmaintained packages
 
 ---
 
-## Additional Resources
+## Incident Response
+
+### If Secrets Are Compromised
+
+1. **Immediately rotate all secrets:**
+   ```bash
+   # Generate new secrets
+   NEW_JWT_SECRET=$(openssl rand -base64 32)
+   NEW_DB_PASSWORD=$(openssl rand -base64 32)
+   
+   # Update .env
+   # Restart services
+   ```
+
+2. **Revoke all active sessions:**
+   - Invalidate all JWT tokens
+   - Force users to re-authenticate
+
+3. **Investigate the breach:**
+   - Check logs for unauthorized access
+   - Identify affected systems
+   - Document the incident
+
+4. **Update security measures:**
+   - Patch vulnerabilities
+   - Improve access controls
+   - Review security practices
+
+---
+
+## Security Checklist
+
+### Development
+
+- [ ] `.env` file is gitignored
+- [ ] No hard-coded secrets in code
+- [ ] Strong random passwords used
+- [ ] Input validation implemented
+- [ ] Error messages don't leak sensitive info
+
+### Pre-Production
+
+- [ ] All dependencies updated
+- [ ] Security audit completed
+- [ ] Secrets rotated from development
+- [ ] HTTPS configured
+- [ ] CORS properly configured
+
+### Production
+
+- [ ] Environment variables set correctly
+- [ ] Database backups configured
+- [ ] Monitoring and logging enabled
+- [ ] Rate limiting implemented
+- [ ] Security headers configured
+- [ ] Incident response plan documented
+
+---
+
+## Resources
 
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [Node.js Security Best Practices](https://nodejs.org/en/docs/guides/security/)
-- [Express Security Best Practices](https://expressjs.com/en/advanced/best-practice-security.html)
-- [JWT Security Best Practices](https://tools.ietf.org/html/rfc8725)
+- [JWT Best Practices](https://curity.io/resources/learn/jwt-best-practices/)
+- [PostgreSQL Security](https://www.postgresql.org/docs/current/security.html)
 
 ---
 
-**Remember: Security is not a one-time task. Regularly review and update security practices.**
+## Contact
+
+For security concerns or to report vulnerabilities, please contact the development team immediately.
+
+**DO NOT** open public GitHub issues for security vulnerabilities.
