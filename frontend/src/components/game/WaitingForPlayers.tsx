@@ -50,17 +50,20 @@ export function WaitingForPlayers({
 
       if (result.gameState) {
         setGameState(result.gameState);
-      } else if (waitingInfo && waitingInfo.gameId === gameId) {
-        const updatedCount = Math.min(4, waitingInfo.playerCount + 1);
-        const updatedNeeded = Math.max(0, waitingInfo.playersNeeded - 1);
+      } else {
+        const nextCount = result.playerCount ?? Math.min(4, (waitingInfo?.playerCount ?? playerCount) + 1);
+        const nextNeeded = result.playersNeeded ?? Math.max(0, 4 - nextCount);
+        const nextMessage = result.waitingMessage
+          ? result.waitingMessage
+          : nextNeeded > 0
+            ? `Waiting for ${nextNeeded} more player${nextNeeded === 1 ? '' : 's'}...`
+            : 'All seats filled. Starting shortly...';
+
         setWaitingInfo({
-          ...waitingInfo,
-          playerCount: updatedCount,
-          playersNeeded: updatedNeeded,
-          message:
-            updatedNeeded > 0
-              ? `Waiting for ${updatedNeeded} more player${updatedNeeded === 1 ? '' : 's'}...`
-              : 'All seats filled. Starting shortly...',
+          gameId,
+          playerCount: nextCount,
+          playersNeeded: nextNeeded,
+          message: nextMessage,
         });
       }
 

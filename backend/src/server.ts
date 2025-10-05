@@ -10,6 +10,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import apiRoutes from './api';
 import { handleConnection } from './sockets/connection';
+import { setSocketServer } from './utils/socketManager';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
 /**
@@ -87,6 +88,7 @@ export function createAppServer(): {
 
   // Initialize WebSocket handlers
   handleConnection(io);
+  setSocketServer(io);
 
   return { app, httpServer, io };
 }
