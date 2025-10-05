@@ -181,7 +181,21 @@ export function applyBid(
   const passedPlayers = new Set(
     newBids.filter(b => b.amount === 'PASS').map(b => b.playerPosition)
   );
-  
+
+  if (passedPlayers.size === 4) {
+    const nextDealerPosition = ((state.dealerPosition + 1) % 4) as PlayerPosition;
+
+    return withVersion(state, {
+      phase: 'DEALING',
+      dealerPosition: nextDealerPosition,
+      bids: [],
+      currentBidder: null,
+      highestBid: null,
+      winningBidderPosition: null,
+      trumpSuit: null,
+    });
+  }
+
   let nextBidder: PlayerPosition | null = null;
   for (let i = 1; i <= 4; i++) {
     const candidatePosition = ((playerPosition + i) % 4) as PlayerPosition;
@@ -190,18 +204,15 @@ export function applyBid(
       break;
     }
   }
-  
+
   // Check if bidding is complete
   let newPhase = state.phase;
-  if (passedPlayers.size === 4) {
-    // All players passed - deal passes to next dealer
-    newPhase = 'DEALING';
-  } else if (passedPlayers.size === 3 && newWinningBidderPosition !== null) {
+  if (passedPlayers.size === 3 && newWinningBidderPosition !== null) {
     // One winner, three passed - bidding complete
     newPhase = 'DECLARING_TRUMP';
     nextBidder = null;
   }
-  
+
   return withVersion(state, {
     phase: newPhase,
     bids: newBids,
