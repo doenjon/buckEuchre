@@ -7,9 +7,13 @@ import dotenv from 'dotenv';
 import { createAppServer } from './server';
 import { connectDatabase, disconnectDatabase } from './db/client';
 import { loadActiveGamesFromDatabase, persistAllActiveGames } from './services/state.service';
+import { validateEnv } from './config/env';
 
 // Load environment variables
 dotenv.config();
+
+// Validate environment variables before starting server
+const env = validateEnv();
 
 async function main(): Promise<void> {
   console.log('Buck Euchre Backend Server');
@@ -29,12 +33,11 @@ async function main(): Promise<void> {
   const { httpServer, io } = createAppServer();
 
   // Start listening
-  const port = parseInt(process.env.PORT || '3000', 10);
-  httpServer.listen(port, () => {
-    console.log(`✓ Server running on port ${port}`);
-    console.log(`  - REST API: http://localhost:${port}`);
-    console.log(`  - WebSocket: ws://localhost:${port}`);
-    console.log(`  - Environment: ${process.env.NODE_ENV || 'development'}\n`);
+  httpServer.listen(env.PORT, () => {
+    console.log(`✓ Server running on port ${env.PORT}`);
+    console.log(`  - REST API: http://localhost:${env.PORT}`);
+    console.log(`  - WebSocket: ws://localhost:${env.PORT}`);
+    console.log(`  - Environment: ${env.NODE_ENV}\n`);
     console.log('Server ready to accept connections!\n');
   });
 

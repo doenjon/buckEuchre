@@ -22,6 +22,7 @@ import {
 } from '../../../shared/src/validators/game';
 import { executeGameAction, getActiveGameState } from '../services/state.service';
 import { joinGame, leaveGame, getGame } from '../services/game.service';
+import { updateConnectionGame } from '../services/connection.service';
 import { 
   applyBid,
   applyTrumpDeclaration,
@@ -65,6 +66,9 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
 
     // Join socket room regardless of whether game has started
     socket.join(`game:${validated.gameId}`);
+    
+    // Update connection service to track this player's game
+    updateConnectionGame(playerId, validated.gameId);
 
     if (!gameState) {
       // Game exists but hasn't started yet (still in WAITING)
@@ -136,6 +140,9 @@ async function handleLeaveGame(io: Server, socket: Socket, payload: unknown): Pr
 
     // Leave socket room
     socket.leave(`game:${validated.gameId}`);
+    
+    // Update connection service to clear this player's game
+    updateConnectionGame(playerId, null);
 
     // Notify other players
     io.to(`game:${validated.gameId}`).emit('PLAYER_DISCONNECTED', {

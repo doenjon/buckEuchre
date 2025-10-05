@@ -10,3 +10,6 @@ export * from './game';
 
 // Export all API types
 export * from './api';
+
+// Export all error types
+export * from './errors';
