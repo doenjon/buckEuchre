@@ -27,3 +27,115 @@ body {
 #root {
   width: 100%;
 }
+
+/* Custom animations */
+@layer utilities {
+  @keyframes slide-in-from-bottom {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-in-from-top {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes bounce-in {
+    0% {
+      transform: scale(0.3);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.05);
+    }
+    70% {
+      transform: scale(0.9);
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .animate-in {
+    animation-fill-mode: both;
+  }
+
+  .slide-in-from-bottom-4 {
+    animation: slide-in-from-bottom 0.5s ease-out;
+  }
+
+  .slide-in-from-bottom-10 {
+    animation: slide-in-from-bottom 0.7s ease-out;
+  }
+
+  .slide-in-from-top-2 {
+    animation: slide-in-from-top 0.3s ease-out;
+  }
+
+  .fade-in {
+    animation: fade-in 0.5s ease-out;
+  }
+
+  .bounce-in {
+    animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+}
+
+/* Improved focus styles for accessibility */
+@layer base {
+  *:focus-visible {
+    outline: 2px solid theme('colors.blue.500');
+    outline-offset: 2px;
+  }
+
+  /* Reduce motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Mobile-friendly touch targets */
+@layer components {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Card size adjustments for mobile */
+@media (max-width: 640px) {
+  .w-24 {
+    width: 4.5rem !important;
+  }
+  .h-36 {
+    height: 6.75rem !important;
+  }
+}

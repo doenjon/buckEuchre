@@ -21,20 +21,29 @@ export function PlayerHand({
 }: PlayerHandProps) {
   if (!cards || cards.length === 0) {
     return (
-      <div className="text-center text-gray-500 py-8">
+      <div 
+        className="text-center text-gray-500 py-8"
+        role="status"
+        aria-label="No cards in hand"
+      >
         <p>No cards in hand</p>
       </div>
     );
   }
 
   return (
-    <div className="flex justify-center items-end gap-2">
+    <div 
+      className="flex flex-wrap sm:flex-nowrap justify-center items-end gap-1 sm:gap-2 px-2 sm:px-0"
+      role="group"
+      aria-label={`Your hand: ${cards.length} cards`}
+    >
       {cards.map((card, index) => (
         <div 
           key={card.id} 
-          className="transition-transform"
+          className="transition-all duration-300 hover:z-10"
           style={{
-            transform: `translateY(${index % 2 === 0 ? '0' : '8px'})`,
+            transform: `translateY(${index % 2 === 0 ? '0' : '4px'}) scale(${selectedCardId === card.id ? 1.05 : 1})`,
+            animationDelay: `${index * 50}ms`,
           }}
         >
           <Card
