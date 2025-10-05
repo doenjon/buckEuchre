@@ -36,8 +36,11 @@ export function TurnIndicator({ currentPlayer, isMyTurn, phase, className }: Tur
 
   return (
     <div
+      role="status"
+      aria-live="polite"
+      aria-label={isMyTurn ? `Your turn to ${actionText}` : `Waiting for ${currentPlayer?.name || 'player'}`}
       className={cn(
-        'turn-indicator p-4 rounded-lg transition-all duration-300',
+        'turn-indicator p-3 sm:p-4 rounded-lg transition-all duration-300 animate-in fade-in',
         isMyTurn
           ? 'bg-green-50 border-2 border-green-500 animate-pulse shadow-lg'
           : 'bg-gray-50 border border-gray-200',
@@ -45,28 +48,30 @@ export function TurnIndicator({ currentPlayer, isMyTurn, phase, className }: Tur
       )}
     >
       {isMyTurn ? (
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-green-600 animate-bounce" />
-          <span className="font-bold text-green-900 text-lg">
+        <div className="flex items-center gap-2 justify-center sm:justify-start">
+          <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 animate-bounce" />
+          <span className="font-bold text-green-900 text-sm sm:text-lg text-center sm:text-left">
             Your turn to {actionText}!
           </span>
         </div>
       ) : currentPlayer ? (
-        <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-gray-500" />
-          <span className="text-gray-700">
-            Waiting for {currentPlayer.name} to {actionText}
-          </span>
+        <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 justify-center sm:justify-start">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
+            <span className="text-gray-700 text-sm sm:text-base text-center sm:text-left">
+              Waiting for {currentPlayer.name} to {actionText}
+            </span>
+          </div>
           {!currentPlayer.connected && (
-            <Badge variant="destructive" className="ml-2">
+            <Badge variant="destructive" className="text-xs">
               Disconnected
             </Badge>
           )}
         </div>
       ) : (
-        <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-gray-500" />
-          <span className="text-gray-700">
+        <div className="flex items-center gap-2 justify-center sm:justify-start">
+          <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
+          <span className="text-gray-700 text-sm sm:text-base">
             {phase === 'DEALING' && 'Dealing cards...'}
             {phase === 'TRUMP_REVEAL' && 'Revealing trump card...'}
             {phase === 'ROUND_OVER' && 'Round complete'}
