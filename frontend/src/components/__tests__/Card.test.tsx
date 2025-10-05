@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Card, type CardProps } from '../game/Card';
+import { Card } from '../game/Card';
 import type { Card as CardType } from '@buck-euchre/shared';
 
 // Mock card data

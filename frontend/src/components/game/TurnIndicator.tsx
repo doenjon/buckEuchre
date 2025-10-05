@@ -6,7 +6,7 @@
 import { Clock, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { GamePhase, PlayerPosition, Player } from '@buck-euchre/shared';
+import type { GamePhase, Player } from '@buck-euchre/shared';
 
 interface TurnIndicatorProps {
   currentPlayer: Player | null;

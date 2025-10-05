@@ -5,12 +5,10 @@
 
 import { useCallback } from 'react';
 import { useGameStore } from '@/stores/gameStore';
-import { useAuthStore } from '@/stores/authStore';
 import { useSocket } from './useSocket';
 
 export function useGame() {
   const gameStore = useGameStore();
-  const { playerId } = useAuthStore();
   const socket = useSocket();
 
   // Game actions

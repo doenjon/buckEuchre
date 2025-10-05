@@ -38,7 +38,7 @@ export function WaitingForPlayers({
             <Users className="h-16 w-16 text-primary" />
             <Badge 
               className="absolute -top-2 -right-2 px-2 py-1"
-              variant={playerCount === 4 ? 'default' : 'secondary'}
+              variant={playerCount === 4 ? 'success' : 'default'}
             >
               {playerCount}/4
             </Badge>

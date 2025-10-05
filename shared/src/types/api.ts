@@ -8,7 +8,7 @@
  * - Request/response structures
  */
 
-import { GameState, ClientGameState, GameSummary, BidAmount, Suit, PlayerPosition } from './game';
+import { ClientGameState, GameSummary, BidAmount, Suit, PlayerPosition } from './game';
 
 // ============================================================================
 // Authentication API Types

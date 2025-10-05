@@ -6,7 +6,7 @@
 import * as React from "react";
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'default' | 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'default' | 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -20,6 +20,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       secondary: 'bg-blue-600 text-white hover:bg-blue-700',
       danger: 'bg-red-600 text-white hover:bg-red-700',
       ghost: 'hover:bg-gray-100',
+      outline: 'border border-gray-300 bg-white hover:bg-gray-50',
     };
     
     const sizeStyles = {

@@ -3,10 +3,10 @@
  * @description Tests for Scoreboard component
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { Scoreboard } from '../game/Scoreboard';
-import type { Player, GamePhase } from '@buck-euchre/shared';
+import type { Player } from '@buck-euchre/shared';
 
 // Mock players
 const mockPlayers: Player[] = [

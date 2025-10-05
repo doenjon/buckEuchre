@@ -6,7 +6,6 @@
  */
 
 import { z } from 'zod';
-import { VALID_BID_AMOUNTS, PLAYER_NAME_MIN_LENGTH, PLAYER_NAME_MAX_LENGTH } from '../constants/rules';
 
 /**
  * UUID format validation
