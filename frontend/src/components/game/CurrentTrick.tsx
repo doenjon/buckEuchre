@@ -10,9 +10,15 @@ export interface CurrentTrickProps {
   trick: Trick | null;
   players: Player[];
   currentPlayerPosition: number;
+  myPosition: number;
 }
 
-export function CurrentTrick({ trick, players, currentPlayerPosition }: CurrentTrickProps) {
+export function CurrentTrick({
+  trick,
+  players,
+  currentPlayerPosition,
+  myPosition
+}: CurrentTrickProps) {
   if (!trick || trick.cards.length === 0) {
     return (
       <div
@@ -27,12 +33,12 @@ export function CurrentTrick({ trick, players, currentPlayerPosition }: CurrentT
     );
   }
 
-  // Arrange cards in a circle around the center
+  // Arrange cards around the center with the local player seated at the bottom
   const cardPositions = [
-    'top-4 left-1/2 -translate-x-1/2',      // North (0)
-    'right-4 top-1/2 -translate-y-1/2',     // East (1)
-    'bottom-4 left-1/2 -translate-x-1/2',   // South (2)
-    'left-4 top-1/2 -translate-y-1/2',      // West (3)
+    'bottom-6 left-1/2 -translate-x-1/2', // South (you)
+    'left-6 top-1/2 -translate-y-1/2', // Seat to your left
+    'top-6 left-1/2 -translate-x-1/2', // Across from you
+    'right-6 top-1/2 -translate-y-1/2' // Seat to your right
   ];
 
   const winner = trick.winner !== null ? players[trick.winner] : null;
@@ -59,7 +65,9 @@ export function CurrentTrick({ trick, players, currentPlayerPosition }: CurrentT
 
       {trick.cards.map((playedCard, index) => {
         const player = players[playedCard.playerPosition];
-        const positionClass = cardPositions[playedCard.playerPosition];
+        const relativeSeatIndex =
+          ((playedCard.playerPosition - myPosition) % 4 + 4) % 4;
+        const positionClass = cardPositions[relativeSeatIndex];
         const isCurrentPlayer = playedCard.playerPosition === currentPlayerPosition;
         const isWinner = trick.winner === playedCard.playerPosition;
         

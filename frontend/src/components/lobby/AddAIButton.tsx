@@ -4,9 +4,10 @@
  */
 
 import { useState } from 'react';
-import { Bot } from 'lucide-react';
+import { Bot, Loader2 } from 'lucide-react';
 import { addAIToGame } from '@/services/api';
 import { useUIStore } from '@/stores/uiStore';
+import { Button } from '@/components/ui/button';
 
 interface AddAIButtonProps {
   gameId: string;
@@ -37,14 +38,15 @@ export function AddAIButton({ gameId, onAIAdded }: AddAIButtonProps) {
   };
 
   return (
-    <button
+    <Button
       onClick={handleAddAI}
       disabled={adding}
-      className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      size="sm"
+      className="gap-2"
       aria-label="Add AI player"
     >
-      <Bot className="h-4 w-4" />
-      {adding ? 'Adding...' : 'Add AI'}
-    </button>
+      {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
+      {adding ? 'Adding…' : 'Add AI'}
+    </Button>
   );
 }

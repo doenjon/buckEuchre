@@ -228,6 +228,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             trick={displayTrick}
             players={players}
             currentPlayerPosition={trickHighlightPosition}
+            myPosition={myPosition}
           />
 
           {myPlayer.folded !== true ? (
