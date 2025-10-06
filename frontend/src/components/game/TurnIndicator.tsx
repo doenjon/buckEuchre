@@ -40,25 +40,25 @@ export function TurnIndicator({ currentPlayer, isMyTurn, phase, className }: Tur
       aria-live="polite"
       aria-label={isMyTurn ? `Your turn to ${actionText}` : `Waiting for ${currentPlayer?.name || 'player'}`}
       className={cn(
-        'turn-indicator p-3 sm:p-4 rounded-lg transition-all duration-300 animate-in fade-in',
+        'turn-indicator rounded-2xl border border-white/10 bg-white/5 p-4 transition-all duration-300 backdrop-blur',
         isMyTurn
-          ? 'bg-green-50 border-2 border-green-500 animate-pulse shadow-lg'
-          : 'bg-gray-50 border border-gray-200',
+          ? 'ring-1 ring-emerald-400/60 shadow-[0_20px_50px_-25px_rgba(16,185,129,0.65)]'
+          : 'text-slate-200',
         className
       )}
     >
       {isMyTurn ? (
-        <div className="flex items-center gap-2 justify-center sm:justify-start">
-          <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 animate-bounce" />
-          <span className="font-bold text-green-900 text-sm sm:text-lg text-center sm:text-left">
-            Your turn to {actionText}!
+        <div className="flex items-center justify-center gap-3 text-emerald-200 sm:justify-start">
+          <Sparkles className="h-5 w-5 animate-bounce" />
+          <span className="text-sm font-semibold uppercase tracking-[0.35em] sm:text-base">
+            Your turn • {actionText}
           </span>
         </div>
       ) : currentPlayer ? (
-        <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 justify-center sm:justify-start">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
-            <span className="text-gray-700 text-sm sm:text-base text-center sm:text-left">
+        <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-between sm:text-left">
+          <div className="flex items-center gap-2 text-slate-200">
+            <Clock className="h-5 w-5 text-emerald-300/80" />
+            <span className="text-sm font-medium sm:text-base">
               Waiting for {currentPlayer.name} to {actionText}
             </span>
           </div>
@@ -69,11 +69,11 @@ export function TurnIndicator({ currentPlayer, isMyTurn, phase, className }: Tur
           )}
         </div>
       ) : (
-        <div className="flex items-center gap-2 justify-center sm:justify-start">
-          <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
-          <span className="text-gray-700 text-sm sm:text-base">
-            {phase === 'DEALING' && 'Dealing cards...'}
-            {phase === 'TRUMP_REVEAL' && 'Revealing trump card...'}
+        <div className="flex items-center justify-center gap-2 text-slate-200 sm:justify-start">
+          <Clock className="h-5 w-5 text-emerald-300/80" />
+          <span className="text-sm sm:text-base">
+            {phase === 'DEALING' && 'Dealing cards…'}
+            {phase === 'TRUMP_REVEAL' && 'Revealing trump card…'}
             {phase === 'ROUND_OVER' && 'Round complete'}
           </span>
         </div>

@@ -18,11 +18,9 @@ export function FoldDecision({ gameState, myPosition, isMyTurn }: FoldDecisionPr
 
   if (!isMyTurn) {
     return (
-      <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
-        <p className="text-center text-gray-600">
-          Waiting for other players to decide...
-        </p>
-      </div>
+      <p className="text-center text-sm font-medium text-slate-300">
+        Waiting for other players to make their call…
+      </p>
     );
   }
 
@@ -31,51 +29,50 @@ export function FoldDecision({ gameState, myPosition, isMyTurn }: FoldDecisionPr
   const canFold = !isClubs && !isBidder;
 
   return (
-    <div className="bg-amber-50 border-2 border-amber-500 rounded-lg p-6">
-      <h3 className="text-xl font-bold text-center mb-2">
-        Fold or Stay?
-      </h3>
-      
-      <div className="text-center mb-4">
-        <p className="text-gray-700">
-          Trump: <span className="font-semibold">{gameState.trumpSuit}</span>
+    <div className="space-y-6">
+      <div className="space-y-2 text-center">
+        <h3 className="text-lg font-semibold tracking-wide text-white">
+          Stay in or sit out?
+        </h3>
+        <p className="text-xs uppercase tracking-[0.3em] text-emerald-200/80">
+          Trump: {gameState.trumpSuit}
         </p>
         {isClubs && (
-          <p className="text-sm text-red-600 mt-1">
-            Clubs turned up - no folding allowed!
+          <p className="text-xs font-medium text-rose-300/90">
+            Clubs are up—folding isn’t available this round.
           </p>
         )}
         {isBidder && (
-          <p className="text-sm text-blue-600 mt-1">
-            You're the bidder - you must stay!
+          <p className="text-xs font-medium text-sky-200/90">
+            You won the bid, so you’re locked in.
           </p>
         )}
       </div>
-      
-      <div className="flex gap-3 justify-center">
+
+      <div className="flex flex-wrap justify-center gap-3">
         <Button
           onClick={() => makeFoldDecision(false)}
           variant="default"
           size="lg"
-          className="min-w-[120px] bg-green-600 hover:bg-green-700"
+          className="min-w-[120px] bg-emerald-500 text-slate-900 hover:bg-emerald-400"
         >
-          Stay In
+          Stay in
         </Button>
-        
+
         <Button
           onClick={() => makeFoldDecision(true)}
           variant="outline"
           size="lg"
-          className="min-w-[120px]"
+          className="min-w-[120px] border-emerald-500/60 text-emerald-200 hover:bg-emerald-500/10"
           disabled={!canFold}
         >
           Fold
         </Button>
       </div>
-      
+
       {!canFold && (
-        <p className="text-xs text-center text-gray-500 mt-2">
-          {isClubs ? 'Cannot fold when clubs are trump' : 'Bidder cannot fold'}
+        <p className="text-center text-xs text-slate-300/80">
+          {isClubs ? 'Cannot fold when clubs are trump.' : 'Bidder must play the hand.'}
         </p>
       )}
     </div>

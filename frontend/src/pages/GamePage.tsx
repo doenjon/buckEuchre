@@ -80,17 +80,24 @@ export function GamePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-800 to-green-600 p-4">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-white text-center mb-4">
-          Buck Euchre - Game {gameId?.slice(0, 8)}
-        </h1>
-        
+    <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+        <header className="flex flex-col gap-2 text-center">
+          <span className="text-sm uppercase tracking-[0.35em] text-emerald-300/70">
+            Buck Euchre
+          </span>
+          <h1 className="text-2xl font-semibold text-white sm:text-3xl">
+            Game {gameId?.slice(0, 8)}
+          </h1>
+        </header>
+
         {myPosition !== null ? (
           <GameBoard gameState={gameState} myPosition={myPosition} />
         ) : (
-          <div className="bg-white rounded-lg shadow-xl p-8 text-center">
-            <p className="text-gray-600">Finding your position in the game...</p>
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-slate-200 backdrop-blur">
+            <p className="text-sm font-medium tracking-wide text-emerald-200/80">
+              Finding your position in the game…
+            </p>
           </div>
         )}
       </div>
