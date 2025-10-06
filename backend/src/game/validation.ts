@@ -92,8 +92,13 @@ export function canPlaceBid(
   amount: 'PASS' | number,
   currentHighestBid: number | null,
   playerHasPassed: boolean,
-  allOthersPassed: boolean
+  allOthersPassed: boolean,
+  playerHasBid = false
 ): ValidationResult {
+  if (playerHasBid) {
+    return { valid: false, reason: 'Already acted in bidding round' };
+  }
+
   // Cannot bid after passing
   if (playerHasPassed) {
     return { valid: false, reason: 'Already passed this round' };

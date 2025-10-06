@@ -170,14 +170,15 @@ describe('state.ts - State Transitions', () => {
       expect(state.currentBidder).toBe(2);
     });
 
-    it('should skip passed players', () => {
+    it('should not provide additional bidding turns once each player has acted', () => {
       state = applyBid(state, 1, 'PASS');
       state = applyBid(state, 2, 3);
       state = applyBid(state, 3, 'PASS');
       state = applyBid(state, 0, 'PASS');
-      
+
       expect(state.phase).toBe('DECLARING_TRUMP');
       expect(state.currentBidder).toBeNull();
+      expect(state.bids.filter(bid => bid.playerPosition === 1)).toHaveLength(1);
     });
 
     it('should transition to DECLARING_TRUMP when bidding complete', () => {
