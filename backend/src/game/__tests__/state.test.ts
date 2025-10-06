@@ -327,6 +327,17 @@ describe('state.ts - State Transitions', () => {
       state = applyFoldDecision(state, 0, true);
       expect(() => applyFoldDecision(state, 0, false)).toThrow('already recorded');
     });
+
+    it('should immediately score when all non-bidders fold', () => {
+      state = applyFoldDecision(state, 0, true);
+      state = applyFoldDecision(state, 2, true);
+      state = applyFoldDecision(state, 3, true);
+
+      expect(state.phase === 'ROUND_OVER' || state.phase === 'GAME_OVER').toBe(true);
+      expect(state.players[1].tricksTaken).toBe(5);
+      expect(state.players[1].score).toBe(10);
+      expect(state.players[0].score).toBe(15);
+    });
   });
 
   describe('applyCardPlay', () => {
