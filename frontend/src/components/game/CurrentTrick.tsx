@@ -35,28 +35,28 @@ export function CurrentTrick({
 
   // Arrange cards around the center with the local player seated at the bottom
   const cardPositions = [
-    'bottom-6 left-1/2 -translate-x-1/2', // South (you)
-    'left-6 top-1/2 -translate-y-1/2', // Seat to your left
-    'top-6 left-1/2 -translate-x-1/2', // Across from you
-    'right-6 top-1/2 -translate-y-1/2' // Seat to your right
+    'bottom-12 left-1/2 -translate-x-1/2 sm:bottom-16', // South (you)
+    'left-12 top-1/2 -translate-y-1/2 sm:left-16', // Seat to your left
+    'top-12 left-1/2 -translate-x-1/2 sm:top-16', // Across from you
+    'right-12 top-1/2 -translate-y-1/2 sm:right-16' // Seat to your right
   ];
 
   const winner = trick.winner !== null ? players[trick.winner] : null;
 
   return (
     <div
-      className="relative flex min-h-[340px] items-center justify-center overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 p-6 shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] backdrop-blur"
+      className="relative flex min-h-[360px] items-center justify-center overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 px-6 pb-16 pt-20 shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] sm:pb-20 sm:pt-24 backdrop-blur"
       role="region"
       aria-label={`Trick ${trick.number}, ${trick.cards.length} of 4 cards played`}
     >
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-2 text-center text-emerald-100/80">
-          <span className="text-xs uppercase tracking-[0.4em]">Trick {trick.number}</span>
-          <span className="text-sm font-medium">
+      <div className="pointer-events-none absolute inset-x-0 top-6 flex justify-center px-6 sm:top-8">
+        <div className="flex flex-col items-center gap-1 rounded-full bg-emerald-950/70 px-4 py-2 text-center text-emerald-100/80 shadow-[0_20px_40px_-30px_rgba(16,185,129,0.9)]">
+          <span className="text-[11px] uppercase tracking-[0.4em]">Trick {trick.number}</span>
+          <span className="text-sm font-medium leading-tight">
             Lead • {players[trick.leadPlayerPosition]?.name || `Player ${trick.leadPlayerPosition}`}
           </span>
           {winner && (
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white">
+            <span className="mt-1 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-white">
               Winner {winner.name}
             </span>
           )}
@@ -75,7 +75,7 @@ export function CurrentTrick({
           <div
             key={playedCard.playerPosition}
             className={`
-              absolute ${positionClass}
+              absolute ${positionClass} z-10
               flex flex-col items-center gap-3 transition-transform duration-500
               ${isWinner ? 'scale-105 drop-shadow-[0_15px_25px_rgba(250,204,21,0.35)]' : ''}
             `}
