@@ -152,22 +152,23 @@ describe('Card Component', () => {
   describe('Disabled State', () => {
     it('should show disabled styles when disabled', () => {
       render(<Card card={mockCard} disabled={true} />);
-      
+
       const button = screen.getByRole('button');
-      expect(button.className).toContain('opacity-40');
+      expect(button.className).toContain('cursor-not-allowed');
+      expect(button.className).not.toContain('opacity-40');
     });
 
     it('should include disabled state in aria-label', () => {
       render(<Card card={mockCard} disabled={true} />);
-      
+
       expect(screen.getByRole('button').getAttribute('aria-label')).toContain('disabled');
     });
 
     it('should not have hover cursor when disabled', () => {
       render(<Card card={mockCard} disabled={true} onClick={() => {}} />);
-      
+
       const button = screen.getByRole('button');
-      expect(button.className).toContain('cursor-default');
+      expect(button.className).toContain('cursor-not-allowed');
       expect(button.className).not.toContain('cursor-pointer');
     });
   });
