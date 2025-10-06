@@ -286,6 +286,7 @@ export function applyFoldDecision(
   }) as [Player, Player, Player, Player];
 
   const winningBidder = state.winningBidderPosition;
+  const activePlayers = players.filter(player => player.folded !== true);
 
   // Only non-bidders need to make a decision. Bidder is always considered decided.
   const allDecided = players.every((player, position) => {
@@ -302,6 +303,55 @@ export function applyFoldDecision(
   if (allDecided) {
     if (winningBidder === null) {
       throw new Error('Cannot start playing without a winning bidder');
+    }
+
+    // If everyone except the bidder folded, resolve round immediately
+    if (activePlayers.length === 1 && activePlayers[0].position === winningBidder) {
+      if (state.highestBid === null) {
+        throw new Error('Cannot score round without a winning bid');
+      }
+
+      const playersWithAutoTricks = players.map((player, position) => {
+        if (position === winningBidder) {
+          return {
+            ...player,
+            tricksTaken: 5,
+          };
+        }
+        return player;
+      }) as [Player, Player, Player, Player];
+
+      const scoreChanges = calculateRoundScores(
+        playersWithAutoTricks,
+        winningBidder,
+        state.highestBid
+      );
+
+      const scoredPlayers = playersWithAutoTricks.map((player, position) => ({
+        ...player,
+        score: player.score + scoreChanges[position],
+      })) as [Player, Player, Player, Player];
+
+      const { winner, gameOver } = checkWinCondition(scoredPlayers);
+
+      const updates: Partial<GameState> = {
+        phase: gameOver ? 'GAME_OVER' : 'ROUND_OVER',
+        players: scoredPlayers,
+        currentPlayerPosition: null,
+        currentTrick: {
+          number: 1,
+          leadPlayerPosition: winningBidder,
+          cards: [],
+          winner: winningBidder,
+        },
+      };
+
+      if (gameOver) {
+        updates.winner = winner;
+        updates.gameOver = true;
+      }
+
+      return withVersion(state, updates);
     }
 
     // Start playing phase
