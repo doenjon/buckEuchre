@@ -15,75 +15,73 @@ export interface CurrentTrickProps {
 export function CurrentTrick({ trick, players, currentPlayerPosition }: CurrentTrickProps) {
   if (!trick || trick.cards.length === 0) {
     return (
-      <div 
-        className="bg-green-700 rounded-lg p-8 flex items-center justify-center min-h-[300px] shadow-lg"
+      <div
+        className="relative flex min-h-[320px] items-center justify-center rounded-[28px] border border-white/15 bg-white/5 shadow-inner backdrop-blur"
         role="region"
         aria-label="Current trick area"
       >
-        <p className="text-white text-lg animate-pulse">Waiting for first card to be played...</p>
+        <div className="rounded-full border border-dashed border-white/20 px-6 py-4 text-xs font-medium uppercase tracking-[0.25em] text-white/60">
+          Waiting for the first card
+        </div>
       </div>
     );
   }
 
-  // Arrange cards in a circle around the center
-  const cardPositions = [
-    'top-4 left-1/2 -translate-x-1/2',      // North (0)
-    'right-4 top-1/2 -translate-y-1/2',     // East (1)
-    'bottom-4 left-1/2 -translate-x-1/2',   // South (2)
-    'left-4 top-1/2 -translate-y-1/2',      // West (3)
-  ];
-
   const winner = trick.winner !== null ? players[trick.winner] : null;
 
+  const cardPositions = [
+    { top: '8%', left: '50%', translate: '-50% -50%' },
+    { top: '50%', right: '6%', translate: '50% -50%' },
+    { bottom: '6%', left: '50%', translate: '-50% 50%' },
+    { top: '50%', left: '6%', translate: '-50% -50%' }
+  ];
+
   return (
-    <div 
-      className="bg-gradient-to-br from-green-700 to-green-800 rounded-lg p-4 sm:p-8 min-h-[300px] relative shadow-xl"
+    <div
+      className="relative flex min-h-[360px] items-center justify-center rounded-[28px] border border-white/15 bg-[radial-gradient(circle_at_center,_rgba(15,118,110,0.35),_rgba(6,31,17,0.95))] shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] backdrop-blur"
       role="region"
       aria-label={`Trick ${trick.number}, ${trick.cards.length} of 4 cards played`}
     >
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="text-white text-center animate-in fade-in duration-500">
-          <p className="text-sm sm:text-base mb-1 font-semibold">Trick #{trick.number}</p>
-          <p className="text-xs sm:text-sm opacity-90">
-            Lead: {players[trick.leadPlayerPosition]?.name || `Player ${trick.leadPlayerPosition}`}
+      <div className="pointer-events-none absolute inset-4 rounded-[24px] border border-white/10" />
+
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-center text-white">
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">Trick {trick.number}</p>
+        <p className="text-[11px] uppercase tracking-[0.25em] text-white/50">
+          Lead: {players[trick.leadPlayerPosition]?.name || `Player ${trick.leadPlayerPosition}`}
+        </p>
+        {winner && (
+          <p className="mt-2 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-200">
+            Winner: {winner.name}
           </p>
-          {winner && (
-            <p className="text-xs sm:text-sm mt-2 font-bold text-yellow-300 animate-bounce">
-              Winner: {winner.name}!
-            </p>
-          )}
-        </div>
+        )}
       </div>
-      
+
       {trick.cards.map((playedCard, index) => {
         const player = players[playedCard.playerPosition];
-        const positionClass = cardPositions[playedCard.playerPosition];
+        const position = cardPositions[playedCard.playerPosition];
         const isCurrentPlayer = playedCard.playerPosition === currentPlayerPosition;
         const isWinner = trick.winner === playedCard.playerPosition;
-        
+
         return (
           <div
             key={playedCard.playerPosition}
-            className={`
-              absolute ${positionClass}
-              animate-in slide-in-from-bottom-10 fade-in duration-500
-              ${isWinner ? 'animate-pulse' : ''}
-            `}
-            style={{ animationDelay: `${index * 150}ms` }}
+            className="absolute flex flex-col items-center gap-3"
+            style={{
+              top: position.top,
+              bottom: position.bottom,
+              left: position.left,
+              right: position.right,
+              transform: `translate(${position.translate})`,
+              animationDelay: `${index * 120}ms`
+            }}
           >
-            <div className="flex flex-col items-center gap-2">
-              <div className={`${isWinner ? 'ring-4 ring-yellow-400 rounded-lg' : ''}`}>
-                <Card card={playedCard.card} size="medium" />
-              </div>
-              <div 
-                className={`
-                  text-xs font-medium px-2 py-1 rounded shadow-md transition-all duration-300
-                  ${isCurrentPlayer ? 'bg-yellow-400 text-gray-900 ring-2 ring-yellow-500' : 'bg-white text-gray-900'}
-                  ${isWinner ? 'bg-green-500 text-white' : ''}
-                `}
-              >
-                {player?.name || `P${playedCard.playerPosition}`}
-              </div>
+            <div className={`rounded-2xl transition-all duration-300 ${isWinner ? 'ring-4 ring-emerald-300' : 'ring-0'}`}>
+              <Card card={playedCard.card} size="medium" />
+            </div>
+            <div
+              className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition-all duration-300 ${isWinner ? 'bg-emerald-500 text-white shadow-lg' : isCurrentPlayer ? 'bg-white text-emerald-700 shadow' : 'bg-white/80 text-slate-700'}`}
+            >
+              {player?.name || `P${playedCard.playerPosition}`}
             </div>
           </div>
         );

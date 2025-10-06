@@ -143,12 +143,12 @@ describe('Scoreboard Component', () => {
       const items = screen.getAllByRole('listitem');
       
       // Bob is position 1 (index 1)
-      expect(items[1].className).toContain('border-green-500');
-      expect(items[1].className).toContain('bg-green-50');
-      
+      expect(items[1].className).toContain('ring-emerald-200/70');
+      expect(items[1].className).toContain('bg-emerald-50/80');
+
       // Other players should not be highlighted
-      expect(items[0].className).not.toContain('border-green-500');
-      expect(items[2].className).not.toContain('border-green-500');
+      expect(items[0].className).not.toContain('ring-emerald-200/70');
+      expect(items[2].className).not.toContain('ring-emerald-200/70');
     });
 
     it('should update highlighting when turn changes', () => {
@@ -161,7 +161,7 @@ describe('Scoreboard Component', () => {
       );
       
       let items = screen.getAllByRole('listitem');
-      expect(items[0].className).toContain('border-green-500');
+      expect(items[0].className).toContain('ring-emerald-200/70');
       
       rerender(
         <Scoreboard 
@@ -172,8 +172,8 @@ describe('Scoreboard Component', () => {
       );
       
       items = screen.getAllByRole('listitem');
-      expect(items[0].className).not.toContain('border-green-500');
-      expect(items[2].className).toContain('border-green-500');
+      expect(items[0].className).not.toContain('ring-emerald-200/70');
+      expect(items[2].className).toContain('ring-emerald-200/70');
     });
 
     it('should include current turn in aria-label', () => {
@@ -205,11 +205,11 @@ describe('Scoreboard Component', () => {
       );
 
       const items = screen.getAllByRole('listitem');
-      expect(items[1].className).toContain('border-green-500');
-      expect(items[1].className).toContain('bg-green-50');
-      expect(items[3].className).toContain('border-green-500');
-      expect(items[3].className).toContain('bg-green-50');
-      expect(items[2].className).not.toContain('border-green-500');
+      expect(items[1].className).toContain('ring-emerald-200/70');
+      expect(items[1].className).toContain('bg-emerald-50/80');
+      expect(items[3].className).toContain('ring-emerald-200/70');
+      expect(items[3].className).toContain('bg-emerald-50/80');
+      expect(items[2].className).not.toContain('ring-emerald-200/70');
 
       expect(
         screen.getByRole('listitem', { name: /Bob, score 20, 0 tricks, current turn/i })
@@ -276,7 +276,7 @@ describe('Scoreboard Component', () => {
         />
       );
       
-      expect(screen.queryByText(/Trump Suit:/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('status', { name: /Trump suit/i })).not.toBeInTheDocument();
     });
 
     it('should not display trump suit when null', () => {
@@ -289,7 +289,7 @@ describe('Scoreboard Component', () => {
         />
       );
       
-      expect(screen.queryByText(/Trump Suit:/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('status', { name: /Trump suit/i })).not.toBeInTheDocument();
     });
   });
 
@@ -379,7 +379,7 @@ describe('Scoreboard Component', () => {
       );
       
       const items = screen.getAllByRole('listitem');
-      expect(items[1].className).toContain('opacity-50');
+      expect(items[1].className).toContain('opacity-60');
     });
   });
 
@@ -396,7 +396,7 @@ describe('Scoreboard Component', () => {
         />
       );
       
-      expect(screen.getByText('WINNER!')).toBeInTheDocument();
+      expect(screen.getByText(/Winner/i)).toBeInTheDocument();
     });
 
     it('should show winner for negative score', () => {
@@ -411,7 +411,7 @@ describe('Scoreboard Component', () => {
         />
       );
       
-      expect(screen.getByText('WINNER!')).toBeInTheDocument();
+      expect(screen.getByText(/Winner/i)).toBeInTheDocument();
     });
 
     it('should show winner only for player with lowest score at 0 or below', () => {
@@ -428,7 +428,7 @@ describe('Scoreboard Component', () => {
       );
       
       // Should only show one winner
-      expect(screen.getAllByText('WINNER!')).toHaveLength(1);
+      expect(screen.getAllByText(/Winner/i)).toHaveLength(1);
     });
 
     it('should highlight winner score in green', () => {
@@ -445,7 +445,7 @@ describe('Scoreboard Component', () => {
       
       const items = screen.getAllByRole('listitem');
       const winnerScore = within(items[0]).getByText('0');
-      expect(winnerScore.className).toContain('text-green-600');
+      expect(winnerScore.className).toContain('text-emerald-600');
     });
   });
 
@@ -533,7 +533,7 @@ describe('Scoreboard Component', () => {
       
       const items = screen.getAllByRole('listitem');
       items.forEach(item => {
-        expect(item.className).not.toContain('border-green-500');
+        expect(item.className).not.toContain('ring-emerald-200/70');
       });
     });
 
@@ -623,7 +623,7 @@ describe('Scoreboard Component', () => {
         />
       );
       
-      expect(screen.queryByText(/Trump Suit:/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('status', { name: /Trump suit/i })).not.toBeInTheDocument();
       
       rerender(
         <Scoreboard 
@@ -634,7 +634,7 @@ describe('Scoreboard Component', () => {
         />
       );
       
-      expect(screen.getByText(/Trump Suit:/i)).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: /Trump suit is HEARTS/i })).toBeInTheDocument();
       expect(screen.getByText('♥')).toBeInTheDocument();
     });
   });

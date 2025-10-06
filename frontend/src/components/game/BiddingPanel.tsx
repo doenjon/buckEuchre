@@ -16,51 +16,52 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
 
   if (!isMyTurn) {
     return (
-      <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-        <p className="text-center text-gray-600">
-          Waiting for other players to bid...
-        </p>
+      <div className="flex flex-col items-center gap-2 text-center text-sm text-white/70">
+        <p className="font-medium uppercase tracking-[0.25em]">Waiting for bids</p>
         {currentBid !== null && (
-          <p className="text-center font-semibold mt-2">
-            Current bid: {currentBid}
+          <p className="rounded-full border border-white/20 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
+            Current bid {currentBid}
           </p>
         )}
       </div>
     );
   }
 
-  const availableBids = [2, 3, 4, 5].filter(bid => 
+  const availableBids = [2, 3, 4, 5].filter(bid =>
     currentBid === null || bid > currentBid
   );
 
   return (
-    <div className="bg-blue-50 border-2 border-blue-500 rounded-lg p-6">
-      <h3 className="text-xl font-bold text-center mb-4">Your Turn to Bid</h3>
-      
-      {currentBid !== null && (
-        <p className="text-center text-gray-700 mb-4">
-          Current bid: <span className="font-semibold">{currentBid}</span>
-        </p>
-      )}
-      
-      <div className="flex gap-2 justify-center flex-wrap">
+    <div className="flex flex-col gap-5">
+      <div className="text-center">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/80">
+          Your turn to bid
+        </h3>
+        {currentBid !== null && (
+          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-white/60">
+            Current bid {currentBid}
+          </p>
+        )}
+      </div>
+
+      <div className="flex flex-wrap justify-center gap-3">
         {availableBids.map(bid => (
           <Button
             key={bid}
             onClick={() => placeBid(bid as 2 | 3 | 4 | 5)}
-            variant="default"
+            variant="primary"
             size="lg"
-            className="min-w-[80px]"
+            className="min-w-[96px] rounded-full bg-emerald-500/90 px-6 text-base font-semibold uppercase tracking-[0.2em] text-white hover:bg-emerald-500"
           >
             Bid {bid}
           </Button>
         ))}
-        
+
         <Button
           onClick={() => placeBid('PASS')}
           variant="outline"
           size="lg"
-          className="min-w-[80px]"
+          className="min-w-[96px] rounded-full border-white/40 bg-white/10 px-6 text-base font-semibold uppercase tracking-[0.2em] text-white/80 hover:bg-white/20"
         >
           Pass
         </Button>
