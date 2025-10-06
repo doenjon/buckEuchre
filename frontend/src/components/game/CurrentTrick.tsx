@@ -35,32 +35,33 @@ export function CurrentTrick({
 
   // Arrange cards around the center with the local player seated at the bottom
   const cardPositions = [
-    'bottom-6 left-1/2 -translate-x-1/2', // South (you)
-    'left-6 top-1/2 -translate-y-1/2', // Seat to your left
-    'top-6 left-1/2 -translate-x-1/2', // Across from you
-    'right-6 top-1/2 -translate-y-1/2' // Seat to your right
+    'top-[72%] left-1/2 -translate-x-1/2 sm:top-[74%]', // South (you)
+    'top-1/2 left-[18%] -translate-y-1/2 sm:left-[20%]', // Seat to your left
+    'top-[28%] left-1/2 -translate-x-1/2 sm:top-[26%]', // Across from you
+    'top-1/2 left-[82%] -translate-y-1/2 sm:left-[80%]' // Seat to your right
   ];
 
   const winner = trick.winner !== null ? players[trick.winner] : null;
 
   return (
     <div
-      className="relative flex min-h-[340px] items-center justify-center overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 p-6 shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] backdrop-blur"
+      className="relative flex min-h-[420px] items-center justify-center overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 px-10 pb-28 pt-24 shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] sm:px-16 sm:pb-32 sm:pt-28 backdrop-blur"
       role="region"
       aria-label={`Trick ${trick.number}, ${trick.cards.length} of 4 cards played`}
     >
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-2 text-center text-emerald-100/80">
-          <span className="text-xs uppercase tracking-[0.4em]">Trick {trick.number}</span>
-          <span className="text-sm font-medium">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-[18%] flex -translate-x-1/2 flex-col items-center gap-1 rounded-full bg-emerald-950/70 px-4 py-2 text-center text-emerald-100/80 shadow-[0_20px_40px_-30px_rgba(16,185,129,0.9)] sm:top-[16%]">
+          <span className="text-[11px] uppercase tracking-[0.4em]">Trick {trick.number}</span>
+          <span className="text-sm font-medium leading-tight">
             Lead • {players[trick.leadPlayerPosition]?.name || `Player ${trick.leadPlayerPosition}`}
           </span>
           {winner && (
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white">
+            <span className="mt-1 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-white">
               Winner {winner.name}
             </span>
           )}
         </div>
+        <div className="absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-900/60 blur-3xl sm:h-56 sm:w-56" />
       </div>
 
       {trick.cards.map((playedCard, index) => {
@@ -75,13 +76,13 @@ export function CurrentTrick({
           <div
             key={playedCard.playerPosition}
             className={`
-              absolute ${positionClass}
-              flex flex-col items-center gap-3 transition-transform duration-500
+              absolute ${positionClass} z-10
+              flex flex-col items-center gap-3 text-center transition-transform duration-500
               ${isWinner ? 'scale-105 drop-shadow-[0_15px_25px_rgba(250,204,21,0.35)]' : ''}
             `}
             style={{ animationDelay: `${index * 150}ms` }}
           >
-            <div className={`${isWinner ? 'ring-4 ring-emerald-300/60 rounded-2xl' : ''}`}>
+            <div className={`${isWinner ? 'rounded-2xl ring-4 ring-emerald-300/60' : 'drop-shadow-[0_25px_40px_rgba(16,185,129,0.35)]'}`}>
               <Card card={playedCard.card} size="medium" />
             </div>
             <div
