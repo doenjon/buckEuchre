@@ -16,9 +16,10 @@
 7. [Monitoring & Logging](#monitoring--logging)
 8. [Backup & Recovery](#backup--recovery)
 9. [Scaling Considerations](#scaling-considerations)
-10. [Security Hardening](#security-hardening)
-11. [Troubleshooting](#troubleshooting)
-12. [Maintenance](#maintenance)
+10. [AWS Lightsail Notes](#aws-lightsail-notes)
+11. [Security Hardening](#security-hardening)
+12. [Troubleshooting](#troubleshooting)
+13. [Maintenance](#maintenance)
 
 ---
 
@@ -462,6 +463,35 @@ curl http://localhost/api/health
 1. **Connection Pooling** (PgBouncer)
 2. **Read Replicas** for read-heavy workloads
 3. **Managed Database** (AWS RDS, DigitalOcean Managed Database)
+
+---
+
+## AWS Lightsail Notes
+
+### Upgrading an Instance
+
+Lightsail bundles do not support in-place resizing. To move to a larger or smaller plan:
+1. Create a snapshot of the current instance (Snapshots tab → **Create snapshot**).
+2. Launch a new instance from that snapshot, choosing the desired bundle size.
+3. Reassign the static IP or update DNS records to point traffic at the new instance.
+4. Decommission the old instance after verifying the new one is healthy.
+
+This approach minimizes downtime—you only need a brief cutover while swapping DNS or the static IP.
+
+### Lightsail Containers vs. Docker Compose
+
+- **Lightsail Containers** run one container image per service with optional scaling and HTTPS. They do not provide multi-container definitions, shared Compose networks, or named volumes.
+- **Docker Compose workflow** (current project setup) requires a standard Lightsail instance, EC2, or another host where you install Docker/Compose and manage the stack yourself.
+
+If you depend on `docker-compose` features, continue using a Lightsail instance (or move to ECS/EKS) rather than Lightsail Containers.
+
+### Sustainable CPU Usage Graph
+
+- Lightsail bundles use burstable CPUs. The “Sustainable CPU usage” line shows the baseline percentage you can run 24/7 without consuming burst credits (often ~5% per vCPU on small plans).
+- Using more CPU than that baseline burns credits; when credits run out, the instance is throttled back to the sustainable level.
+- Persistently higher workloads should move to a larger bundle or to EC2 families with dedicated CPU (e.g., M or C-series).
+
+Monitor the CPU credit balance in Lightsail to ensure workloads stay within sustainable limits.
 
 ---
 
