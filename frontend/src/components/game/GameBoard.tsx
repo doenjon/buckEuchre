@@ -87,112 +87,139 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       ? activePosition
       : displayTrick?.cards[displayTrick.cards.length - 1]?.playerPosition ?? 0;
 
-  return (
-    <div className="space-y-6">
-      {/* Scoreboard */}
-      <Scoreboard 
-        players={players} 
-        currentPlayerPosition={activePosition}
-        phase={phase}
-        trumpSuit={gameState.trumpSuit}
-        winningBidderPosition={gameState.winningBidderPosition}
-      />
-
-      {/* Turn Indicator */}
-      {currentPlayer && (
-        <TurnIndicator 
-          currentPlayer={currentPlayer}
-          isMyTurn={isMyTurn}
-          phase={phase}
-        />
-      )}
-
-      {/* Game Info */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div>
-            <p className="text-sm text-gray-600">Phase</p>
-            <p className="font-semibold">{phase}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Round</p>
-            <p className="font-semibold">{gameState.round}</p>
-          </div>
-          {gameState.trumpSuit && (
-            <div>
-              <p className="text-sm text-gray-600">Trump</p>
-              <p className="font-semibold">{gameState.trumpSuit}</p>
-            </div>
-          )}
-          {gameState.highestBid !== null && (
-            <div>
-              <p className="text-sm text-gray-600">Highest Bid</p>
-              <p className="font-semibold">{gameState.highestBid}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Phase-specific UI */}
-      {phase === 'BIDDING' && (
-        <BiddingPanel 
+  const actionPanel = (() => {
+    if (phase === 'BIDDING') {
+      return (
+        <BiddingPanel
           currentBid={gameState.highestBid}
           isMyTurn={isMyTurn}
         />
-      )}
+      );
+    }
 
-      {phase === 'DECLARING_TRUMP' && (
-        <TrumpSelector 
-          isMyTurn={gameState.winningBidderPosition === myPosition}
-        />
-      )}
+    if (phase === 'DECLARING_TRUMP') {
+      return <TrumpSelector isMyTurn={gameState.winningBidderPosition === myPosition} />;
+    }
 
-      {phase === 'FOLDING_DECISION' && gameState.winningBidderPosition !== myPosition && (
-        <FoldDecision 
+    if (phase === 'FOLDING_DECISION' && gameState.winningBidderPosition !== myPosition) {
+      return (
+        <FoldDecision
           gameState={gameState}
           myPosition={myPosition}
           isMyTurn={isMyTurn}
         />
-      )}
+      );
+    }
 
-      {/* Current Trick */}
-      {showCurrentTrick && (
-        <CurrentTrick 
-          trick={displayTrick}
-          players={players}
-          currentPlayerPosition={trickHighlightPosition}
-        />
-      )}
+    return null;
+  })();
 
-      {/* Player's Hand */}
+  return (
+    <div className="flex flex-col gap-6 text-white">
+      <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
+        <aside className="flex flex-col gap-6">
+          <Scoreboard
+            players={players}
+            currentPlayerPosition={activePosition}
+            phase={phase}
+            trumpSuit={gameState.trumpSuit}
+            winningBidderPosition={gameState.winningBidderPosition}
+          />
+
+          <div className="rounded-3xl border border-white/15 bg-white/10 p-6 shadow-2xl backdrop-blur">
+            <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-2">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs uppercase tracking-[0.2em] text-white/60">Phase</span>
+                <span className="text-base font-semibold text-white/90">{phase.replace(/_/g, ' ')}</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs uppercase tracking-[0.2em] text-white/60">Round</span>
+                <span className="text-base font-semibold text-white/90">{gameState.round}</span>
+              </div>
+              {gameState.trumpSuit && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs uppercase tracking-[0.2em] text-white/60">Trump</span>
+                  <span className="text-base font-semibold text-white/90">{gameState.trumpSuit}</span>
+                </div>
+              )}
+              {gameState.highestBid !== null && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs uppercase tracking-[0.2em] text-white/60">Highest Bid</span>
+                  <span className="text-base font-semibold text-white/90">{gameState.highestBid}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {actionPanel && (
+            <div className="rounded-3xl border border-white/15 bg-white/10 p-6 shadow-2xl backdrop-blur">
+              {actionPanel}
+            </div>
+          )}
+        </aside>
+
+        <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/10 shadow-[0_20px_80px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(74,222,128,0.35),_transparent_60%)]" />
+
+          <div className="relative flex h-full flex-col gap-6 p-6 sm:p-10">
+            {currentPlayer && (
+              <TurnIndicator
+                currentPlayer={currentPlayer}
+                isMyTurn={isMyTurn}
+                phase={phase}
+                className="shadow-lg"
+              />
+            )}
+
+            {showCurrentTrick ? (
+              <CurrentTrick
+                trick={displayTrick}
+                players={players}
+                currentPlayerPosition={trickHighlightPosition}
+              />
+            ) : (
+              <div className="flex flex-1 items-center justify-center">
+                <div className="rounded-full border border-dashed border-white/30 px-6 py-4 text-center text-sm font-medium uppercase tracking-[0.2em] text-white/60">
+                  Waiting for the first card...
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+
       {myPlayer.folded !== true && (
-        <PlayerHand 
-          cards={myPlayer.hand}
-          onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
-          disabled={!isMyTurn || phase !== 'PLAYING'}
-        />
+        <div className="rounded-[28px] border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur">
+          <div className="mb-4 text-center text-xs font-medium uppercase tracking-[0.3em] text-white/60">
+            Your Hand
+          </div>
+          <PlayerHand
+            cards={myPlayer.hand}
+            onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
+            disabled={!isMyTurn || phase !== 'PLAYING'}
+          />
+        </div>
       )}
 
       {myPlayer.folded === true && (
-        <div className="bg-gray-100 border-2 border-gray-300 rounded-lg p-8 text-center">
-          <p className="text-xl font-semibold text-gray-600">
+        <div className="rounded-[28px] border border-white/10 bg-white/5 p-8 text-center shadow-2xl backdrop-blur">
+          <p className="text-xl font-semibold text-white">
             You have folded this round
           </p>
-          <p className="text-sm text-gray-500 mt-2">
-            Watch the other players complete the hand
+          <p className="mt-2 text-sm text-white/70">
+            Watch the table to see how the hand plays out.
           </p>
         </div>
       )}
 
-      {/* Game Over */}
       {phase === 'GAME_OVER' && gameState.winner !== null && (
-        <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-lg shadow-xl p-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">🎉 Game Over! 🎉</h2>
-          <p className="text-2xl text-white">
+        <div className="rounded-[32px] border border-yellow-300/40 bg-gradient-to-br from-yellow-400/30 via-amber-400/30 to-transparent p-8 text-center text-white shadow-[0_20px_80px_-40px_rgba(250,204,21,0.8)] backdrop-blur">
+          <h2 className="mb-4 text-3xl font-semibold">Game Over</h2>
+          <p className="text-xl">
             Winner: <span className="font-bold">{players[gameState.winner].name}</span>
           </p>
-          <p className="text-lg text-white mt-2">
-            Final Score: {players[gameState.winner].score}
+          <p className="mt-2 text-sm uppercase tracking-[0.4em] text-white/70">
+            Final score {players[gameState.winner].score}
           </p>
         </div>
       )}

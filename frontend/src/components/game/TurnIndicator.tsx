@@ -40,40 +40,40 @@ export function TurnIndicator({ currentPlayer, isMyTurn, phase, className }: Tur
       aria-live="polite"
       aria-label={isMyTurn ? `Your turn to ${actionText}` : `Waiting for ${currentPlayer?.name || 'player'}`}
       className={cn(
-        'turn-indicator p-3 sm:p-4 rounded-lg transition-all duration-300 animate-in fade-in',
+        'flex flex-col gap-2 rounded-2xl border px-4 py-3 text-sm transition-all duration-300 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4',
         isMyTurn
-          ? 'bg-green-50 border-2 border-green-500 animate-pulse shadow-lg'
-          : 'bg-gray-50 border border-gray-200',
+          ? 'border-emerald-300/60 bg-emerald-400/20 text-white shadow-lg backdrop-blur'
+          : 'border-white/20 bg-white/10 text-white/90 backdrop-blur',
         className
       )}
     >
       {isMyTurn ? (
-        <div className="flex items-center gap-2 justify-center sm:justify-start">
-          <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 animate-bounce" />
-          <span className="font-bold text-green-900 text-sm sm:text-lg text-center sm:text-left">
-            Your turn to {actionText}!
+        <div className="flex flex-1 items-center justify-center gap-3 sm:justify-start">
+          <Sparkles className="h-5 w-5 text-emerald-200" />
+          <span className="text-center text-base font-semibold uppercase tracking-[0.25em] sm:text-left sm:text-lg">
+            Your turn to {actionText}
           </span>
         </div>
       ) : currentPlayer ? (
-        <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 justify-center sm:justify-start">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
-            <span className="text-gray-700 text-sm sm:text-base text-center sm:text-left">
+        <div className="flex flex-1 flex-col items-center justify-center gap-1 sm:flex-row sm:justify-start sm:gap-3">
+          <div className="flex items-center gap-2 text-white/80">
+            <Clock className="h-5 w-5 text-white/60" />
+            <span className="text-center text-sm font-medium uppercase tracking-[0.2em] sm:text-left">
               Waiting for {currentPlayer.name} to {actionText}
             </span>
           </div>
           {!currentPlayer.connected && (
-            <Badge variant="destructive" className="text-xs">
+            <Badge variant="destructive" className="bg-red-100/90 text-red-700">
               Disconnected
             </Badge>
           )}
         </div>
       ) : (
-        <div className="flex items-center gap-2 justify-center sm:justify-start">
-          <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
-          <span className="text-gray-700 text-sm sm:text-base">
-            {phase === 'DEALING' && 'Dealing cards...'}
-            {phase === 'TRUMP_REVEAL' && 'Revealing trump card...'}
+        <div className="flex flex-1 items-center justify-center gap-2 text-white/80 sm:justify-start">
+          <Clock className="h-5 w-5 text-white/60" />
+          <span className="text-sm font-medium uppercase tracking-[0.2em]">
+            {phase === 'DEALING' && 'Dealing cards'}
+            {phase === 'TRUMP_REVEAL' && 'Revealing trump card'}
             {phase === 'ROUND_OVER' && 'Round complete'}
           </span>
         </div>

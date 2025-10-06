@@ -80,17 +80,35 @@ export function GamePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-800 to-green-600 p-4">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-white text-center mb-4">
-          Buck Euchre - Game {gameId?.slice(0, 8)}
-        </h1>
-        
+    <div className="relative min-h-screen overflow-hidden bg-[#061f11]">
+      <div className="pointer-events-none absolute inset-0 opacity-90">
+        <div className="absolute -top-48 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-emerald-500/30 blur-3xl" />
+        <div className="absolute bottom-0 left-0 h-72 w-72 bg-emerald-600/30 blur-3xl" />
+        <div className="absolute right-0 top-10 h-64 w-64 bg-teal-500/20 blur-3xl" />
+      </div>
+
+      <div className="relative z-10 mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+        <header className="flex flex-col items-center justify-between gap-3 text-white sm:flex-row">
+          <div className="flex flex-col items-center gap-1 sm:items-start">
+            <span className="text-xs font-medium uppercase tracking-[0.35em] text-emerald-200/90">
+              Buck Euchre
+            </span>
+            <h1 className="text-center text-2xl font-semibold leading-tight sm:text-left sm:text-3xl">
+              Game {gameId?.slice(0, 8)}
+            </h1>
+          </div>
+          <div className="rounded-full border border-white/20 bg-white/10 px-4 py-1 text-sm font-medium text-white/80 backdrop-blur">
+            Live table view
+          </div>
+        </header>
+
         {myPosition !== null ? (
           <GameBoard gameState={gameState} myPosition={myPosition} />
         ) : (
-          <div className="bg-white rounded-lg shadow-xl p-8 text-center">
-            <p className="text-gray-600">Finding your position in the game...</p>
+          <div className="rounded-3xl border border-white/20 bg-white/10 p-8 text-center text-white shadow-2xl backdrop-blur">
+            <p className="text-sm font-medium tracking-wide text-white/80">
+              Finding your seat at the table...
+            </p>
           </div>
         )}
       </div>

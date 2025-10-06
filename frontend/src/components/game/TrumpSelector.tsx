@@ -32,32 +32,34 @@ export function TrumpSelector({ isMyTurn }: TrumpSelectorProps) {
 
   if (!isMyTurn) {
     return (
-      <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
-        <p className="text-center text-gray-600">
-          Waiting for winning bidder to declare trump...
-        </p>
-      </div>
+      <p className="text-center text-sm font-medium uppercase tracking-[0.25em] text-white/70">
+        Waiting for trump declaration
+      </p>
     );
   }
 
   return (
-    <div className="bg-purple-50 border-2 border-purple-500 rounded-lg p-6">
-      <h3 className="text-xl font-bold text-center mb-4">
-        You won the bid! Choose Trump
-      </h3>
-      
-      <div className="flex gap-3 justify-center flex-wrap">
+    <div className="flex flex-col gap-5">
+      <div className="text-center">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/80">
+          Choose the trump suit
+        </h3>
+        <p className="mt-2 text-xs uppercase tracking-[0.25em] text-white/60">
+          You won the bid
+        </p>
+      </div>
+
+      <div className="flex flex-wrap justify-center gap-3">
         {SUITS.map(suit => (
           <Button
             key={suit}
             onClick={() => declareTrump(suit)}
-            variant="default"
+            variant="primary"
             size="lg"
-            className="min-w-[120px] text-2xl"
+            className="flex min-w-[130px] items-center justify-center gap-2 rounded-full bg-white/90 px-6 text-lg font-semibold uppercase tracking-[0.2em] text-slate-900 hover:bg-white"
           >
-            <span className={SUIT_COLORS[suit]}>
-              {SUIT_SYMBOLS[suit]} {suit}
-            </span>
+            <span className={`${SUIT_COLORS[suit]} text-2xl`}>{SUIT_SYMBOLS[suit]}</span>
+            <span className="text-sm font-semibold text-slate-800">{suit}</span>
           </Button>
         ))}
       </div>
