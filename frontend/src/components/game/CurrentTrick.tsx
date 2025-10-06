@@ -61,6 +61,7 @@ export function CurrentTrick({
             </span>
           )}
         </div>
+        <div className="absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-900/60 blur-3xl sm:h-56 sm:w-56" />
       </div>
 
       {trick.cards.map((playedCard, index) => {
@@ -81,7 +82,7 @@ export function CurrentTrick({
             `}
             style={{ animationDelay: `${index * 150}ms` }}
           >
-            <div className={`${isWinner ? 'ring-4 ring-emerald-300/60 rounded-2xl' : ''}`}>
+            <div className={`${isWinner ? 'rounded-2xl ring-4 ring-emerald-300/60' : 'drop-shadow-[0_25px_40px_rgba(16,185,129,0.35)]'}`}>
               <Card card={playedCard.card} size="medium" />
             </div>
             <div

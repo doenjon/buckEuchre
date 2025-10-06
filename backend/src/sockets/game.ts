@@ -352,9 +352,25 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
       gameState: newState,
       event: 'FOLD_DECISION_MADE'
     });
-    
+
     // Trigger AI if needed
     checkAndTriggerAI(validated.gameId, newState, io);
+
+    if (newState.phase === 'ROUND_OVER' || newState.phase === 'GAME_OVER') {
+      io.to(`game:${validated.gameId}`).emit('ROUND_COMPLETE', {
+        roundNumber: newState.round,
+        scores: newState.players.map(p => ({ name: p.name, score: p.score }))
+      });
+
+      if (!newState.gameOver) {
+        scheduleAutoStartNextRound(
+          validated.gameId,
+          io,
+          { round: newState.round, version: newState.version },
+          checkAndTriggerAI
+        );
+      }
+    }
   } catch (error: any) {
     console.error('Error in FOLD_DECISION:', error);
     socket.emit('ERROR', {
