@@ -1,8 +1,15 @@
 # Dependencies
 node_modules/
+# Global lockfiles are ignored by default.
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+# Allow lockfiles for individual packages
+!/frontend/package-lock.json
+!/backend/package-lock.json
+!/backend/tests/integration/package-lock.json
+!/shared/package-lock.json
 
 # Build outputs
 dist/
