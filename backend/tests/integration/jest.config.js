@@ -9,5 +9,9 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/setup.ts'],
   testTimeout: 30000,
   verbose: true,
+  // Force Jest to exit after tests complete
+  forceExit: true,
+  // Detect open handles to help debug hanging issues
+  detectOpenHandles: true,
 };
 

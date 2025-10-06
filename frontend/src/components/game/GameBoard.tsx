@@ -13,6 +13,7 @@ import { TrumpSelector } from './TrumpSelector';
 import { FoldDecision } from './FoldDecision';
 import { WaitingForPlayers } from './WaitingForPlayers';
 import { useGame } from '@/hooks/useGame';
+import { Button } from '@/components/ui/button';
 import type { GameState } from '@buck-euchre/shared';
 
 interface GameBoardProps {
@@ -22,7 +23,7 @@ interface GameBoardProps {
 
 export function GameBoard({ gameState, myPosition }: GameBoardProps) {
   const { phase, currentPlayerPosition, currentBidder, players } = gameState;
-  const { playCard } = useGame();
+  const { playCard, startNextRound } = useGame();
 
   // Wait for all players
   if (phase === 'WAITING_FOR_PLAYERS' || players.length < 4) {
@@ -72,8 +73,8 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       isMyTurn = currentPlayerPosition === myPosition;
       break;
     case 'ROUND_OVER':
-      activePosition = gameState.currentTrick?.winner ?? null;
-      isMyTurn = false;
+      activePosition = myPosition;
+      isMyTurn = true;
       break;
     default:
       activePosition = null;
@@ -161,6 +162,30 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
         myPosition={myPosition}
         isMyTurn={isMyTurn}
       />
+    );
+  } else if (phase === 'ROUND_OVER' && !gameState.gameOver) {
+    actionPanel = (
+      <div className="flex flex-col gap-4">
+        <div className="space-y-2 text-sm text-white/80">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
+            Round complete
+          </p>
+          <p>
+            Scores have been updated. When you're ready, start the next round to keep the game moving.
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="lg"
+          className="w-full justify-center bg-emerald-500/90 text-white shadow-[0_18px_40px_-20px_rgba(16,185,129,0.9)] transition hover:bg-emerald-500"
+          onClick={startNextRound}
+        >
+          Start next round
+        </Button>
+        <p className="text-xs text-emerald-200/60">
+          The round will auto-start shortly if no one clicks. Starting manually keeps things snappy.
+        </p>
+      </div>
     );
   }
 

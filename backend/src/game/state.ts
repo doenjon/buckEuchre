@@ -239,10 +239,32 @@ export function handleAllPlayersPass(state: GameState): GameState {
  * @returns New game state with trump declared
  */
 export function applyTrumpDeclaration(state: GameState, trumpSuit: Suit): GameState {
+  if (state.winningBidderPosition === null) {
+    throw new Error('Cannot declare trump without a winning bidder');
+  }
+
+  const players = state.players.map((player, index) => {
+    if (index !== state.winningBidderPosition) {
+      return player;
+    }
+
+    // Bidder is automatically considered to stay in the round
+    if (player.foldDecision === 'STAY' && player.folded === false) {
+      return player;
+    }
+
+    return {
+      ...player,
+      folded: false,
+      foldDecision: 'STAY',
+    };
+  }) as [Player, Player, Player, Player];
+
   const updates: Partial<GameState> = {
     phase: 'FOLDING_DECISION',
     updatedAt: Date.now(),
     trumpSuit,
+    players,
   };
 
   return withVersion(state, updates);

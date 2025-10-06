@@ -263,6 +263,7 @@ describe('state.ts - State Transitions', () => {
     it('should transition to FOLDING_DECISION phase', () => {
       let state = initializeGame(playerIds);
       state = dealNewRound(state);
+      state = applyBid(state, 1, 3);
       
       // Ensure clubs are not turned up (otherwise it skips folding)
       state.isClubsTurnUp = false;
@@ -270,6 +271,17 @@ describe('state.ts - State Transitions', () => {
       state = applyTrumpDeclaration(state, 'SPADES');
       
       expect(state.phase).toBe('FOLDING_DECISION');
+    });
+
+    it('should mark winning bidder as staying', () => {
+      let state = initializeGame(playerIds);
+      state = dealNewRound(state);
+      state = applyBid(state, 2, 4);
+
+      const updated = applyTrumpDeclaration(state, 'DIAMONDS');
+
+      expect(updated.players[2].foldDecision).toBe('STAY');
+      expect(updated.players[2].folded).toBe(false);
     });
   });
 

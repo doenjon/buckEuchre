@@ -125,6 +125,15 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
         event: 'PLAYER_RECONNECTED'
       });
       console.log(`[JOIN_GAME] Player ${playerName} reconnected to game ${validated.gameId} (phase: ${gameState.phase})`);
+
+      if (gameState.phase === 'ROUND_OVER' && gameState.gameOver !== true) {
+        scheduleAutoStartNextRound(
+          validated.gameId,
+          io,
+          { round: gameState.round, version: gameState.version },
+          checkAndTriggerAI
+        );
+      }
     }
   } catch (error: any) {
     console.error(`[JOIN_GAME] Error for player ${socket.data.playerName}:`, error.message || error);
