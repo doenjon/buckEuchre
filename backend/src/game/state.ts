@@ -168,21 +168,20 @@ export function applyBid(
   amount: BidAmount
 ): GameState {
   const newBids = [...state.bids, { playerPosition, amount }];
-  
+
   let newHighestBid = state.highestBid;
   let newWinningBidderPosition = state.winningBidderPosition;
-  
+
   if (typeof amount === 'number') {
     newHighestBid = amount;
     newWinningBidderPosition = playerPosition;
   }
-  
-  // Find next bidder (skip players who have passed)
-  const passedPlayers = new Set(
-    newBids.filter(b => b.amount === 'PASS').map(b => b.playerPosition)
-  );
 
-  if (passedPlayers.size === 4) {
+  const totalBids = newBids.length;
+  const biddingComplete = totalBids >= 4;
+  const allPlayersPassed = biddingComplete && newHighestBid === null;
+
+  if (allPlayersPassed) {
     const nextDealerPosition = ((state.dealerPosition + 1) % 4) as PlayerPosition;
 
     return withVersion(state, {
@@ -197,20 +196,13 @@ export function applyBid(
   }
 
   let nextBidder: PlayerPosition | null = null;
-  for (let i = 1; i <= 4; i++) {
-    const candidatePosition = ((playerPosition + i) % 4) as PlayerPosition;
-    if (!passedPlayers.has(candidatePosition)) {
-      nextBidder = candidatePosition;
-      break;
-    }
-  }
-
-  // Check if bidding is complete
   let newPhase = state.phase;
-  if (passedPlayers.size === 3 && newWinningBidderPosition !== null) {
-    // One winner, three passed - bidding complete
+
+  if (biddingComplete) {
     newPhase = 'DECLARING_TRUMP';
     nextBidder = null;
+  } else {
+    nextBidder = ((playerPosition + 1) % 4) as PlayerPosition;
   }
 
   return withVersion(state, {

@@ -200,7 +200,8 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
         validated.amount,
         currentState.highestBid,
         currentState.bids.some((b: any) => b.playerPosition === player.position && b.amount === 'PASS'),
-        currentState.bids.filter((b: any) => b.amount === 'PASS').length === 3
+        currentState.bids.filter((b: any) => b.amount === 'PASS').length === 3,
+        currentState.bids.some((b: any) => b.playerPosition === player.position)
       );
 
       if (!validation.valid) {
