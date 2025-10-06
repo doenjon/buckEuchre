@@ -163,6 +163,12 @@ describe('validation.ts - Move Validation', () => {
       expect(result.reason).toContain('Already passed');
     });
 
+    it('should reject additional bid after acting once', () => {
+      const result = canPlaceBid(3, 2, false, false, true);
+      expect(result.valid).toBe(false);
+      expect(result.reason).toContain('Already acted');
+    });
+
     it('should allow PASS even when all others have passed (Buck Euchre rule)', () => {
       const result = canPlaceBid('PASS', null, false, true);
       expect(result.valid).toBe(true);

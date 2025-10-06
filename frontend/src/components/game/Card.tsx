@@ -59,6 +59,11 @@ export function Card({
   const suitSymbol = suitSymbols[card.suit];
   const suitColor = suitColors[card.suit];
   const ariaLabel = `${card.rank} of ${card.suit}${selected ? ' (selected)' : ''}${disabled ? ' (disabled)' : ''}`;
+  const interactionClasses = !disabled && onClick
+    ? 'cursor-pointer hover:shadow-2xl hover:-translate-y-3 hover:scale-105 active:scale-95'
+    : disabled
+      ? 'cursor-not-allowed'
+      : 'cursor-default';
   
   return (
     <button
@@ -72,8 +77,8 @@ export function Card({
         flex flex-col items-center justify-between p-2
         transition-all duration-300 ease-out
         transform-gpu
-        ${!disabled && onClick ? 'cursor-pointer hover:shadow-2xl hover:-translate-y-3 hover:scale-105 active:scale-95' : 'cursor-default'}
-        ${disabled ? 'opacity-40' : 'opacity-100'}
+        ${interactionClasses}
+        opacity-100
         ${selected ? 'border-green-500 ring-4 ring-green-300 -translate-y-2 scale-105' : 'border-gray-300'}
         focus:outline-none focus:ring-4 focus:ring-blue-300
         animate-in fade-in slide-in-from-bottom-4 duration-500
