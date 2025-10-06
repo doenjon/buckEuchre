@@ -3,10 +3,9 @@
  * @description Component shown while waiting for players to join
  */
 
-import { Users, Copy, CheckCircle2, Bot, Loader2 } from 'lucide-react';
+import { Users, Copy, CheckCircle2, Bot, Loader2, Hourglass } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
 import { addAIToGame } from '@/services/api';
 import { useUIStore } from '@/stores/uiStore';
@@ -36,9 +35,12 @@ export function WaitingForPlayers({
   const setWaitingInfo = useGameStore(state => state.setWaitingInfo);
   const setGameState = useGameStore(state => state.setGameState);
 
+  const shareUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/game/${gameId}`
+    : `/game/${gameId}`;
+
   const handleCopyGameUrl = async () => {
-    const gameUrl = `${window.location.origin}/game/${gameId}`;
-    await navigator.clipboard.writeText(gameUrl);
+    await navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -79,117 +81,150 @@ export function WaitingForPlayers({
     }
   };
 
+  const waitingMessage = message
+    ? message
+    : playersNeeded === 0
+      ? 'All players are seated. Shuffling the deck...'
+      : `Waiting for ${playersNeeded} more player${playersNeeded === 1 ? '' : 's'}...`;
+
   return (
-    <div className="flex items-center justify-center min-h-screen p-4">
-      <Card className="p-8 max-w-md w-full">
-        <div className="flex flex-col items-center gap-6">
-          {/* Icon */}
-          <div className="relative">
-            <Users className="h-16 w-16 text-primary" />
-            <Badge 
-              className="absolute -top-2 -right-2 px-2 py-1"
-              variant={playerCount === 4 ? 'success' : 'default'}
-            >
-              {playerCount}/4
-            </Badge>
-          </div>
-
-          {/* Title */}
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-2">
-              Waiting for Players
-            </h2>
-            <p className="text-muted-foreground">
-              {message
-                ? message
-                : playersNeeded === 1
-                  ? 'Waiting for 1 more player...'
-                  : `Waiting for ${playersNeeded} more players...`
-              }
-            </p>
-          </div>
-
-          {/* Player Progress */}
-          <div className="w-full">
-            <div className="flex gap-2 justify-center mb-2">
-              {[1, 2, 3, 4].map((i) => (
-                <div
-                  key={i}
-                  className={`h-3 w-12 rounded-full transition-colors ${
-                    i <= playerCount
-                      ? 'bg-primary'
-                      : 'bg-gray-200'
-                  }`}
-                />
-              ))}
+    <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-green-600 flex items-center justify-center p-4">
+      <Card className="w-full max-w-3xl overflow-hidden border-emerald-500/20 bg-white/95 shadow-2xl backdrop-blur">
+        <div className="bg-green-950/90 text-white px-6 py-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-emerald-600/80 p-3">
+              <Users className="h-6 w-6" />
             </div>
-            <p className="text-xs text-center text-muted-foreground">
-              {playerCount} player{playerCount !== 1 ? 's' : ''} joined
-            </p>
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-emerald-200/80">Game Lobby</p>
+              <h2 className="text-2xl font-semibold">Waiting for Players</h2>
+            </div>
           </div>
+          <div
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm backdrop-blur ${
+              playerCount === 4
+                ? 'border-emerald-300 bg-emerald-500/40'
+                : 'border-white/30 bg-white/10'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            <span>{playerCount}/4 ready</span>
+          </div>
+        </div>
 
-          {/* Share Game Link */}
-          <div className="w-full space-y-2">
-            <p className="text-sm font-medium text-center">
-              Share this game with friends:
-            </p>
-            <div className="flex gap-2">
-              <div className="flex-1 px-3 py-2 bg-gray-100 rounded-md text-sm font-mono overflow-hidden text-ellipsis whitespace-nowrap">
-                {gameId}
+        <div className="p-6 md:p-8 bg-white/90">
+          <div className="grid gap-8 md:grid-cols-[3fr,2fr]">
+            <div className="space-y-8">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-emerald-700">
+                  <Hourglass className="h-5 w-5" />
+                  <span className="text-sm font-semibold uppercase tracking-wide">Setting the table</span>
+                </div>
+                <p className="text-xl font-semibold text-gray-900">{waitingMessage}</p>
+                <p className="text-sm text-gray-600">
+                  Sit tight while we gather everyone. As soon as the table is full the game will begin automatically.
+                </p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopyGameUrl}
-                className="shrink-0"
-              >
-                {copied ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4 mr-1" />
-                    Copy Link
-                  </>
-                )}
-              </Button>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <span>Players joined</span>
+                  <span>{playerCount}/4</span>
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  {[1, 2, 3, 4].map((seat) => (
+                    <div
+                      key={seat}
+                      className={`h-3 rounded-full transition-colors ${
+                        seat <= playerCount
+                          ? 'bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.35)]'
+                          : 'bg-gray-200'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-sm text-gray-500">
+                  {playerCount === 0
+                    ? 'Waiting for the first player to join.'
+                    : `${playerCount} player${playerCount === 1 ? ' has' : 's have'} taken a seat.`}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Share the table</p>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <div className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-3 font-mono text-sm text-gray-700 shadow-inner overflow-hidden text-ellipsis">
+                    {shareUrl}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyGameUrl}
+                    className={`shrink-0 border-emerald-200 text-emerald-700 transition-colors hover:bg-emerald-50 ${
+                      copied ? 'bg-emerald-50' : ''
+                    }`}
+                  >
+                    {copied ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy link
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 text-emerald-600">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Getting everything ready&hellip;</span>
+              </div>
+            </div>
+
+            <div className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-6 shadow-inner">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-emerald-700">
+                  <Bot className="h-5 w-5" />
+                  <p className="font-semibold">Need a full table?</p>
+                </div>
+                <p className="text-sm text-emerald-700">
+                  {playersNeeded > 0
+                    ? `Add AI teammates to fill the remaining ${playersNeeded} seat${playersNeeded === 1 ? '' : 's'} and jump right into the action.`
+                    : 'Everyone is here! We are arranging the deck and will start any second now.'}
+                </p>
+              </div>
+
+              {playersNeeded > 0 ? (
+                <Button
+                  onClick={handleAddAI}
+                  disabled={addingAI}
+                  variant="primary"
+                  className="w-full"
+                >
+                  {addingAI ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Adding AI...
+                    </>
+                  ) : (
+                    <>
+                      <Bot className="mr-2 h-4 w-4" />
+                      Add AI players
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>All players are ready!</span>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Loading Animation */}
-          <div className="flex gap-1">
-            <div className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-          </div>
-
-          {playersNeeded > 0 && (
-            <div className="w-full space-y-2">
-              <p className="text-sm text-center text-muted-foreground">
-                Want to start now? Add AI players to fill the empty seats.
-              </p>
-              <Button
-                onClick={handleAddAI}
-                disabled={addingAI}
-                variant="secondary"
-                className="w-full"
-              >
-                {addingAI ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Adding AI...
-                  </>
-                ) : (
-                  <>
-                    <Bot className="mr-2 h-4 w-4" />
-                    Add AI Players
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
         </div>
       </Card>
     </div>
