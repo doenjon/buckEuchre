@@ -10,54 +10,64 @@ export interface CurrentTrickProps {
   trick: Trick | null;
   players: Player[];
   currentPlayerPosition: number;
+  myPosition: number;
 }
 
-export function CurrentTrick({ trick, players, currentPlayerPosition }: CurrentTrickProps) {
+export function CurrentTrick({
+  trick,
+  players,
+  currentPlayerPosition,
+  myPosition
+}: CurrentTrickProps) {
   if (!trick || trick.cards.length === 0) {
     return (
-      <div 
-        className="bg-green-700 rounded-lg p-8 flex items-center justify-center min-h-[300px] shadow-lg"
+      <div
+        className="flex min-h-[320px] items-center justify-center rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 p-8 shadow-2xl backdrop-blur"
         role="region"
         aria-label="Current trick area"
       >
-        <p className="text-white text-lg animate-pulse">Waiting for first card to be played...</p>
+        <p className="text-sm font-medium uppercase tracking-[0.35em] text-emerald-100/70">
+          Waiting for the lead card…
+        </p>
       </div>
     );
   }
 
-  // Arrange cards in a circle around the center
+  // Arrange cards around the center with the local player seated at the bottom
   const cardPositions = [
-    'top-4 left-1/2 -translate-x-1/2',      // North (0)
-    'right-4 top-1/2 -translate-y-1/2',     // East (1)
-    'bottom-4 left-1/2 -translate-x-1/2',   // South (2)
-    'left-4 top-1/2 -translate-y-1/2',      // West (3)
+    'bottom-6 left-1/2 -translate-x-1/2', // South (you)
+    'left-6 top-1/2 -translate-y-1/2', // Seat to your left
+    'top-6 left-1/2 -translate-x-1/2', // Across from you
+    'right-6 top-1/2 -translate-y-1/2' // Seat to your right
   ];
 
   const winner = trick.winner !== null ? players[trick.winner] : null;
 
   return (
-    <div 
-      className="bg-gradient-to-br from-green-700 to-green-800 rounded-lg p-4 sm:p-8 min-h-[300px] relative shadow-xl"
+    <div
+      className="relative flex min-h-[340px] items-center justify-center overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 p-6 shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] backdrop-blur"
       role="region"
       aria-label={`Trick ${trick.number}, ${trick.cards.length} of 4 cards played`}
     >
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="text-white text-center animate-in fade-in duration-500">
-          <p className="text-sm sm:text-base mb-1 font-semibold">Trick #{trick.number}</p>
-          <p className="text-xs sm:text-sm opacity-90">
-            Lead: {players[trick.leadPlayerPosition]?.name || `Player ${trick.leadPlayerPosition}`}
-          </p>
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2 text-center text-emerald-100/80">
+          <span className="text-xs uppercase tracking-[0.4em]">Trick {trick.number}</span>
+          <span className="text-sm font-medium">
+            Lead • {players[trick.leadPlayerPosition]?.name || `Player ${trick.leadPlayerPosition}`}
+          </span>
           {winner && (
-            <p className="text-xs sm:text-sm mt-2 font-bold text-yellow-300 animate-bounce">
-              Winner: {winner.name}!
-            </p>
+            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white">
+              Winner {winner.name}
+            </span>
           )}
         </div>
       </div>
-      
+
       {trick.cards.map((playedCard, index) => {
         const player = players[playedCard.playerPosition];
-        const positionClass = cardPositions[playedCard.playerPosition];
+        const relativeSeatIndex =
+          ((playedCard.playerPosition - myPosition) % 4 + 4) % 4;
+        const positionClass = cardPositions[relativeSeatIndex];
         const isCurrentPlayer = playedCard.playerPosition === currentPlayerPosition;
         const isWinner = trick.winner === playedCard.playerPosition;
         
@@ -66,24 +76,21 @@ export function CurrentTrick({ trick, players, currentPlayerPosition }: CurrentT
             key={playedCard.playerPosition}
             className={`
               absolute ${positionClass}
-              animate-in slide-in-from-bottom-10 fade-in duration-500
-              ${isWinner ? 'animate-pulse' : ''}
+              flex flex-col items-center gap-3 transition-transform duration-500
+              ${isWinner ? 'scale-105 drop-shadow-[0_15px_25px_rgba(250,204,21,0.35)]' : ''}
             `}
             style={{ animationDelay: `${index * 150}ms` }}
           >
-            <div className="flex flex-col items-center gap-2">
-              <div className={`${isWinner ? 'ring-4 ring-yellow-400 rounded-lg' : ''}`}>
-                <Card card={playedCard.card} size="medium" />
-              </div>
-              <div 
-                className={`
-                  text-xs font-medium px-2 py-1 rounded shadow-md transition-all duration-300
-                  ${isCurrentPlayer ? 'bg-yellow-400 text-gray-900 ring-2 ring-yellow-500' : 'bg-white text-gray-900'}
-                  ${isWinner ? 'bg-green-500 text-white' : ''}
-                `}
-              >
-                {player?.name || `P${playedCard.playerPosition}`}
-              </div>
+            <div className={`${isWinner ? 'ring-4 ring-emerald-300/60 rounded-2xl' : ''}`}>
+              <Card card={playedCard.card} size="medium" />
+            </div>
+            <div
+              className={`
+                rounded-full px-3 py-1 text-xs font-medium uppercase tracking-[0.3em]
+                ${isWinner ? 'bg-emerald-400 text-slate-900' : isCurrentPlayer ? 'bg-white text-slate-900' : 'bg-white/10 text-emerald-100'}
+              `}
+            >
+              {player?.name || `P${playedCard.playerPosition}`}
             </div>
           </div>
         );

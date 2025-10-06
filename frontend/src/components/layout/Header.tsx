@@ -17,30 +17,30 @@ export function Header() {
   };
 
   return (
-    <header className="bg-green-700 text-white shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold">Buck Euchre</h1>
+    <header className="relative z-30 border-b border-white/10 bg-white/5 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-lg font-semibold uppercase tracking-[0.35em] text-emerald-200">
+            BE
+          </span>
+          <div className="flex flex-col">
+            <span className="text-xs uppercase tracking-[0.35em] text-emerald-200/70">Card Club</span>
+            <h1 className="text-lg font-semibold text-white sm:text-xl">Buck Euchre</h1>
+          </div>
         </div>
-        
+
         {playerName && (
           <div className="flex items-center gap-4">
-            <span className="text-sm flex items-center gap-2">
-              <span>
-                Playing as: <strong>{playerName}</strong>
+            <div className="flex flex-col items-end text-right">
+              <span className="text-[10px] uppercase tracking-[0.3em] text-emerald-200/70">Playing as</span>
+              <span className="text-sm font-semibold text-white">{playerName}</span>
+            </div>
+            {isGuest && (
+              <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-100">
+                Guest
               </span>
-              {isGuest && (
-                <span className="inline-flex items-center rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide">
-                  Guest
-                </span>
-              )}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="text-white hover:bg-green-600"
-            >
+            )}
+            <Button variant="outline" size="sm" onClick={handleLogout}>
               Logout
             </Button>
           </div>
