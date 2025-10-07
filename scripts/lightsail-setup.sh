@@ -197,6 +197,16 @@ EOF
   chown "${APP_USER}:${APP_USER}" "${env_file}"
   chmod 600 "${env_file}"
 
+  local dot_env="${app_dir}/.env"
+  if [[ ! -e "${dot_env}" ]]; then
+    sudo -u "${APP_USER}" cp "${env_file}" "${dot_env}"
+    chown "${APP_USER}:${APP_USER}" "${dot_env}"
+    chmod 600 "${dot_env}"
+    log "Created ${dot_env} for docker compose environment."
+  else
+    log "${dot_env} already exists; leaving as-is."
+  fi
+
   log "Created ${env_file}. Update CORS_ORIGIN and review settings before launch."
 }
 
