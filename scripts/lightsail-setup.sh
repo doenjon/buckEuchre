@@ -13,7 +13,8 @@
 #   ./lightsail-setup.sh -r <repo-url> [-b main] [-u ubuntu] [-d /opt/buck-euchre]
 #
 # The repository arguments are optional; if omitted the script just prepares
-# the host. Secrets (.env.production) still need to be updated manually.
+# the host. When a repo is cloned the script will create .env.production with
+# freshly generated credentials.
 
 set -euo pipefail
 
@@ -143,10 +144,60 @@ clone_repo() {
     sudo -u "${APP_USER}" git clone --branch "${BRANCH}" "${REPO_URL}" "${app_dir}"
   fi
 
-  if [[ -f "${app_dir}/.env.production.example" && ! -f "${app_dir}/.env.production" ]]; then
-    log "Creating ${app_dir}/.env.production (fill in secrets manually)."
-    sudo -u "${APP_USER}" cp "${app_dir}/.env.production.example" "${app_dir}/.env.production"
+  if [[ -f "${app_dir}/.env.production" ]]; then
+    log "${app_dir}/.env.production already exists; leaving as-is."
+    return
   fi
+
+  if [[ ! -f "${app_dir}/.env.production.example" ]]; then
+    log "Warning: ${app_dir}/.env.production.example not found. Skipping env generation." >&2
+    return
+  fi
+
+  log "Generating ${app_dir}/.env.production with random credentials..."
+
+  local postgres_password jwt_secret
+  postgres_password="$(python3 - <<'PY'
+import secrets
+import string
+alphabet = string.ascii_letters + string.digits + '-_'
+print(''.join(secrets.choice(alphabet) for _ in range(48)))
+PY
+)"
+
+  jwt_secret="$(python3 - <<'PY'
+import secrets
+print(secrets.token_hex(32))
+PY
+)"
+
+  local env_file
+  env_file="${app_dir}/.env.production"
+
+  sudo -u "${APP_USER}" tee "${env_file}" >/dev/null <<EOF
+POSTGRES_DB=buckeuchre
+POSTGRES_USER=buckeuchre
+POSTGRES_PASSWORD=${postgres_password}
+
+JWT_SECRET=${jwt_secret}
+JWT_EXPIRES_IN=24h
+
+DATABASE_URL=postgresql://buckeuchre:${postgres_password}@postgres:5432/buckeuchre?sslmode=prefer
+
+CORS_ORIGIN=https://yourdomain.com
+
+LOG_LEVEL=info
+WS_HEARTBEAT_INTERVAL=30000
+WS_GRACE_PERIOD=30000
+
+HTTP_PORT=80
+HTTPS_PORT=443
+EOF
+
+  chown "${APP_USER}:${APP_USER}" "${env_file}"
+  chmod 600 "${env_file}"
+
+  log "Created ${env_file}. Update CORS_ORIGIN and review settings before launch."
 }
 
 post_install_summary() {
