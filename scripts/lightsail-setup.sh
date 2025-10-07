@@ -10,14 +10,14 @@
 #   * Optionally clones the application repository
 #
 # Usage (run as root):
-#   ./lightsail-setup.sh -r <repo-url> [-b main] [-u buckeuchre] [-d /opt/buck-euchre]
+#   ./lightsail-setup.sh -r <repo-url> [-b main] [-u ubuntu] [-d /opt/buck-euchre]
 #
 # The repository arguments are optional; if omitted the script just prepares
 # the host. Secrets (.env.production) still need to be updated manually.
 
 set -euo pipefail
 
-APP_USER="buckeuchre"
+APP_USER="ubuntu"
 BRANCH="main"
 REPO_URL=""
 DEST_DIR=""
@@ -29,7 +29,7 @@ Usage: lightsail-setup.sh [options]
 Options:
   -r <url>    Git repository URL to clone (optional)
   -b <name>   Branch or tag to checkout (default: main)
-  -u <user>   System user that will own the app (default: buckeuchre)
+  -u <user>   System user that will own the app (default: ubuntu)
   -d <path>   Destination directory for the repo (default: /home/<user>/buck-euchre)
   -h          Show this help
 EOF
@@ -196,4 +196,3 @@ configure_firewall
 ensure_user
 clone_repo
 post_install_summary
-
