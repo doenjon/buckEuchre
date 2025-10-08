@@ -190,8 +190,8 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,260px)_minmax(0,1fr)_minmax(0,260px)] lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
+    <div className="flex flex-col gap-5 sm:gap-6">
+      <div className="grid gap-4 lg:gap-6 xl:grid-cols-[minmax(0,260px)_minmax(0,1fr)_minmax(0,260px)] lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
         {/* Left Column: Scoreboard + Info */}
         <aside className="order-2 flex flex-col gap-4 xl:order-1">
           <Scoreboard
@@ -240,7 +240,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
         </aside>
 
         {/* Middle Column: Table */}
-        <section className="order-1 flex flex-col gap-6 xl:order-2">
+        <section className="order-1 flex flex-col gap-5 sm:gap-6 xl:order-2">
           {currentPlayer && (
             <TurnIndicator
               currentPlayer={currentPlayer}
@@ -257,7 +257,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
           />
 
           {myPlayer.folded !== true ? (
-            <div className="rounded-[32px] border border-white/10 bg-white/5 p-4 shadow-[0_25px_70px_-40px_rgba(16,185,129,0.8)] backdrop-blur">
+            <div className="rounded-[32px] border border-white/10 bg-white/5 p-3 shadow-[0_25px_70px_-40px_rgba(16,185,129,0.8)] backdrop-blur sm:p-4">
               <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
                 Your hand
               </p>
@@ -296,7 +296,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
         {/* Right Column: Actions */}
         {actionPanel && (
           <aside className="order-3 flex flex-col gap-4">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-5 text-slate-100 shadow-xl backdrop-blur">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-slate-100 shadow-xl backdrop-blur sm:p-5">
               {actionPanel}
             </div>
           </aside>

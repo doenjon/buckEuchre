@@ -22,7 +22,7 @@ export function CurrentTrick({
   if (!trick || trick.cards.length === 0) {
     return (
       <div
-        className="flex min-h-[320px] items-center justify-center rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 p-8 shadow-2xl backdrop-blur"
+        className="flex min-h-[260px] items-center justify-center rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 p-6 shadow-2xl backdrop-blur sm:min-h-[320px] sm:p-8"
         role="region"
         aria-label="Current trick area"
       >
@@ -35,33 +35,33 @@ export function CurrentTrick({
 
   // Arrange cards around the center with the local player seated at the bottom
   const cardPositions = [
-    'bottom-12 left-1/2 -translate-x-1/2 sm:bottom-16', // South (you)
-    'left-12 top-1/2 -translate-y-1/2 sm:left-16', // Seat to your left
-    'top-12 left-1/2 -translate-x-1/2 sm:top-16', // Across from you
-    'right-12 top-1/2 -translate-y-1/2 sm:right-16' // Seat to your right
+    'bottom-10 left-1/2 -translate-x-1/2 sm:bottom-16', // South (you)
+    'left-8 top-1/2 -translate-y-1/2 sm:left-16', // Seat to your left
+    'top-10 left-1/2 -translate-x-1/2 sm:top-16', // Across from you
+    'right-8 top-1/2 -translate-y-1/2 sm:right-16' // Seat to your right
   ];
 
   const winner = trick.winner !== null ? players[trick.winner] : null;
 
   return (
     <div
-      className="relative flex min-h-[360px] items-center justify-center overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 px-6 pb-16 pt-20 shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] sm:pb-20 sm:pt-24 backdrop-blur"
+      className="relative flex min-h-[280px] items-center justify-center overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 px-4 pb-14 pt-16 shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] sm:min-h-[360px] sm:px-6 sm:pb-20 sm:pt-24 backdrop-blur"
       role="region"
       aria-label={`Trick ${trick.number}, ${trick.cards.length} of 4 cards played`}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-6 flex justify-center px-6 sm:top-8">
-        <div className="flex flex-col items-center gap-1 rounded-full bg-emerald-950/70 px-4 py-2 text-center text-emerald-100/80 shadow-[0_20px_40px_-30px_rgba(16,185,129,0.9)]">
-          <span className="text-[11px] uppercase tracking-[0.4em]">Trick {trick.number}</span>
+      <div className="pointer-events-none absolute inset-x-0 top-5 flex justify-center px-4 sm:top-8 sm:px-6">
+        <div className="flex flex-col items-center gap-1 rounded-full bg-emerald-950/70 px-3 py-2 text-center text-emerald-100/80 shadow-[0_20px_40px_-30px_rgba(16,185,129,0.9)] sm:px-4">
+          <span className="text-[10px] uppercase tracking-[0.4em] sm:text-[11px]">Trick {trick.number}</span>
           <span className="text-sm font-medium leading-tight">
             Lead • {players[trick.leadPlayerPosition]?.name || `Player ${trick.leadPlayerPosition}`}
           </span>
           {winner && (
-            <span className="mt-1 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-white">
+            <span className="mt-1 rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-white sm:text-[11px]">
               Winner {winner.name}
             </span>
           )}
         </div>
-        <div className="absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-900/60 blur-3xl sm:h-56 sm:w-56" />
+        <div className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-900/60 blur-3xl sm:h-56 sm:w-56" />
       </div>
 
       {trick.cards.map((playedCard, index) => {
@@ -87,7 +87,7 @@ export function CurrentTrick({
             </div>
             <div
               className={`
-                rounded-full px-3 py-1 text-xs font-medium uppercase tracking-[0.3em]
+                rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.3em] sm:px-3 sm:text-xs
                 ${isWinner ? 'bg-emerald-400 text-slate-900' : isCurrentPlayer ? 'bg-white text-slate-900' : 'bg-white/10 text-emerald-100'}
               `}
             >
