@@ -40,7 +40,7 @@ export function TurnIndicator({ currentPlayer, isMyTurn, phase, className }: Tur
       aria-live="polite"
       aria-label={isMyTurn ? `Your turn to ${actionText}` : `Waiting for ${currentPlayer?.name || 'player'}`}
       className={cn(
-        'turn-indicator rounded-2xl border border-white/10 bg-white/5 p-4 transition-all duration-300 backdrop-blur',
+        'turn-indicator rounded-2xl border border-white/10 bg-white/5 p-3 transition-all duration-300 backdrop-blur sm:p-4',
         isMyTurn
           ? 'ring-1 ring-emerald-400/60 shadow-[0_20px_50px_-25px_rgba(16,185,129,0.65)]'
           : 'text-slate-200',

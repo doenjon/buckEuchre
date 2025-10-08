@@ -34,9 +34,9 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="space-y-1 text-center">
-        <h3 className="text-lg font-semibold tracking-wide text-white">
+        <h3 className="text-base font-semibold tracking-wide text-white sm:text-lg">
           Your bid
         </h3>
         {currentBid !== null && (
@@ -53,7 +53,7 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
             onClick={() => placeBid(bid as 2 | 3 | 4 | 5)}
             variant="default"
             size="lg"
-            className="min-w-[84px] bg-emerald-500 text-slate-900 hover:bg-emerald-400"
+            className="min-w-[84px] flex-1 bg-emerald-500 text-slate-900 hover:bg-emerald-400 sm:flex-none"
           >
             Bid {bid}
           </Button>
@@ -63,7 +63,7 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
           onClick={() => placeBid('PASS')}
           variant="outline"
           size="lg"
-          className="min-w-[84px] border-emerald-500/60 text-emerald-200 hover:bg-emerald-500/10"
+          className="min-w-[84px] flex-1 border-emerald-500/60 text-emerald-200 hover:bg-emerald-500/10 sm:flex-none"
         >
           Pass
         </Button>

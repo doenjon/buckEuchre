@@ -80,13 +80,13 @@ export function GamePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-2 text-center">
-          <span className="text-sm uppercase tracking-[0.35em] text-emerald-300/70">
+    <div className="min-h-dvh bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
+        <header className="flex flex-col gap-1.5 text-center">
+          <span className="text-[11px] uppercase tracking-[0.35em] text-emerald-300/70 sm:text-sm">
             Buck Euchre
           </span>
-          <h1 className="text-2xl font-semibold text-white sm:text-3xl">
+          <h1 className="text-lg font-semibold text-white sm:text-3xl">
             Game {gameId?.slice(0, 8)}
           </h1>
         </header>

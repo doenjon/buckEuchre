@@ -29,18 +29,30 @@ const suitColors = {
 };
 
 const sizeStyles = {
-  small: 'w-16 h-24 text-sm',
-  medium: 'w-20 h-32 text-base',
-  large: 'w-24 h-36 text-lg',
-};
+  small: 'w-12 h-[4.5rem] text-xs sm:w-16 sm:h-24 sm:text-sm',
+  medium: 'w-14 h-[5.5rem] text-sm sm:w-20 sm:h-32 sm:text-base',
+  large: 'w-16 h-[6.75rem] text-base sm:w-24 sm:h-36 sm:text-lg',
+} as const;
 
-export function Card({ 
-  card, 
-  onClick, 
-  disabled = false, 
-  faceDown = false, 
+const cornerSymbolStyles = {
+  small: 'text-lg sm:text-xl',
+  medium: 'text-xl sm:text-2xl',
+  large: 'text-2xl sm:text-3xl',
+} as const;
+
+const centerSymbolStyles = {
+  small: 'text-2xl sm:text-3xl',
+  medium: 'text-3xl sm:text-4xl',
+  large: 'text-[2.75rem] sm:text-5xl',
+} as const;
+
+export function Card({
+  card,
+  onClick,
+  disabled = false,
+  faceDown = false,
   size = 'medium',
-  selected = false 
+  selected = false
 }: CardProps) {
   if (faceDown) {
     return (
@@ -59,6 +71,8 @@ export function Card({
   const suitSymbol = suitSymbols[card.suit];
   const suitColor = suitColors[card.suit];
   const ariaLabel = `${card.rank} of ${card.suit}${selected ? ' (selected)' : ''}${disabled ? ' (disabled)' : ''}`;
+  const cornerSymbolClass = cornerSymbolStyles[size];
+  const centerSymbolClass = centerSymbolStyles[size];
   const interactionClasses = !disabled && onClick
     ? 'cursor-pointer hover:shadow-2xl hover:-translate-y-3 hover:scale-105 active:scale-95'
     : disabled
@@ -74,7 +88,7 @@ export function Card({
       className={`
         ${sizeStyles[size]}
         bg-white rounded-lg border-2 shadow-lg
-        flex flex-col items-center justify-between p-2
+        flex flex-col items-center justify-between p-2 sm:p-3
         transition-all duration-300 ease-out
         transform-gpu
         ${interactionClasses}
@@ -86,16 +100,16 @@ export function Card({
     >
       <div className={`${suitColor} font-bold flex items-center gap-1`}>
         <span>{card.rank}</span>
-        <span className="text-2xl">{suitSymbol}</span>
+        <span className={cornerSymbolClass}>{suitSymbol}</span>
       </div>
-      
-      <div className={`${suitColor} text-4xl`}>
+
+      <div className={`${suitColor} ${centerSymbolClass}`}>
         {suitSymbol}
       </div>
-      
+
       <div className={`${suitColor} font-bold flex items-center gap-1 rotate-180`}>
         <span>{card.rank}</span>
-        <span className="text-2xl">{suitSymbol}</span>
+        <span className={cornerSymbolClass}>{suitSymbol}</span>
       </div>
     </button>
   );
