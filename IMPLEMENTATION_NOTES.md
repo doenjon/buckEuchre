@@ -520,6 +520,20 @@ saveGameState(gameId, newState).catch(err => console.error(err));
 
 ---
 
+## Feature Feasibility Notes (2025-01-14)
+
+### Automatically seat invitees as guests
+
+- **Current behavior:** The share link generated in `WaitingForPlayers` simply deep-links to `/game/:gameId` and expects the visitor to already have an auth token.【F:frontend/src/components/game/WaitingForPlayers.tsx†L34-L70】 When an unauthenticated visitor hits that route, `GamePage` immediately redirects them back to the landing page because `checkAuth()` fails before any socket join occurs.【F:frontend/src/pages/GamePage.tsx†L18-L42】
+- **Effort:** _Low-to-moderate (≈1 day)._ The frontend already exposes `loginAsGuest()` which provisions a 24-hour token via `POST /api/auth/guest`; we could trigger that flow automatically when a visitor lands on a game route without credentials.【F:frontend/src/hooks/useAuth.ts†L28-L56】【F:backend/src/api/auth.routes.ts†L41-L74】 The main work is UX polish (loading screen, error state if the table is full) and making sure we do not create orphan guest records on every refresh.
+- **Gotchas:** We need to guard against auto-joining full tables (`joinGame` will throw) and ensure the socket only attempts to join after the guest token has been stored (otherwise the middleware rejects the connection). A simple approach is to gate `GamePage` rendering until `loginAsGuest` resolves and then let the existing `joinGame(gameId)` effect run.【F:frontend/src/hooks/useGame.ts†L13-L42】【F:backend/src/services/game.service.ts†L94-L186】
+
+### Let a guest claim their seat with an existing account
+
+- **Current behavior:** A “real” player session is just another JWT issued by `createPlayer`; there is no passworded account concept today. Once a guest joins a table, every place the game state tracks identity (Prisma `gamePlayer` rows, the in-memory `GameState.players` array, and active socket rooms) uses the guest’s generated `playerId`.【F:backend/src/services/player.service.ts†L15-L86】【F:backend/src/services/game.service.ts†L94-L174】【F:shared/src/types/game.ts†L60-L104】
+- **Effort:** _Moderate (≈2-3 days)._ Allowing a guest to “log in” mid-session requires a server-side mutation that swaps the seat over to a newly created authenticated player (or reuses an existing ID) without breaking the running game. That implies: issuing a fresh token, updating the `gamePlayer` record, patching the in-memory `GameState` player entry, and notifying connected clients so their local stores replace the guest metadata.
+- **Gotchas:** We must rebind the socket connection because the namespace auth middleware keyes sessions by token. The swap also needs to propagate to action queues and AI helpers that cache player IDs, so the update function should be part of `game.service` to touch every layer safely. Frontend UX would likely surface a “Claim seat” dialog that calls the new endpoint, handles token replacement, and reloads socket listeners without kicking the player from the table.
+
 ## Document Update Log
 
 - **2025-10-04:** Initial creation
