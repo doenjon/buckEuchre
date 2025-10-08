@@ -1,32 +1,25 @@
-name: Deploy to Lightsail (build on server)
+- name: Prepare SSH (base64, validated)
+  shell: bash
+  run: |
+    set -euo pipefail
+    mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"
+    echo "${{ secrets.LIGHTSAIL_SSH_KEY_B64 }}" | base64 -d > "$HOME/.ssh/id_ed25519"
+    chmod 600 "$HOME/.ssh/id_ed25519"
+    # fail fast if the key is malformed or passphrase-protected
+    ssh-keygen -y -f "$HOME/.ssh/id_ed25519" > /dev/null
 
-on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch: {}
+    if [ -n "${{ secrets.LIGHTSAIL_KNOWN_HOSTS || '' }}" ]; then
+      printf '%s\n' "${{ secrets.LIGHTSAIL_KNOWN_HOSTS }}" >> "$HOME/.ssh/known_hosts"
+    else
+      ssh-keyscan -H "${{ secrets.LIGHTSAIL_HOST }}" >> "$HOME/.ssh/known_hosts"
+    fi
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Prepare SSH (safe)
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$HOME/.ssh"
-          chmod 700 "$HOME/.ssh"
-          printf '%s' "${{ secrets.LIGHTSAIL_SSH_KEY }}" > "$HOME/.ssh/id_ed25519"
-          chmod 600 "$HOME/.ssh/id_ed25519"
-          sed -i 's/\r$//' "$HOME/.ssh/id_ed25519"
-          if [ -n "${{ secrets.LIGHTSAIL_KNOWN_HOSTS }}" ]; then
-            printf '%s\n' "${{ secrets.LIGHTSAIL_KNOWN_HOSTS }}" >> "$HOME/.ssh/known_hosts"
-          else
-            ssh-keyscan -H "${{ secrets.LIGHTSAIL_HOST }}" >> "$HOME/.ssh/known_hosts"
-          fi
+- name: Test SSH
+  run: |
+    ssh -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+      "${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }}" 'echo ok'
 
-      - name: Trigger remote deploy
-        env:
-          HOST: ${{ secrets.LIGHTSAIL_HOST }}
-          USER: ${{ secrets.LIGHTSAIL_USER }}
-        run: |
-          ssh -o StrictHostKeyChecking=yes "$USER@$HOST" 'bash -lc "~/buckEuchre/deploy.sh"'
+- name: Trigger remote deploy
+  run: |
+    ssh -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+      "${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }}" 'bash -lc "~/buckEuchre/deploy.sh"'
