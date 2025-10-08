@@ -22,7 +22,7 @@ export function CurrentTrick({
   if (!trick || trick.cards.length === 0) {
     return (
       <div
-        className="flex min-h-[220px] items-center justify-center rounded-[28px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 p-5 shadow-2xl backdrop-blur sm:min-h-[300px] sm:p-8"
+        className="flex min-h-[260px] items-center justify-center rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 p-6 shadow-2xl backdrop-blur sm:min-h-[320px] sm:p-8"
         role="region"
         aria-label="Current trick area"
       >
@@ -41,19 +41,26 @@ export function CurrentTrick({
     'right-8 top-1/2 -translate-y-1/2 sm:right-16' // Seat to your right
   ];
 
-  const winner = trick.winner !== null ? players[trick.winner] : null;
+  const getPlayerByPosition = (position: number | null) => {
+    if (position === null) {
+      return null;
+    }
+    return players.find(player => player.position === position) ?? null;
+  };
+
+  const winner = getPlayerByPosition(trick.winner);
 
   return (
     <div
-      className="relative flex min-h-[240px] items-center justify-center overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 px-3 pb-12 pt-14 shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] sm:min-h-[340px] sm:px-6 sm:pb-20 sm:pt-24 backdrop-blur"
+      className="relative flex min-h-[280px] items-center justify-center overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 px-4 pb-14 pt-16 shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] sm:min-h-[360px] sm:px-6 sm:pb-20 sm:pt-24 backdrop-blur"
       role="region"
       aria-label={`Trick ${trick.number}, ${trick.cards.length} of 4 cards played`}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center px-3 sm:top-8 sm:px-6">
+      <div className="pointer-events-none absolute inset-x-0 top-5 flex justify-center px-4 sm:top-8 sm:px-6">
         <div className="flex flex-col items-center gap-1 rounded-full bg-emerald-950/70 px-3 py-2 text-center text-emerald-100/80 shadow-[0_20px_40px_-30px_rgba(16,185,129,0.9)] sm:px-4">
           <span className="text-[10px] uppercase tracking-[0.4em] sm:text-[11px]">Trick {trick.number}</span>
           <span className="text-sm font-medium leading-tight">
-            Lead • {players[trick.leadPlayerPosition]?.name || `Player ${trick.leadPlayerPosition}`}
+            Lead • {getPlayerByPosition(trick.leadPlayerPosition)?.name || `Player ${trick.leadPlayerPosition}`}
           </span>
           {winner && (
             <span className="mt-1 rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-white sm:text-[11px]">
@@ -61,11 +68,11 @@ export function CurrentTrick({
             </span>
           )}
         </div>
-        <div className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-900/60 blur-3xl sm:h-56 sm:w-56" />
+        <div className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-900/60 blur-3xl sm:h-56 sm:w-56" />
       </div>
 
       {trick.cards.map((playedCard, index) => {
-        const player = players[playedCard.playerPosition];
+        const player = getPlayerByPosition(playedCard.playerPosition);
         const relativeSeatIndex =
           ((playedCard.playerPosition - myPosition) % 4 + 4) % 4;
         const positionClass = cardPositions[relativeSeatIndex];

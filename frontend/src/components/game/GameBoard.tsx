@@ -36,7 +36,24 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
     );
   }
 
-  const myPlayer = players[myPosition];
+  const getPlayerByPosition = (position: number | null) => {
+    if (position === null) {
+      return null;
+    }
+    return players.find(player => player.position === position) ?? null;
+  };
+
+  const myPlayer = getPlayerByPosition(myPosition);
+
+  if (!myPlayer) {
+    return (
+      <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-slate-200 backdrop-blur">
+        <p className="text-sm font-medium tracking-wide text-emerald-200/80">
+          Locating your seat at the table…
+        </p>
+      </div>
+    );
+  }
 
   const suitSymbols: Record<string, string> = {
     SPADES: '♠',
@@ -81,7 +98,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       isMyTurn = false;
   }
 
-  const currentPlayer = activePosition !== null ? players[activePosition] : null;
+  const currentPlayer = getPlayerByPosition(activePosition);
   const completedTrick =
     gameState.tricks.length > 0
       ? gameState.tricks[gameState.tricks.length - 1]
@@ -245,64 +262,8 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
   );
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-6">
-      <div className="flex flex-col gap-4 sm:hidden">
-        {playArea}
-
-        <div className="grid gap-3">
-          <div className="grid grid-cols-2 gap-3">
-            <Scoreboard
-              players={players}
-              currentPlayerPosition={activePosition}
-              phase={phase}
-              trumpSuit={gameState.trumpSuit}
-              winningBidderPosition={gameState.winningBidderPosition}
-              winningBid={gameState.highestBid ?? undefined}
-              variant="compact"
-            />
-
-            <div className="flex flex-col gap-3">
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-3 text-[11px] text-white/90 shadow-lg backdrop-blur">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
-                  Game overview
-                </p>
-                <dl className="mt-3 grid grid-cols-2 gap-x-2 gap-y-1.5">
-                  {infoItems.map(item => (
-                    <div key={item.label} className="flex flex-col gap-0.5">
-                      <dt className="text-[9px] uppercase tracking-[0.28em] text-emerald-200/70">{item.label}</dt>
-                      <dd className="font-semibold text-white">{item.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-
-                {personalItems.length > 0 && (
-                  <div className="mt-3 border-t border-white/10 pt-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-emerald-200/80">
-                      You
-                    </p>
-                    <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1.5">
-                      {personalItems.map(item => (
-                        <div key={item.label} className="flex flex-col gap-0.5">
-                          <dt className="text-[9px] uppercase tracking-[0.28em] text-emerald-200/60">{item.label}</dt>
-                          <dd className="font-semibold text-white">{item.value}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {actionPanel && (
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-3 text-sm text-slate-100 shadow-lg backdrop-blur">
-              {actionPanel}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="hidden sm:grid gap-4 lg:gap-6 xl:grid-cols-[minmax(0,260px)_minmax(0,1fr)_minmax(0,260px)] lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)]">
+    <div className="flex flex-col gap-5 sm:gap-6">
+      <div className="grid gap-4 lg:gap-6 xl:grid-cols-[minmax(0,260px)_minmax(0,1fr)_minmax(0,260px)] lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
         {/* Left Column: Scoreboard + Info */}
         <aside className="order-2 flex flex-col gap-4 xl:order-1">
           <Scoreboard
@@ -351,9 +312,58 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
         </aside>
 
         {/* Middle Column: Table */}
-        <div className="order-1 flex flex-col gap-5 sm:gap-6 xl:order-2">
-          {playArea}
-        </div>
+        <section className="order-1 flex flex-col gap-5 sm:gap-6 xl:order-2">
+          {currentPlayer && (
+            <TurnIndicator
+              currentPlayer={currentPlayer}
+              isMyTurn={isMyTurn}
+              phase={phase}
+            />
+          )}
+
+          <CurrentTrick
+            trick={displayTrick}
+            players={players}
+            currentPlayerPosition={trickHighlightPosition}
+            myPosition={myPosition}
+          />
+
+          {myPlayer.folded !== true ? (
+            <div className="rounded-[32px] border border-white/10 bg-white/5 p-3 shadow-[0_25px_70px_-40px_rgba(16,185,129,0.8)] backdrop-blur sm:p-4">
+              <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
+                Your hand
+              </p>
+              <PlayerHand
+                cards={myPlayer.hand}
+                onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
+                disabled={!isMyTurn || phase !== 'PLAYING'}
+              />
+            </div>
+          ) : (
+            <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 text-center shadow-xl backdrop-blur">
+              <p className="text-lg font-semibold text-white/90">
+                You have folded this round
+              </p>
+              <p className="mt-2 text-sm text-emerald-200/70">
+                Sit back and watch the remaining tricks play out.
+              </p>
+            </div>
+          )}
+
+          {phase === 'GAME_OVER' && gameState.winner !== null && (
+            <div className="rounded-[32px] border border-emerald-400/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 p-8 text-center shadow-2xl backdrop-blur">
+              <h2 className="text-2xl font-semibold uppercase tracking-[0.4em] text-emerald-100">
+                Game complete
+              </h2>
+              <p className="mt-3 text-lg text-white">
+                Winner · <span className="font-semibold">{getPlayerByPosition(gameState.winner)?.name}</span>
+              </p>
+              <p className="mt-1 text-sm text-emerald-200/70">
+                Final score {getPlayerByPosition(gameState.winner)?.score}
+              </p>
+            </div>
+          )}
+        </section>
 
         {/* Right Column: Actions */}
         {actionPanel && (

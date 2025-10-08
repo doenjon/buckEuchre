@@ -29,9 +29,9 @@ const suitColors = {
 };
 
 const sizeStyles = {
-  small: 'w-12 h-[4.5rem] text-xs sm:w-16 sm:h-24 sm:text-sm',
-  medium: 'w-14 h-[5.5rem] text-sm sm:w-20 sm:h-32 sm:text-base',
-  large: 'w-16 h-[6.75rem] text-base sm:w-24 sm:h-36 sm:text-lg',
+  small: 'w-14 h-20 text-xs sm:w-16 sm:h-24 sm:text-sm',
+  medium: 'w-16 h-24 text-sm sm:w-20 sm:h-32 sm:text-base',
+  large: 'w-20 h-[8.5rem] text-base sm:w-24 sm:h-36 sm:text-lg',
 } as const;
 
 const cornerSymbolStyles = {
@@ -43,7 +43,7 @@ const cornerSymbolStyles = {
 const centerSymbolStyles = {
   small: 'text-2xl sm:text-3xl',
   medium: 'text-3xl sm:text-4xl',
-  large: 'text-[2.75rem] sm:text-5xl',
+  large: 'text-4xl sm:text-5xl',
 } as const;
 
 export function Card({

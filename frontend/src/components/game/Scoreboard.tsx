@@ -171,56 +171,79 @@ export function Scoreboard({
       </CardHeader>
       <CardContent className="pt-4 sm:pt-5">
         <div className="space-y-2 sm:space-y-3" role="list" aria-label="Player scores">
-          {entries.map(({ player, index, isCurrentTurn, isBidder, isLeader, hasFolded, scoreChanged }) => (
-            <div
-              key={player.id}
-              role="listitem"
-              aria-label={`${player.name}, score ${player.score}, ${player.tricksTaken} tricks${isCurrentTurn ? ', current turn' : ''}`}
-              className={`
-                flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 sm:gap-4 sm:px-4 sm:py-3
-                transition-all duration-300
-                ${isCurrentTurn ? 'ring-1 ring-emerald-400/70 shadow-[0_18px_40px_-20px_rgba(16,185,129,0.8)]' : ''}
-                ${hasFolded ? 'opacity-60' : ''}
-              `}
-            >
-              <div className="flex flex-1 min-w-0 items-center gap-3">
-                <div className="flex flex-col flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                    <span className={`truncate text-sm font-semibold sm:text-base ${isCurrentTurn ? 'text-emerald-200' : 'text-white'}`}>
-                      {player.name || `Player ${index}`}
-                    </span>
-                    {!player.connected && (
-                      <Badge variant="danger" className="text-[10px] uppercase tracking-wide">
-                        Offline
-                      </Badge>
-                    )}
-                    {isBidder && (
-                      <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-emerald-200">
-                        {winningBid !== null && winningBid !== undefined
-                          ? `Bidder ${winningBid}`
-                          : 'Bidder'}
-                      </Badge>
-                    )}
-                    {hasFolded && (
-                      <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-slate-200">
-                        Folded
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="text-[10px] uppercase tracking-[0.3em] text-emerald-200/60">
-                    Seat {index + 1} • Tricks {player.tricksTaken}
+          {players.map((player, index) => {
+            const needsFoldDecision = (
+              phase === 'FOLDING_DECISION' &&
+              seat !== winningBidderPosition &&
+              player.foldDecision === 'UNDECIDED'
+            );
+            const isCurrentTurn = phase === 'FOLDING_DECISION'
+              ? needsFoldDecision
+              : currentPlayerPosition === seat;
+            const isBidder = winningBidderPosition === seat;
+            const isLeader = player.id === leader.id;
+            const isWinner = isLeader && player.score <= 0;
+            const hasFolded = player.folded === true;
+            const previousScore = previousScores.current.get(player.id);
+            const scoreChanged = previousScore !== undefined && previousScore !== player.score;
+
+            return (
+              <div
+                key={player.id}
+                role="listitem"
+                aria-label={`${player.name}, score ${player.score}, ${player.tricksTaken} tricks${isCurrentTurn ? ', current turn' : ''}`}
+                className={`
+                  flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 sm:gap-4 sm:px-4 sm:py-3
+                  transition-all duration-300
+                  ${isCurrentTurn ? 'ring-1 ring-emerald-400/70 shadow-[0_18px_40px_-20px_rgba(16,185,129,0.8)]' : ''}
+                  ${hasFolded ? 'opacity-60' : ''}
+                `}
+              >
+                <div className="flex flex-1 min-w-0 items-center gap-3">
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                      <span className={`truncate text-sm font-semibold sm:text-base ${isCurrentTurn ? 'text-emerald-200' : 'text-white'}`}>
+                        {player.name || `Player ${seat + 1}`}
+                      </span>
+                      {!player.connected && (
+                        <Badge variant="danger" className="text-[10px] uppercase tracking-wide">
+                          Offline
+                        </Badge>
+                      )}
+                      {isBidder && (
+                        <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-emerald-200">
+                          {winningBid !== null && winningBid !== undefined
+                            ? `Bidder ${winningBid}`
+                            : 'Bidder'}
+                        </Badge>
+                      )}
+                      {hasFolded && (
+                        <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-slate-200">
+                          Folded
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-[10px] uppercase tracking-[0.3em] text-emerald-200/60">
+                      Seat {seat + 1} • Tricks {player.tricksTaken}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="ml-2 flex flex-col items-end">
-                <div
-                  className={`
-                    text-lg font-bold text-emerald-100 transition-all duration-500 sm:text-2xl
-                    ${scoreChanged ? 'animate-bounce scale-110 text-white' : ''}
-                  `}
-                >
-                  {player.score}
+                <div className="ml-2 flex flex-col items-end">
+                  <div
+                    className={`
+                      text-lg font-bold text-emerald-100 transition-all duration-500 sm:text-2xl
+                      ${scoreChanged ? 'animate-bounce scale-110 text-white' : ''}
+                    `}
+                  >
+                    {player.score}
+                  </div>
+                  {isWinner && (
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-200/80">
+                      WINNER!
+                    </span>
+                  )}
                 </div>
                 {isLeader && player.score <= 0 && (
                   <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-200/80">

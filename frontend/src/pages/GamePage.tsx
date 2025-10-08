@@ -3,44 +3,149 @@
  * @description Main game page
  */
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useGame } from '@/hooks/useGame';
 import { useAuthStore } from '@/stores/authStore';
 import { GameBoard } from '@/components/game/GameBoard';
 import { WaitingForPlayers } from '@/components/game/WaitingForPlayers';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 export function GamePage() {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
-  const { checkAuth } = useAuth();
-  const { joinGame, gameState, myPosition, setMyPosition, waitingInfo } = useGame();
+  const { checkAuth, loginAsGuest } = useAuth();
+  const { joinGame, gameState, myPosition, setMyPosition, waitingInfo, error, clearGame } = useGame();
   const { playerId } = useAuthStore();
+  const [authReady, setAuthReady] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+
+  // Attempt to ensure the visitor is authenticated, logging in as a guest if needed
+  useEffect(() => {
+    if (authReady || isAuthenticating) {
+      return;
+    }
+
+    let isActive = true;
+
+    async function ensureAuthenticated() {
+      if (checkAuth()) {
+        if (isActive) {
+          setAuthReady(true);
+        }
+        return;
+      }
+
+      try {
+        setIsAuthenticating(true);
+        await loginAsGuest();
+        if (isActive) {
+          setAuthReady(true);
+        }
+      } catch (err) {
+        if (!isActive) {
+          return;
+        }
+        const message = err instanceof Error ? err.message : 'Unable to join as a guest right now.';
+        setAuthError(message);
+        setAuthReady(true);
+      } finally {
+        if (isActive) {
+          setIsAuthenticating(false);
+        }
+      }
+    }
+
+    ensureAuthenticated();
+
+    return () => {
+      isActive = false;
+    };
+  }, [authReady, checkAuth, loginAsGuest, isAuthenticating]);
 
   // Check authentication
   useEffect(() => {
+    if (!authReady || authError) {
+      return;
+    }
+
     if (!checkAuth()) {
       navigate('/');
     }
-  }, [checkAuth, navigate]);
+  }, [authReady, authError, checkAuth, navigate]);
 
   // Join game when component mounts
   useEffect(() => {
+    if (!authReady) {
+      return;
+    }
+
     if (gameId && playerId) {
       joinGame(gameId);
     }
-  }, [gameId, playerId, joinGame]);
+  }, [authReady, gameId, playerId, joinGame]);
 
   // Set player position when game state updates
   useEffect(() => {
     if (gameState && playerId && myPosition === null) {
-      const playerIndex = gameState.players.findIndex(p => p.id === playerId);
-      if (playerIndex !== -1) {
-        setMyPosition(playerIndex);
+      const player = gameState.players.find(p => p.id === playerId);
+      if (player) {
+        setMyPosition(player.position);
       }
     }
   }, [gameState, playerId, myPosition, setMyPosition]);
+
+  const activeError = useMemo(() => authError || error, [authError, error]);
+
+  if (!authReady || isAuthenticating) {
+    return (
+      <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
+        <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-16 sm:px-6 lg:px-8">
+          <Card className="border-white/10 bg-white/5 text-center text-slate-200 backdrop-blur">
+            <CardHeader className="items-center gap-2 text-center">
+              <CardTitle className="text-lg font-semibold tracking-[0.25em] text-emerald-200/80 uppercase">Joining Table</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-4 pb-8">
+              <Loader2 className="h-10 w-10 animate-spin text-emerald-300" />
+              <p className="text-sm text-slate-300">Preparing a guest seat for you&hellip;</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (activeError) {
+    return (
+      <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
+        <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-16 sm:px-6 lg:px-8">
+          <Card className="border-rose-400/30 bg-rose-950/30 text-slate-100 backdrop-blur">
+            <CardHeader className="items-center gap-2 text-center">
+              <AlertCircle className="h-10 w-10 text-rose-300" />
+              <CardTitle className="text-lg font-semibold">We couldn&apos;t seat you at this table</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-4 pb-8 text-center text-sm text-slate-200">
+              <p>{activeError}</p>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  clearGame();
+                  navigate('/');
+                }}
+              >
+                Return to lobby
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   if (!gameState) {
     const fallbackWaiting =
@@ -80,13 +185,13 @@ export function GamePage() {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
-        <header className="flex flex-col gap-1.5 text-center">
-          <span className="text-[11px] uppercase tracking-[0.35em] text-emerald-300/70 sm:text-sm">
+    <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
+        <header className="flex flex-col gap-2 text-center">
+          <span className="text-xs uppercase tracking-[0.35em] text-emerald-300/70 sm:text-sm">
             Buck Euchre
           </span>
-          <h1 className="text-lg font-semibold text-white sm:text-3xl">
+          <h1 className="text-xl font-semibold text-white sm:text-3xl">
             Game {gameId?.slice(0, 8)}
           </h1>
         </header>
