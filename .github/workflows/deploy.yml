@@ -1,0 +1,28 @@
+name: Deploy to Lightsail (build on server)
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          install -m 600 -D /dev/null ~/.ssh/id_ed25519
+          echo "${{ secrets.LIGHTSAIL_SSH_KEY }}" > ~/.ssh/id_ed25519
+          if [ -n "${{ secrets.LIGHTSAIL_KNOWN_HOSTS }}" ]; then
+            echo "${{ secrets.LIGHTSAIL_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "${{ secrets.LIGHTSAIL_HOST }}" >> ~/.ssh/known_hosts
+          fi
+
+      - name: Trigger remote deploy
+        env:
+          HOST: ${{ secrets.LIGHTSAIL_HOST }}
+          USER: ${{ secrets.LIGHTSAIL_USER }}
+        run: |
+          ssh -o StrictHostKeyChecking=yes $USER@$HOST 'bash -lc "~/buckEuchre/deploy.sh"'
