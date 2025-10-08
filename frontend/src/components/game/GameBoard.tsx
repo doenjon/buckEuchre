@@ -206,61 +206,6 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
     );
   }
 
-  const playArea = (
-    <section className="flex flex-col gap-4 sm:gap-5">
-      {currentPlayer && (
-        <TurnIndicator
-          currentPlayer={currentPlayer}
-          isMyTurn={isMyTurn}
-          phase={phase}
-        />
-      )}
-
-      <CurrentTrick
-        trick={displayTrick}
-        players={players}
-        currentPlayerPosition={trickHighlightPosition}
-        myPosition={myPosition}
-      />
-
-      {myPlayer.folded !== true ? (
-        <div className="rounded-[28px] border border-white/10 bg-white/5 p-3 shadow-[0_25px_70px_-40px_rgba(16,185,129,0.8)] backdrop-blur sm:p-4">
-          <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
-            Your hand
-          </p>
-          <PlayerHand
-            cards={myPlayer.hand}
-            onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
-            disabled={!isMyTurn || phase !== 'PLAYING'}
-          />
-        </div>
-      ) : (
-        <div className="rounded-[28px] border border-white/10 bg-white/5 p-6 text-center shadow-xl backdrop-blur sm:p-8">
-          <p className="text-base font-semibold text-white/90 sm:text-lg">
-            You have folded this round
-          </p>
-          <p className="mt-2 text-sm text-emerald-200/70">
-            Sit back and watch the remaining tricks play out.
-          </p>
-        </div>
-      )}
-
-      {phase === 'GAME_OVER' && gameState.winner !== null && (
-        <div className="rounded-[28px] border border-emerald-400/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 p-6 text-center shadow-2xl backdrop-blur sm:p-8">
-          <h2 className="text-xl font-semibold uppercase tracking-[0.4em] text-emerald-100 sm:text-2xl">
-            Game complete
-          </h2>
-          <p className="mt-3 text-base text-white sm:text-lg">
-            Winner · <span className="font-semibold">{players[gameState.winner].name}</span>
-          </p>
-          <p className="mt-1 text-sm text-emerald-200/70">
-            Final score {players[gameState.winner].score}
-          </p>
-        </div>
-      )}
-    </section>
-  );
-
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
       <div className="grid gap-4 lg:gap-6 xl:grid-cols-[minmax(0,260px)_minmax(0,1fr)_minmax(0,260px)] lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
