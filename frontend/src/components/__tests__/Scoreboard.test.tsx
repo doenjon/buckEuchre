@@ -113,7 +113,7 @@ describe('Scoreboard Component', () => {
         />
       );
       
-      const trickTexts = screen.getAllByText(/Tricks: 2/);
+      const trickTexts = screen.getAllByText(/Tricks\s*2/);
       expect(trickTexts).toHaveLength(4);
     });
 
@@ -143,12 +143,12 @@ describe('Scoreboard Component', () => {
       const items = screen.getAllByRole('listitem');
       
       // Bob is position 1 (index 1)
-      expect(items[1].className).toContain('border-green-500');
-      expect(items[1].className).toContain('bg-green-50');
+      expect(items[1].className).toContain('ring-emerald-400/70');
+      expect(items[1].className).toContain('shadow-[0_18px_40px_-20px_rgba(16,185,129,0.8)]');
       
       // Other players should not be highlighted
-      expect(items[0].className).not.toContain('border-green-500');
-      expect(items[2].className).not.toContain('border-green-500');
+      expect(items[0].className).not.toContain('ring-emerald-400/70');
+      expect(items[2].className).not.toContain('ring-emerald-400/70');
     });
 
     it('should update highlighting when turn changes', () => {
@@ -161,7 +161,7 @@ describe('Scoreboard Component', () => {
       );
       
       let items = screen.getAllByRole('listitem');
-      expect(items[0].className).toContain('border-green-500');
+      expect(items[0].className).toContain('ring-emerald-400/70');
       
       rerender(
         <Scoreboard 
@@ -172,8 +172,8 @@ describe('Scoreboard Component', () => {
       );
       
       items = screen.getAllByRole('listitem');
-      expect(items[0].className).not.toContain('border-green-500');
-      expect(items[2].className).toContain('border-green-500');
+      expect(items[0].className).not.toContain('ring-emerald-400/70');
+      expect(items[2].className).toContain('ring-emerald-400/70');
     });
 
     it('should include current turn in aria-label', () => {
@@ -205,11 +205,11 @@ describe('Scoreboard Component', () => {
       );
 
       const items = screen.getAllByRole('listitem');
-      expect(items[1].className).toContain('border-green-500');
-      expect(items[1].className).toContain('bg-green-50');
-      expect(items[3].className).toContain('border-green-500');
-      expect(items[3].className).toContain('bg-green-50');
-      expect(items[2].className).not.toContain('border-green-500');
+      expect(items[1].className).toContain('ring-emerald-400/70');
+      expect(items[1].className).toContain('shadow-[0_18px_40px_-20px_rgba(16,185,129,0.8)]');
+      expect(items[3].className).toContain('ring-emerald-400/70');
+      expect(items[3].className).toContain('shadow-[0_18px_40px_-20px_rgba(16,185,129,0.8)]');
+      expect(items[2].className).not.toContain('ring-emerald-400/70');
 
       expect(
         screen.getByRole('listitem', { name: /Bob, score 20, 0 tricks, current turn/i })
@@ -276,7 +276,7 @@ describe('Scoreboard Component', () => {
         />
       );
       
-      expect(screen.queryByText(/Trump Suit:/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Trump suit/i)).not.toBeInTheDocument();
     });
 
     it('should not display trump suit when null', () => {
@@ -289,7 +289,7 @@ describe('Scoreboard Component', () => {
         />
       );
       
-      expect(screen.queryByText(/Trump Suit:/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Trump suit/i)).not.toBeInTheDocument();
     });
   });
 
@@ -305,7 +305,7 @@ describe('Scoreboard Component', () => {
         />
       );
       
-      expect(screen.getByText(/Bidder \(3\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/Bidder 3/i)).toBeInTheDocument();
     });
 
     it('should show correct bid amount', () => {
@@ -319,7 +319,7 @@ describe('Scoreboard Component', () => {
         />
       );
       
-      expect(screen.getByText(/Bidder \(5\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/Bidder 5/i)).toBeInTheDocument();
     });
 
     it('should not show bidder badge when no bidder', () => {
@@ -369,17 +369,17 @@ describe('Scoreboard Component', () => {
     it('should reduce opacity for folded players', () => {
       const playersWithFolded = [...mockPlayers];
       playersWithFolded[1] = { ...mockPlayers[1], folded: true, foldDecision: 'FOLD' };
-      
+
       render(
-        <Scoreboard 
-          players={playersWithFolded} 
+        <Scoreboard
+          players={playersWithFolded}
           currentPlayerPosition={null}
           phase="PLAYING"
         />
       );
-      
+
       const items = screen.getAllByRole('listitem');
-      expect(items[1].className).toContain('opacity-50');
+      expect(items[1].className).toContain('opacity-60');
     });
   });
 
@@ -507,7 +507,7 @@ describe('Scoreboard Component', () => {
         />
       );
       
-      expect(screen.getByText('Player 0')).toBeInTheDocument();
+      expect(screen.getByText('Player 1')).toBeInTheDocument();
     });
 
     it('should handle single player', () => {
@@ -623,7 +623,7 @@ describe('Scoreboard Component', () => {
         />
       );
       
-      expect(screen.queryByText(/Trump Suit:/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Trump suit/i)).not.toBeInTheDocument();
       
       rerender(
         <Scoreboard 
@@ -634,7 +634,7 @@ describe('Scoreboard Component', () => {
         />
       );
       
-      expect(screen.getByText(/Trump Suit:/i)).toBeInTheDocument();
+      expect(screen.getByText(/Trump suit/i)).toBeInTheDocument();
       expect(screen.getByText('♥')).toBeInTheDocument();
     });
   });

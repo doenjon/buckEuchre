@@ -35,9 +35,9 @@ export function GamePage() {
   // Set player position when game state updates
   useEffect(() => {
     if (gameState && playerId && myPosition === null) {
-      const playerIndex = gameState.players.findIndex(p => p.id === playerId);
-      if (playerIndex !== -1) {
-        setMyPosition(playerIndex);
+      const player = gameState.players.find(p => p.id === playerId);
+      if (player) {
+        setMyPosition(player.position);
       }
     }
   }, [gameState, playerId, myPosition, setMyPosition]);

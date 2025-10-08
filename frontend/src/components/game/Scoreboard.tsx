@@ -63,17 +63,19 @@ export function Scoreboard({
       </CardHeader>
       <CardContent className="pt-4">
         <div className="space-y-3" role="list" aria-label="Player scores">
-          {players.map((player, index) => {
+          {players.map((player) => {
+            const seat = player.position;
             const needsFoldDecision = (
               phase === 'FOLDING_DECISION' &&
-              index !== winningBidderPosition &&
+              seat !== winningBidderPosition &&
               player.foldDecision === 'UNDECIDED'
             );
             const isCurrentTurn = phase === 'FOLDING_DECISION'
               ? needsFoldDecision
-              : currentPlayerPosition === index;
-            const isBidder = winningBidderPosition === index;
+              : currentPlayerPosition === seat;
+            const isBidder = winningBidderPosition === seat;
             const isLeader = player.id === leader.id;
+            const isWinner = isLeader && player.score <= 0;
             const hasFolded = player.folded === true;
             const previousScore = previousScores.current.get(player.id);
             const scoreChanged = previousScore !== undefined && previousScore !== player.score;
@@ -94,7 +96,7 @@ export function Scoreboard({
                   <div className="flex flex-col flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-1 sm:gap-2">
                       <span className={`truncate text-sm font-semibold sm:text-base ${isCurrentTurn ? 'text-emerald-200' : 'text-white'}`}>
-                        {player.name || `Player ${index}`}
+                        {player.name || `Player ${seat + 1}`}
                       </span>
                       {!player.connected && (
                         <Badge variant="danger" className="text-[10px] uppercase tracking-wide">
@@ -115,7 +117,7 @@ export function Scoreboard({
                       )}
                     </div>
                     <div className="text-[10px] uppercase tracking-[0.3em] text-emerald-200/60">
-                      Seat {index + 1} • Tricks {player.tricksTaken}
+                      Seat {seat + 1} • Tricks {player.tricksTaken}
                     </div>
                   </div>
                 </div>
@@ -123,15 +125,16 @@ export function Scoreboard({
                 <div className="flex flex-col items-end ml-2">
                   <div
                     className={`
-                      text-xl font-bold text-emerald-100 transition-all duration-500 sm:text-2xl
+                      text-xl font-bold transition-all duration-500 sm:text-2xl
+                      ${isWinner ? 'text-green-600' : 'text-emerald-100'}
                       ${scoreChanged ? 'animate-bounce scale-110 text-white' : ''}
                     `}
                   >
                     {player.score}
                   </div>
-                  {isLeader && player.score <= 0 && (
+                  {isWinner && (
                     <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-200/80">
-                      In the lead
+                      WINNER!
                     </span>
                   )}
                 </div>
