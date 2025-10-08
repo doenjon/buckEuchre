@@ -89,7 +89,7 @@ export function CurrentTrick({
             `}
             style={{ animationDelay: `${index * 150}ms` }}
           >
-            <div className={`${isWinner ? 'rounded-2xl ring-4 ring-emerald-300/60' : 'drop-shadow-[0_25px_40px_rgba(16,185,129,0.35)]'}`}>
+            <div className={`${isWinner ? 'rounded-2xl ring-4 ring-emerald-300/60' : 'drop-shadow-[0_20px_32px_rgba(16,185,129,0.35)]'}`}>
               <Card card={playedCard.card} size="medium" />
             </div>
             <div

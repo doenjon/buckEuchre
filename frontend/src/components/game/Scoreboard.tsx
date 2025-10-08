@@ -17,6 +17,7 @@ export interface ScoreboardProps {
   winningBidderPosition?: number | null;
   winningBid?: number | null;
   className?: string;
+  variant?: 'default' | 'compact';
 }
 
 const suitSymbols = {
@@ -33,7 +34,8 @@ export function Scoreboard({
   trumpSuit,
   winningBidderPosition,
   winningBid,
-  className
+  className,
+  variant = 'default'
 }: ScoreboardProps) {
   const sortedPlayers = [...players].sort((a, b) => a.score - b.score);
   const leader = sortedPlayers[0];
@@ -48,6 +50,112 @@ export function Scoreboard({
     }, 1000);
     return () => clearTimeout(timeout);
   }, [players]);
+
+  const entries = players.map((player, index) => {
+    const needsFoldDecision = (
+      phase === 'FOLDING_DECISION' &&
+      index !== winningBidderPosition &&
+      player.foldDecision === 'UNDECIDED'
+    );
+    const isCurrentTurn = phase === 'FOLDING_DECISION'
+      ? needsFoldDecision
+      : currentPlayerPosition === index;
+    const isBidder = winningBidderPosition === index;
+    const isLeader = player.id === leader.id;
+    const hasFolded = player.folded === true;
+    const previousScore = previousScores.current.get(player.id);
+    const scoreChanged = previousScore !== undefined && previousScore !== player.score;
+
+    return {
+      player,
+      index,
+      isCurrentTurn,
+      isBidder,
+      isLeader,
+      hasFolded,
+      scoreChanged,
+    };
+  });
+
+  if (variant === 'compact') {
+    return (
+      <div
+        className={cn(
+          'rounded-3xl border border-white/10 bg-white/5 p-3 text-slate-100 shadow-lg backdrop-blur',
+          className
+        )}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-emerald-200/80">
+            Table tally
+          </p>
+          <span className="text-[11px] uppercase tracking-[0.3em] text-emerald-200/70">
+            {phase.replace(/_/g, ' ')}
+          </span>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2" role="list" aria-label="Player scores">
+          {entries.map(({ player, index, isCurrentTurn, isBidder, hasFolded }) => (
+            <div
+              key={player.id}
+              className={cn(
+                'flex flex-col gap-1 rounded-2xl border border-white/10 bg-white/5 p-2 text-[11px] text-white/90 transition-colors duration-200',
+                isCurrentTurn && 'ring-1 ring-emerald-400/70 bg-emerald-500/10 shadow-[0_18px_40px_-20px_rgba(16,185,129,0.8)]',
+                hasFolded && 'opacity-60'
+              )}
+              role="listitem"
+              aria-label={`${player.name}, score ${player.score}, seat ${index + 1}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className={cn(
+                  'truncate font-semibold',
+                  isCurrentTurn ? 'text-emerald-100' : 'text-white'
+                )}>
+                  {player.name || `Player ${index + 1}`}
+                </span>
+                <span className="text-base font-bold text-emerald-100">{player.score}</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1 text-[9px] uppercase tracking-[0.28em] text-emerald-200/70">
+                <span>Seat {index + 1}</span>
+                <span>Tricks {player.tricksTaken}</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {!player.connected && (
+                  <Badge variant="danger" className="text-[9px] uppercase tracking-wide">
+                    Offline
+                  </Badge>
+                )}
+                {isBidder && (
+                  <Badge variant="outline" className="text-[9px] uppercase tracking-wide text-emerald-200">
+                    {winningBid !== null && winningBid !== undefined ? `Bid ${winningBid}` : 'Bidder'}
+                  </Badge>
+                )}
+                {player.foldDecision === 'UNDECIDED' && phase === 'FOLDING_DECISION' && index !== winningBidderPosition && (
+                  <Badge variant="outline" className="text-[9px] uppercase tracking-wide text-white/80">
+                    Decide
+                  </Badge>
+                )}
+                {hasFolded && (
+                  <Badge variant="outline" className="text-[9px] uppercase tracking-wide text-slate-200">
+                    Folded
+                  </Badge>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {trumpSuit && (
+          <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-2 py-1.5 text-[11px] uppercase tracking-[0.3em] text-emerald-200/80">
+            <span>Trump</span>
+            <span className="text-lg font-semibold text-white">
+              {suitSymbols[trumpSuit as keyof typeof suitSymbols] || trumpSuit}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <Card
@@ -120,6 +228,7 @@ export function Scoreboard({
                     </div>
                   </div>
                 </div>
+              </div>
 
                 <div className="ml-2 flex flex-col items-end">
                   <div
@@ -136,9 +245,14 @@ export function Scoreboard({
                     </span>
                   )}
                 </div>
+                {isLeader && player.score <= 0 && (
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-200/80">
+                    In the lead
+                  </span>
+                )}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
 
         {trumpSuit && (
