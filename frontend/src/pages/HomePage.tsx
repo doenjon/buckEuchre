@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Sparkles, Users, Crown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/uiStore';
@@ -153,8 +153,7 @@ export function HomePage() {
 
   // If authenticated, redirect to lobby
   if (isAuthenticated) {
-    navigate('/lobby');
-    return null;
+    return <Navigate to="/lobby" replace />;
   }
 
   return null;
