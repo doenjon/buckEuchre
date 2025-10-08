@@ -174,13 +174,13 @@ export function Scoreboard({
           {players.map((player, index) => {
             const needsFoldDecision = (
               phase === 'FOLDING_DECISION' &&
-              seat !== winningBidderPosition &&
+              index !== winningBidderPosition &&
               player.foldDecision === 'UNDECIDED'
             );
             const isCurrentTurn = phase === 'FOLDING_DECISION'
               ? needsFoldDecision
-              : currentPlayerPosition === seat;
-            const isBidder = winningBidderPosition === seat;
+              : currentPlayerPosition === index;
+            const isBidder = winningBidderPosition === index;
             const isLeader = player.id === leader.id;
             const isWinner = isLeader && player.score <= 0;
             const hasFolded = player.folded === true;
@@ -192,18 +192,22 @@ export function Scoreboard({
                 key={player.id}
                 role="listitem"
                 aria-label={`${player.name}, score ${player.score}, ${player.tricksTaken} tricks${isCurrentTurn ? ', current turn' : ''}`}
-                className={`
-                  flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 sm:gap-4 sm:px-4 sm:py-3
-                  transition-all duration-300
-                  ${isCurrentTurn ? 'ring-1 ring-emerald-400/70 shadow-[0_18px_40px_-20px_rgba(16,185,129,0.8)]' : ''}
-                  ${hasFolded ? 'opacity-60' : ''}
-                `}
+                className={cn(
+                  'flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 transition-all duration-300 sm:gap-4 sm:px-4 sm:py-3',
+                  isCurrentTurn && 'ring-1 ring-emerald-400/70 shadow-[0_18px_40px_-20px_rgba(16,185,129,0.8)]',
+                  hasFolded && 'opacity-60'
+                )}
               >
                 <div className="flex flex-1 min-w-0 items-center gap-3">
-                  <div className="flex flex-col flex-1 min-w-0">
+                  <div className="flex min-w-0 flex-1 flex-col">
                     <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                      <span className={`truncate text-sm font-semibold sm:text-base ${isCurrentTurn ? 'text-emerald-200' : 'text-white'}`}>
-                        {player.name || `Player ${seat + 1}`}
+                      <span
+                        className={cn(
+                          'truncate text-sm font-semibold sm:text-base',
+                          isCurrentTurn ? 'text-emerald-200' : 'text-white'
+                        )}
+                      >
+                        {player.name || `Player ${index + 1}`}
                       </span>
                       {!player.connected && (
                         <Badge variant="danger" className="text-[10px] uppercase tracking-wide">
@@ -213,7 +217,7 @@ export function Scoreboard({
                       {isBidder && (
                         <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-emerald-200">
                           {winningBid !== null && winningBid !== undefined
-                            ? `Bidder ${winningBid}`
+                            ? `Bid ${winningBid}`
                             : 'Bidder'}
                         </Badge>
                       )}
@@ -224,18 +228,21 @@ export function Scoreboard({
                       )}
                     </div>
                     <div className="text-[10px] uppercase tracking-[0.3em] text-emerald-200/60">
-                      Seat {seat + 1} • Tricks {player.tricksTaken}
+                      Seat {index + 1} • Tricks {player.tricksTaken}
                     </div>
+                    {isLeader && player.score <= 0 && (
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-200/80">
+                        In the lead
+                      </span>
+                    )}
                   </div>
                 </div>
-              </div>
-
                 <div className="ml-2 flex flex-col items-end">
                   <div
-                    className={`
-                      text-lg font-bold text-emerald-100 transition-all duration-500 sm:text-2xl
-                      ${scoreChanged ? 'animate-bounce scale-110 text-white' : ''}
-                    `}
+                    className={cn(
+                      'text-lg font-bold text-emerald-100 transition-all duration-500 sm:text-2xl',
+                      scoreChanged && 'animate-bounce scale-110 text-white'
+                    )}
                   >
                     {player.score}
                   </div>
@@ -245,14 +252,9 @@ export function Scoreboard({
                     </span>
                   )}
                 </div>
-                {isLeader && player.score <= 0 && (
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-200/80">
-                    In the lead
-                  </span>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {trumpSuit && (
