@@ -36,7 +36,24 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
     );
   }
 
-  const myPlayer = players[myPosition];
+  const getPlayerByPosition = (position: number | null) => {
+    if (position === null) {
+      return null;
+    }
+    return players.find(player => player.position === position) ?? null;
+  };
+
+  const myPlayer = getPlayerByPosition(myPosition);
+
+  if (!myPlayer) {
+    return (
+      <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-slate-200 backdrop-blur">
+        <p className="text-sm font-medium tracking-wide text-emerald-200/80">
+          Locating your seat at the table…
+        </p>
+      </div>
+    );
+  }
 
   const suitSymbols: Record<string, string> = {
     SPADES: '♠',
@@ -81,7 +98,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       isMyTurn = false;
   }
 
-  const currentPlayer = activePosition !== null ? players[activePosition] : null;
+  const currentPlayer = getPlayerByPosition(activePosition);
   const completedTrick =
     gameState.tricks.length > 0
       ? gameState.tricks[gameState.tricks.length - 1]
@@ -284,10 +301,10 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 Game complete
               </h2>
               <p className="mt-3 text-lg text-white">
-                Winner · <span className="font-semibold">{players[gameState.winner].name}</span>
+                Winner · <span className="font-semibold">{getPlayerByPosition(gameState.winner)?.name}</span>
               </p>
               <p className="mt-1 text-sm text-emerald-200/70">
-                Final score {players[gameState.winner].score}
+                Final score {getPlayerByPosition(gameState.winner)?.score}
               </p>
             </div>
           )}

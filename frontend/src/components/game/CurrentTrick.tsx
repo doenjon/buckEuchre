@@ -41,7 +41,14 @@ export function CurrentTrick({
     'right-8 top-1/2 -translate-y-1/2 sm:right-16' // Seat to your right
   ];
 
-  const winner = trick.winner !== null ? players[trick.winner] : null;
+  const getPlayerByPosition = (position: number | null) => {
+    if (position === null) {
+      return null;
+    }
+    return players.find(player => player.position === position) ?? null;
+  };
+
+  const winner = getPlayerByPosition(trick.winner);
 
   return (
     <div
@@ -53,7 +60,7 @@ export function CurrentTrick({
         <div className="flex flex-col items-center gap-1 rounded-full bg-emerald-950/70 px-3 py-2 text-center text-emerald-100/80 shadow-[0_20px_40px_-30px_rgba(16,185,129,0.9)] sm:px-4">
           <span className="text-[10px] uppercase tracking-[0.4em] sm:text-[11px]">Trick {trick.number}</span>
           <span className="text-sm font-medium leading-tight">
-            Lead • {players[trick.leadPlayerPosition]?.name || `Player ${trick.leadPlayerPosition}`}
+            Lead • {getPlayerByPosition(trick.leadPlayerPosition)?.name || `Player ${trick.leadPlayerPosition}`}
           </span>
           {winner && (
             <span className="mt-1 rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-white sm:text-[11px]">
@@ -65,7 +72,7 @@ export function CurrentTrick({
       </div>
 
       {trick.cards.map((playedCard, index) => {
-        const player = players[playedCard.playerPosition];
+        const player = getPlayerByPosition(playedCard.playerPosition);
         const relativeSeatIndex =
           ((playedCard.playerPosition - myPosition) % 4 + 4) % 4;
         const positionClass = cardPositions[relativeSeatIndex];

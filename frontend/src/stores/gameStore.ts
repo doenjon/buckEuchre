@@ -73,7 +73,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
   getMyPlayer: () => {
     const { gameState, myPosition } = get();
     if (!gameState || myPosition === null) return null;
-    return gameState.players[myPosition] || null;
+    return gameState.players.find(player => player.position === myPosition) || null;
   },
 
   isMyTurn: () => {
@@ -146,6 +146,6 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     }
     
     if (currentPosition === null) return null;
-    return gameState.players[currentPosition] || null;
+    return gameState.players.find(player => player.position === currentPosition) || null;
   },
 }));

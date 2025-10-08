@@ -121,7 +121,7 @@ describe('gameValidation folding helpers', () => {
 
   it('blocks folding when clubs are turned up', () => {
     const state = buildFoldingState({ isClubsTurnUp: true });
-    expectFold(state, 2, { valid: false, reasonIncludes: 'Clubs' });
+    expectFold(state, 2, { valid: false, reasonIncludes: 'clubs' });
   });
 
   it('blocks fold attempts after a decision has been recorded', () => {
