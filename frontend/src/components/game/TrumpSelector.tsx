@@ -39,9 +39,9 @@ export function TrumpSelector({ isMyTurn }: TrumpSelectorProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="space-y-1 text-center">
-        <h3 className="text-lg font-semibold tracking-wide text-white">
+        <h3 className="text-base font-semibold tracking-wide text-white sm:text-lg">
           Choose your trump suit
         </h3>
         <p className="text-xs uppercase tracking-[0.3em] text-emerald-200/80">
@@ -49,18 +49,18 @@ export function TrumpSelector({ isMyTurn }: TrumpSelectorProps) {
         </p>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-3">
+      <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
         {SUITS.map(suit => (
           <Button
             key={suit}
             onClick={() => declareTrump(suit)}
             variant="default"
             size="lg"
-            className="min-w-[120px] border border-white/20 bg-white text-lg font-semibold text-slate-900 shadow-lg hover:bg-emerald-100"
+            className="min-w-[120px] flex-1 border border-white/20 bg-white text-base font-semibold text-slate-900 shadow-lg hover:bg-emerald-100 sm:flex-none sm:text-lg"
           >
             <span className={`flex items-center gap-2 ${SUIT_COLORS[suit]}`}>
-              <span className="text-2xl">{SUIT_SYMBOLS[suit]}</span>
-              <span>{suit}</span>
+              <span className="text-xl sm:text-2xl">{SUIT_SYMBOLS[suit]}</span>
+              <span className="text-sm sm:text-base">{suit}</span>
             </span>
           </Button>
         ))}

@@ -32,8 +32,8 @@ export function PlayerHand({
   }
 
   return (
-    <div 
-      className="flex flex-wrap sm:flex-nowrap justify-center items-end gap-1 sm:gap-2 px-2 sm:px-0"
+    <div
+      className="flex w-full flex-wrap items-end justify-center gap-1 px-2 sm:flex-nowrap sm:gap-2 sm:px-0"
       role="group"
       aria-label={`Your hand: ${cards.length} cards`}
     >
