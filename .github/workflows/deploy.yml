@@ -1,4 +1,4 @@
-name: Deploy to Lightsail (build on server)
+name: Deploy to Lightsail (build on server, b64 key)
 
 on:
   push:
@@ -8,25 +8,45 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      HOST: ${{ secrets.LIGHTSAIL_HOST }}
+      USER: ${{ secrets.LIGHTSAIL_USER }}
+      KEY_B64: ${{ secrets.LIGHTSAIL_SSH_KEY_B64 }}
+
     steps:
-      - name: Prepare SSH (safe)
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          [ -n "$HOST" ]    || { echo "Missing LIGHTSAIL_HOST"; exit 1; }
+          [ -n "$USER" ]    || { echo "Missing LIGHTSAIL_USER"; exit 1; }
+          [ -n "$KEY_B64" ] || { echo "Missing LIGHTSAIL_SSH_KEY_B64"; exit 1; }
+
+      - name: Prepare SSH (decode + validate)
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$HOME/.ssh"
-          chmod 700 "$HOME/.ssh"
-          printf '%s' "${{ secrets.LIGHTSAIL_SSH_KEY }}" > "$HOME/.ssh/id_ed25519"
+          mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"
+
+          # write decoded key
+          echo "$KEY_B64" | base64 -d > "$HOME/.ssh/id_ed25519"
           chmod 600 "$HOME/.ssh/id_ed25519"
-          sed -i 's/\r$//' "$HOME/.ssh/id_ed25519"
-          if [ -n "${{ secrets.LIGHTSAIL_KNOWN_HOSTS }}" ]; then
+
+          # fail fast if malformed or passphrase-protected
+          ssh-keygen -y -f "$HOME/.ssh/id_ed25519" > /dev/null
+
+          # trust host
+          if [ -n "${{ secrets.LIGHTSAIL_KNOWN_HOSTS || '' }}" ]; then
             printf '%s\n' "${{ secrets.LIGHTSAIL_KNOWN_HOSTS }}" >> "$HOME/.ssh/known_hosts"
           else
-            ssh-keyscan -H "${{ secrets.LIGHTSAIL_HOST }}" >> "$HOME/.ssh/known_hosts"
+            ssh-keyscan -H "$HOST" >> "$HOME/.ssh/known_hosts"
           fi
 
-      - name: Trigger remote deploy
-        env:
-          HOST: ${{ secrets.LIGHTSAIL_HOST }}
-          USER: ${{ secrets.LIGHTSAIL_USER }}
+      - name: Test SSH connectivity
         run: |
-          ssh -o StrictHostKeyChecking=yes "$USER@$HOST" 'bash -lc "~/app/deploy.sh"'
+          ssh -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$USER@$HOST" 'echo ok'
+
+      - name: Trigger remote deploy
+        run: |
+          ssh -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$USER@$HOST" 'bash -lc "~/buckEuchre/deploy.sh"'
