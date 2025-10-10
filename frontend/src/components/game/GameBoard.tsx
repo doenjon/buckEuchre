@@ -220,13 +220,13 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
 
         {/* Middle Column: Table */}
         <section className="order-1 flex flex-col gap-5 sm:gap-6 xl:order-2">
-          <div className="relative">
-            {inlineActionPanel && (
-              <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4">
-                <div className="pointer-events-auto w-full max-w-md rounded-3xl border border-white/10 bg-slate-950/80 p-5 text-slate-100 shadow-[0_35px_80px_-35px_rgba(16,185,129,0.9)] backdrop-blur-xl sm:p-6">
-                  {inlineActionPanel}
-                </div>
-              </div>
+          <div className="space-y-5 sm:space-y-6">
+            {currentPlayer && (
+              <TurnIndicator
+                currentPlayer={currentPlayer}
+                isMyTurn={isMyTurn}
+                phase={phase}
+              />
             )}
 
             <div className="space-y-5 sm:space-y-6">
@@ -244,6 +244,15 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 currentPlayerPosition={trickHighlightPosition}
                 myPosition={myPosition}
               />
+
+              {inlineActionPanel && (
+                <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-6">
+                  <div className="pointer-events-auto w-full max-w-md rounded-3xl border border-white/10 bg-slate-950/80 p-5 text-slate-100 shadow-[0_35px_80px_-35px_rgba(16,185,129,0.9)] backdrop-blur-xl sm:p-6">
+                    {inlineActionPanel}
+                  </div>
+                </div>
+              )}
+            </div>
 
               {myPlayer.folded !== true ? (
                 <div className="rounded-[32px] border border-white/10 bg-white/5 p-3 shadow-[0_25px_70px_-40px_rgba(16,185,129,0.8)] backdrop-blur sm:p-4">
