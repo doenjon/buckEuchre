@@ -229,15 +229,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
               />
             )}
 
-            <div className="space-y-5 sm:space-y-6">
-              {currentPlayer && (
-                <TurnIndicator
-                  currentPlayer={currentPlayer}
-                  isMyTurn={isMyTurn}
-                  phase={phase}
-                />
-              )}
-
+            <div className="relative">
               <CurrentTrick
                 trick={displayTrick}
                 players={players}
@@ -254,79 +246,78 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
               )}
             </div>
 
-              {myPlayer.folded !== true ? (
-                <div className="rounded-[32px] border border-white/10 bg-white/5 p-3 shadow-[0_25px_70px_-40px_rgba(16,185,129,0.8)] backdrop-blur sm:p-4">
-                  <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
-                    Your hand
-                  </p>
-                  <PlayerHand
-                    cards={myPlayer.hand}
-                    onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
-                    disabled={!isMyTurn || phase !== 'PLAYING'}
-                  />
-                </div>
-              ) : (
-                <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 text-center shadow-xl backdrop-blur">
-                  <p className="text-lg font-semibold text-white/90">
-                    You have folded this round
-                  </p>
-                  <p className="mt-2 text-sm text-emerald-200/70">
-                    Sit back and watch the remaining tricks play out.
-                  </p>
-                </div>
-              )}
+            {myPlayer.folded !== true ? (
+              <div className="rounded-[32px] border border-white/10 bg-white/5 p-3 shadow-[0_25px_70px_-40px_rgba(16,185,129,0.8)] backdrop-blur sm:p-4">
+                <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
+                  Your hand
+                </p>
+                <PlayerHand
+                  cards={myPlayer.hand}
+                  onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
+                  disabled={!isMyTurn || phase !== 'PLAYING'}
+                />
+              </div>
+            ) : (
+              <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 text-center shadow-xl backdrop-blur">
+                <p className="text-lg font-semibold text-white/90">
+                  You have folded this round
+                </p>
+                <p className="mt-2 text-sm text-emerald-200/70">
+                  Sit back and watch the remaining tricks play out.
+                </p>
+              </div>
+            )}
 
-              {phase === 'GAME_OVER' && gameState.winner !== null && (
-                <div className="rounded-[32px] border border-emerald-400/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 p-8 text-center shadow-2xl backdrop-blur">
-                  <h2 className="text-2xl font-semibold uppercase tracking-[0.4em] text-emerald-100">
-                    Game complete
-                  </h2>
-                  <p className="mt-3 text-lg text-white">
-                    Winner · <span className="font-semibold">{getPlayerByPosition(gameState.winner)?.name}</span>
-                  </p>
-                  <p className="mt-1 text-sm text-emerald-200/70">
-                    Final score {getPlayerByPosition(gameState.winner)?.score}
-                  </p>
-                  <p className="mt-6 text-sm text-emerald-100/80">
-                    Ready for another showdown? Start a fresh table or head back to the lobby to celebrate.
-                  </p>
-                  <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                    <Button
-                      type="button"
-                      size="lg"
-                      className="min-w-[180px] justify-center bg-emerald-500/90 text-white transition hover:bg-emerald-500"
-                      onClick={handleRematch}
-                      disabled={isRematching || isReturning}
-                    >
-                      {isRematching ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <RotateCcw className="mr-2 h-4 w-4" />
-                      )}
-                      Start rematch
-                    </Button>
-                    <Button
-                      type="button"
-                      size="lg"
-                      variant="outline"
-                      className="min-w-[180px] justify-center border-white/40 bg-white/10 text-white transition hover:bg-white/20"
-                      onClick={handleReturnToLobby}
-                      disabled={isRematching || isReturning}
-                    >
-                      {isReturning ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <LogOut className="mr-2 h-4 w-4" />
-                      )}
-                      Return to lobby
-                    </Button>
-                  </div>
-                  {actionError && (
-                    <p className="mt-4 text-sm text-rose-200/80">{actionError}</p>
-                  )}
+            {phase === 'GAME_OVER' && gameState.winner !== null && (
+              <div className="rounded-[32px] border border-emerald-400/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 p-8 text-center shadow-2xl backdrop-blur">
+                <h2 className="text-2xl font-semibold uppercase tracking-[0.4em] text-emerald-100">
+                  Game complete
+                </h2>
+                <p className="mt-3 text-lg text-white">
+                  Winner · <span className="font-semibold">{getPlayerByPosition(gameState.winner)?.name}</span>
+                </p>
+                <p className="mt-1 text-sm text-emerald-200/70">
+                  Final score {getPlayerByPosition(gameState.winner)?.score}
+                </p>
+                <p className="mt-6 text-sm text-emerald-100/80">
+                  Ready for another showdown? Start a fresh table or head back to the lobby to celebrate.
+                </p>
+                <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="min-w-[180px] justify-center bg-emerald-500/90 text-white transition hover:bg-emerald-500"
+                    onClick={handleRematch}
+                    disabled={isRematching || isReturning}
+                  >
+                    {isRematching ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                    )}
+                    Start rematch
+                  </Button>
+                  <Button
+                    type="button"
+                    size="lg"
+                    variant="outline"
+                    className="min-w-[180px] justify-center border-white/40 bg-white/10 text-white transition hover:bg-white/20"
+                    onClick={handleReturnToLobby}
+                    disabled={isRematching || isReturning}
+                  >
+                    {isReturning ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <LogOut className="mr-2 h-4 w-4" />
+                    )}
+                    Return to lobby
+                  </Button>
                 </div>
-              )}
-            </div>
+                {actionError && (
+                  <p className="mt-4 text-sm text-rose-200/80">{actionError}</p>
+                )}
+              </div>
+            )}
           </div>
         </section>
 
