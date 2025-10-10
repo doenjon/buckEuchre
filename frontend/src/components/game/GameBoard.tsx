@@ -260,23 +260,22 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                       <p className="text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
                         Round complete
                       </p>
-                      <p className="text-sm text-white" aria-live="polite">
-                        Next hand in{' '}
-                        <span className="font-semibold text-emerald-200">
-                          {nextHandCountdown ?? '—'}s
-                        </span>
-                      </p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="w-full justify-center bg-emerald-500/90 text-white transition hover:bg-emerald-500"
-                        onClick={startNextRound}
-                      >
-                        Start now
-                      </Button>
-                      <p className="text-[0.7rem] text-emerald-200/70">
-                        Starts automatically when the timer ends.
-                      </p>
+                      <div className="flex w-full items-center justify-between gap-3">
+                        <p className="text-left text-sm text-white" aria-live="polite">
+                          Next hand in{' '}
+                          <span className="font-semibold text-emerald-200">
+                            {nextHandCountdown ?? '—'}s
+                          </span>
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="shrink-0 bg-emerald-500/90 text-white transition hover:bg-emerald-500"
+                          onClick={startNextRound}
+                        >
+                          Start now
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
