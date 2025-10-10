@@ -63,19 +63,19 @@ describe('CurrentTrick Component', () => {
       winner: null,
       cards: [
         {
-          card: { id: 'AS', rank: 'A', suit: 'SPADES' },
+          card: { id: 'SPADES_ACE', rank: 'ACE', suit: 'SPADES' },
           playerPosition: 3
         },
         {
-          card: { id: 'KH', rank: 'K', suit: 'HEARTS' },
+          card: { id: 'HEARTS_KING', rank: 'KING', suit: 'HEARTS' },
           playerPosition: 0
         },
         {
-          card: { id: 'QD', rank: 'Q', suit: 'DIAMONDS' },
+          card: { id: 'DIAMONDS_QUEEN', rank: 'QUEEN', suit: 'DIAMONDS' },
           playerPosition: 1
         },
         {
-          card: { id: 'JC', rank: 'J', suit: 'CLUBS' },
+          card: { id: 'CLUBS_JACK', rank: 'JACK', suit: 'CLUBS' },
           playerPosition: 2
         }
       ]

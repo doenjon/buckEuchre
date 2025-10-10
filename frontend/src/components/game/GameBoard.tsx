@@ -17,7 +17,7 @@ import { WaitingForPlayers } from './WaitingForPlayers';
 import { useGame } from '@/hooks/useGame';
 import { createGame } from '@/services/api';
 import { Button } from '@/components/ui/button';
-import { GAME_TIMEOUTS } from '@buck-euchre/shared/constants/rules';
+import { GAME_TIMEOUTS } from '@buck-euchre/shared';
 import type { GameState } from '@buck-euchre/shared';
 
 interface GameBoardProps {
