@@ -55,13 +55,6 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
     );
   }
 
-  const suitSymbols: Record<string, string> = {
-    SPADES: '♠',
-    HEARTS: '♥',
-    DIAMONDS: '♦',
-    CLUBS: '♣'
-  };
-
   // Determine whose turn it is based on the phase
   let isMyTurn = false;
   let activePosition: number | null = null;
@@ -111,51 +104,6 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
     activePosition !== null
       ? activePosition
       : displayTrick?.cards[displayTrick.cards.length - 1]?.playerPosition ?? 0;
-
-  const phaseLabel = phase.replace(/_/g, ' ');
-  const infoItems = [
-    {
-      label: 'Phase',
-      value: phaseLabel
-    },
-    {
-      label: 'Round',
-      value: `#${gameState.round}`
-    },
-    gameState.trumpSuit
-      ? {
-          label: 'Trump',
-          value: `${suitSymbols[gameState.trumpSuit] ?? ''} ${gameState.trumpSuit}`
-        }
-      : null,
-    gameState.highestBid !== null
-      ? {
-          label: 'High Bid',
-          value: gameState.highestBid
-        }
-      : null
-  ].filter(Boolean) as { label: string; value: string | number }[];
-
-  const personalItems = [
-    {
-      label: 'Your seat',
-      value: myPosition + 1
-    },
-    {
-      label: 'Score',
-      value: myPlayer.score
-    },
-    {
-      label: 'Tricks',
-      value: myPlayer.tricksTaken
-    },
-    myPlayer.folded === true
-      ? {
-          label: 'Status',
-          value: 'Folded'
-        }
-      : null
-  ].filter(Boolean) as { label: string; value: string | number }[];
 
   let inlineActionPanel: ReactNode = null;
   let sidebarActionPanel: ReactNode = null;
@@ -225,40 +173,6 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             winningBid={gameState.highestBid ?? undefined}
             className="shadow-[0_25px_60px_-35px_rgba(16,185,129,0.75)]"
           />
-
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl backdrop-blur">
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
-              Game state
-            </p>
-            <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-white/90">
-              {infoItems.map(item => (
-                <div key={item.label} className="flex items-center justify-between">
-                  <span className="text-xs uppercase tracking-[0.3em] text-emerald-200/70">
-                    {item.label}
-                  </span>
-                  <span className="font-medium">{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {personalItems.length > 0 && (
-            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-5 shadow-xl backdrop-blur">
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/80">
-                You at the table
-              </p>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-white/90">
-                {personalItems.map(item => (
-                  <div key={item.label} className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase tracking-[0.3em] text-emerald-200/60">
-                      {item.label}
-                    </span>
-                    <span className="text-base font-semibold">{item.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </aside>
 
         {/* Middle Column: Table */}
