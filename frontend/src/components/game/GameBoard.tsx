@@ -152,7 +152,6 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       : displayTrick?.cards[displayTrick.cards.length - 1]?.playerPosition ?? 0;
 
   let inlineActionPanel: ReactNode = null;
-  let sidebarActionPanel: ReactNode = null;
 
   if (phase === 'BIDDING') {
     inlineActionPanel = (
@@ -168,7 +167,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       />
     );
   } else if (phase === 'FOLDING_DECISION' && gameState.winningBidderPosition !== myPosition) {
-    sidebarActionPanel = (
+    inlineActionPanel = (
       <FoldDecision
         gameState={gameState}
         myPosition={myPosition}
@@ -176,7 +175,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       />
     );
   } else if (phase === 'ROUND_OVER' && !gameState.gameOver) {
-    sidebarActionPanel = (
+    inlineActionPanel = (
       <div className="flex flex-col gap-4">
         <div className="space-y-2 text-sm text-white/80">
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
@@ -201,9 +200,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
     );
   }
 
-  const gridLayoutClasses = sidebarActionPanel
-    ? 'grid gap-4 lg:gap-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)] xl:grid-cols-[minmax(0,260px)_minmax(0,1fr)_minmax(0,260px)]'
-    : 'grid gap-4 lg:gap-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]';
+  const gridLayoutClasses = 'grid gap-4 lg:gap-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]';
 
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
@@ -232,7 +229,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
               </div>
             )}
 
-            <div className={inlineActionPanel ? 'space-y-5 sm:space-y-6 opacity-40 transition-opacity duration-300' : 'space-y-5 sm:space-y-6'}>
+            <div className="space-y-5 sm:space-y-6">
               {currentPlayer && (
                 <TurnIndicator
                   currentPlayer={currentPlayer}
@@ -324,14 +321,6 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
           </div>
         </section>
 
-        {/* Right Column: Actions */}
-        {sidebarActionPanel && (
-          <aside className="order-3 flex flex-col gap-4">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-slate-100 shadow-xl backdrop-blur sm:p-5">
-              {sidebarActionPanel}
-            </div>
-          </aside>
-        )}
       </div>
     </div>
   );
