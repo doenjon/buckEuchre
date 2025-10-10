@@ -32,22 +32,21 @@ const sizeStyles = {
   small: 'w-14 h-20 text-xs sm:w-16 sm:h-24 sm:text-sm',
   medium: 'w-16 h-24 text-sm sm:w-20 sm:h-32 sm:text-base',
   large: 'w-20 h-[8.5rem] text-base sm:w-24 sm:h-36 sm:text-lg',
-  responsive:
-    'w-[clamp(3.65rem,18vw,4.3rem)] h-[clamp(5.2rem,26vw,6.1rem)] text-[clamp(0.7rem,3.5vw,0.85rem)] sm:w-24 sm:h-36 sm:text-lg',
+  responsive: 'w-14 h-20 text-xs sm:w-24 sm:h-36 sm:text-lg',
 } as const;
 
 const cornerSymbolStyles = {
   small: 'text-lg sm:text-xl',
   medium: 'text-xl sm:text-2xl',
   large: 'text-2xl sm:text-3xl',
-  responsive: 'text-[clamp(1.1rem,4vw,1.35rem)] sm:text-3xl',
+  responsive: 'text-lg sm:text-3xl',
 } as const;
 
 const centerSymbolStyles = {
   small: 'text-2xl sm:text-3xl',
   medium: 'text-3xl sm:text-4xl',
   large: 'text-4xl sm:text-5xl',
-  responsive: 'text-[clamp(1.9rem,7vw,2.4rem)] sm:text-5xl',
+  responsive: 'text-2xl sm:text-5xl',
 } as const;
 
 export function Card({
