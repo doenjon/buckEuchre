@@ -296,42 +296,58 @@ describe('Scoreboard Component', () => {
   describe('Bidder Indication', () => {
     it('should show bidder badge for winning bidder', () => {
       render(
-        <Scoreboard 
-          players={mockPlayers} 
+        <Scoreboard
+          players={mockPlayers}
           currentPlayerPosition={null}
           phase="PLAYING"
           winningBidderPosition={1}
           winningBid={3}
         />
       );
-      
-      expect(screen.getByText(/Bidder 3/i)).toBeInTheDocument();
+
+      expect(screen.getByText(/Bid 3/i)).toBeInTheDocument();
     });
 
     it('should show correct bid amount', () => {
       render(
-        <Scoreboard 
-          players={mockPlayers} 
+        <Scoreboard
+          players={mockPlayers}
           currentPlayerPosition={null}
           phase="PLAYING"
           winningBidderPosition={0}
           winningBid={5}
         />
       );
-      
-      expect(screen.getByText(/Bidder 5/i)).toBeInTheDocument();
+
+      expect(screen.getByText(/Bid 5/i)).toBeInTheDocument();
+    });
+
+    it('should display dirty clubs label when clubs turn up', () => {
+      render(
+        <Scoreboard
+          players={mockPlayers}
+          currentPlayerPosition={null}
+          phase="PLAYING"
+          winningBidderPosition={2}
+          winningBid={2}
+          isClubsTurnUp
+        />
+      );
+
+      expect(screen.getByText(/Dirty Clubs/i)).toBeInTheDocument();
     });
 
     it('should not show bidder badge when no bidder', () => {
       render(
-        <Scoreboard 
-          players={mockPlayers} 
+        <Scoreboard
+          players={mockPlayers}
           currentPlayerPosition={null}
           phase="DEALING"
         />
       );
-      
-      expect(screen.queryByText(/Bidder/i)).not.toBeInTheDocument();
+
+      expect(screen.queryByText(/Bid /i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Dirty Clubs/i)).not.toBeInTheDocument();
     });
   });
 
@@ -434,18 +450,18 @@ describe('Scoreboard Component', () => {
     it('should highlight winner score in green', () => {
       const playersWithWinner = [...mockPlayers];
       playersWithWinner[0] = { ...mockPlayers[0], score: 0 };
-      
+
       render(
-        <Scoreboard 
-          players={playersWithWinner} 
+        <Scoreboard
+          players={playersWithWinner}
           currentPlayerPosition={null}
           phase="ROUND_OVER"
         />
       );
-      
+
       const items = screen.getAllByRole('listitem');
       const winnerScore = within(items[0]).getByText('0');
-      expect(winnerScore.className).toContain('text-green-600');
+      expect(winnerScore.className).toContain('text-emerald-100');
     });
   });
 

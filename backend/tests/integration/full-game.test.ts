@@ -767,6 +767,8 @@ describe('Full Game Flow', () => {
       const diana = await createPlayer('Diana');
       const players = [alice, bob, charlie, diana];
 
+      await setCustomDeck(FOLLOW_SUIT_DECK);
+
 
       const gameId = await createGame(alice);
       await Promise.all(players.map(p => joinGame(p, gameId)));
@@ -1011,8 +1013,8 @@ describe('Full Game Flow', () => {
       await cleanup(players);
     }, 30000);
 
-    it('should prevent folding when clubs are turned up (dirty clubs)', async () => {
-      console.log('\n🎮 TEST: Dirty clubs (no folding allowed)\n');
+    it('should skip bidding and force all players to stay on dirty clubs', async () => {
+      console.log('\n🎮 TEST: Dirty clubs (forced play)\n');
 
       await setDealerPosition(3);
       await setCustomDeck(DIRTY_CLUBS_DECK);
@@ -1026,26 +1028,41 @@ describe('Full Game Flow', () => {
       const gameId = await createGame(alice);
       await Promise.all(players.map(p => joinGame(p, gameId)));
 
-      const { winningBidderPosition } = await bidAndDeclareTrump(players, gameId, 3, 'HEARTS');
+      const playState = await waitForPhase(players, 'PLAYING', 10000);
+      expect(playState.isClubsTurnUp).toBe(true);
+      expect(playState.trumpSuit).toBe('CLUBS');
+      expect(playState.bids).toHaveLength(0);
+      expect(playState.currentBidder).toBeNull();
+      expect(playState.highestBid).toBe(2);
 
-      const foldState = await waitForPhase(players, 'FOLDING_DECISION', 10000);
-      expect(foldState.isClubsTurnUp).toBe(true);
+      const leftOfDealer = (playState.dealerPosition + 1) % 4;
+      expect(playState.currentPlayerPosition).toBe(leftOfDealer);
+      expect(playState.winningBidderPosition).toBe(leftOfDealer);
 
-      const foldAttemptPosition = getNextActivePosition(foldState, winningBidderPosition);
-      const foldingPlayer = getPlayerByPosition(players, foldState, foldAttemptPosition);
-      if (!foldingPlayer) throw new Error('Folding player not found');
+      playState.players.forEach(player => {
+        expect(player.foldDecision).toBe('STAY');
+        expect(player.folded).toBe(false);
+      });
 
-      const errorPromise = waitForSocketError(foldingPlayer.socket);
-      foldingPlayer.socket.emit('FOLD_DECISION', { gameId, folded: true });
-      const error = await errorPromise;
-      expect(error.code).toBe('FOLD_DECISION_FAILED');
-      expect(error.message).toBe('Cannot fold when Clubs turned up');
+      const forcedLeader = getPlayerByPosition(players, playState, leftOfDealer);
+      if (!forcedLeader) throw new Error('Forced leader not found');
 
-      // Respond correctly to advance phase
-      foldingPlayer.socket.emit('FOLD_DECISION', { gameId, folded: false });
-      await waitForGameState(players, state => state.players[foldAttemptPosition].folded === false, 5000);
-      
-      // Cleanup
+      const bidErrorPromise = waitForSocketError(forcedLeader.socket);
+      forcedLeader.socket.emit('PLACE_BID', { gameId, amount: 3 });
+      const bidError = await bidErrorPromise;
+      expect(bidError.code).toBe('PLACE_BID_FAILED');
+      expect(bidError.message).toBe('Not in bidding phase');
+
+      const nextPlayerPosition = getNextActivePosition(playState, leftOfDealer);
+      const nextPlayer = getPlayerByPosition(players, playState, nextPlayerPosition);
+      if (!nextPlayer) throw new Error('Next player not found');
+
+      const foldErrorPromise = waitForSocketError(nextPlayer.socket);
+      nextPlayer.socket.emit('FOLD_DECISION', { gameId, folded: true });
+      const foldError = await foldErrorPromise;
+      expect(foldError.code).toBe('FOLD_DECISION_FAILED');
+      expect(foldError.message).toBe('Not in folding decision phase');
+
       await cleanup(players);
     }, 30000);
   });

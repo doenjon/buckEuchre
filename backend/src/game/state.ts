@@ -109,25 +109,61 @@ export function dealNewRound(state: GameState): GameState {
     foldDecision: 'UNDECIDED',
   })) as [Player, Player, Player, Player];
 
+  const leftOfDealer = ((state.dealerPosition + 1) % 4) as PlayerPosition;
+
+  if (isClubsTurnUp) {
+    const activePlayers = players.map(player => ({
+      ...player,
+      folded: false,
+      foldDecision: 'STAY',
+    })) as [Player, Player, Player, Player];
+
+    return withVersion(state, {
+      phase: 'PLAYING',
+      round: state.round + 1,
+
+      players: activePlayers,
+
+      blind,
+      turnUpCard,
+      isClubsTurnUp,
+
+      bids: [],
+      currentBidder: null,
+      highestBid: 2,
+      winningBidderPosition: leftOfDealer,
+      trumpSuit: 'CLUBS',
+
+      tricks: [],
+      currentTrick: {
+        number: 1,
+        leadPlayerPosition: leftOfDealer,
+        cards: [],
+        winner: null,
+      },
+      currentPlayerPosition: leftOfDealer,
+    });
+  }
+
   // Automatically transition to BIDDING phase and set currentBidder
-  const currentBidder = ((state.dealerPosition + 1) % 4) as PlayerPosition;
+  const currentBidder = leftOfDealer;
 
   return withVersion(state, {
     phase: 'BIDDING',
     round: state.round + 1,
-    
+
     players,
-    
+
     blind,
     turnUpCard,
     isClubsTurnUp,
-    
+
     bids: [],
     currentBidder,
     highestBid: null,
     winningBidderPosition: null,
     trumpSuit: null,
-    
+
     tricks: [],
     currentTrick: {
       number: 1,

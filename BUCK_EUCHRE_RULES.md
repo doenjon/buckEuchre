@@ -58,7 +58,7 @@ For suits that are not trump (highest to lowest):
 
 **Trump Card Reveal:**
 - The top card of the blind is revealed
-- **If the card is a Club:** Clubs are automatically trump and **no one can fold** (everyone must stay in)
+- **If the card is a Club:** Clubs are automatically trump, **bidding is skipped**, and **no one can fold** (everyone must stay in). The player to the dealer's left leads the first trick.
 - **If any other suit:** Bidding proceeds
 
 **Bidding Order:** Starts with player to dealer's left, proceeds clockwise.
@@ -171,7 +171,8 @@ After all 5 tricks are played:
 ### Clubs Turn-Up
 - Clubs are automatically trump
 - No one can fold (all 4 players must play)
-- Bidding still proceeds normally
+- Bidding is skipped entirely
+- Player to dealer's left leads the first trick
 
 ### All Non-Bidders Fold
 - Only the bidder plays (essentially takes all 5 tricks)

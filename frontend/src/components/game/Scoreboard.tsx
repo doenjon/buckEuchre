@@ -16,6 +16,7 @@ export interface ScoreboardProps {
   trumpSuit?: string | null;
   winningBidderPosition?: number | null;
   winningBid?: number | null;
+  isClubsTurnUp?: boolean;
   className?: string;
   variant?: 'default' | 'compact';
 }
@@ -34,6 +35,7 @@ export function Scoreboard({
   trumpSuit,
   winningBidderPosition,
   winningBid,
+  isClubsTurnUp = false,
   className,
   variant = 'default'
 }: ScoreboardProps) {
@@ -50,6 +52,12 @@ export function Scoreboard({
     }, 1000);
     return () => clearTimeout(timeout);
   }, [players]);
+
+  const bidderLabel = isClubsTurnUp
+    ? 'Dirty Clubs'
+    : winningBid !== null && winningBid !== undefined
+      ? `Bid ${winningBid}`
+      : 'Bidder';
 
   const entries = players.map((player, index) => {
     const needsFoldDecision = (
@@ -127,7 +135,7 @@ export function Scoreboard({
                 )}
                 {isBidder && (
                   <Badge variant="outline" className="text-[9px] uppercase tracking-wide text-emerald-200">
-                    {winningBid !== null && winningBid !== undefined ? `Bid ${winningBid}` : 'Bidder'}
+                    {bidderLabel}
                   </Badge>
                 )}
                 {player.foldDecision === 'UNDECIDED' && phase === 'FOLDING_DECISION' && index !== winningBidderPosition && (
@@ -216,9 +224,7 @@ export function Scoreboard({
                       )}
                       {isBidder && (
                         <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-emerald-200">
-                          {winningBid !== null && winningBid !== undefined
-                            ? `Bid ${winningBid}`
-                            : 'Bidder'}
+                          {bidderLabel}
                         </Badge>
                       )}
                       {hasFolded && (
