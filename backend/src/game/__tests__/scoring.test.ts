@@ -128,81 +128,76 @@ describe('scoring.ts - Scoring Logic', () => {
   });
 
   describe('checkWinCondition', () => {
-    it('should return no winner when all scores above 0', () => {
-      const players = [
-        { ...createPlayer(0, 0, false), score: 10 },
-        { ...createPlayer(1, 0, false), score: 8 },
-        { ...createPlayer(2, 0, false), score: 12 },
-        { ...createPlayer(3, 0, false), score: 5 },
-      ];
+    const buildPlayersWithScores = (scores: number[]): Player[] =>
+      scores.map((score, index) => ({
+        ...createPlayer(index as PlayerPosition, 0, false),
+        score,
+      })) as Player[];
 
-      const result = checkWinCondition(players);
+    it('should return no winner when all scores above 0', () => {
+      const players = buildPlayersWithScores([10, 8, 12, 5]);
+      const previous = players.map(player => ({ ...player }));
+
+      const result = checkWinCondition(players, {
+        previousPlayers: previous,
+        winningBidderPosition: 0,
+      });
       expect(result.winner).toBeNull();
       expect(result.gameOver).toBe(false);
     });
 
     it('should return winner when one player reaches 0', () => {
-      const players = [
-        { ...createPlayer(0, 0, false), score: 10 },
-        { ...createPlayer(1, 0, false), score: 0 },
-        { ...createPlayer(2, 0, false), score: 12 },
-        { ...createPlayer(3, 0, false), score: 5 },
-      ];
+      const players = buildPlayersWithScores([10, 0, 12, 5]);
+      const previous = players.map((player, index) => ({
+        ...player,
+        score: index === 1 ? 2 : player.score,
+      }));
 
-      const result = checkWinCondition(players);
+      const result = checkWinCondition(players, {
+        previousPlayers: previous,
+        winningBidderPosition: 2,
+      });
       expect(result.winner).toBe(1);
       expect(result.gameOver).toBe(true);
     });
 
-    it('should return winner when one player goes negative', () => {
-      const players = [
-        { ...createPlayer(0, 0, false), score: 10 },
-        { ...createPlayer(1, 0, false), score: -2 },
-        { ...createPlayer(2, 0, false), score: 12 },
-        { ...createPlayer(3, 0, false), score: 5 },
-      ];
+    it('should prioritize bidder when multiple players reach 0', () => {
+      const players = buildPlayersWithScores([0, 0, 3, 4]);
+      const previous = players.map((player, index) => ({
+        ...player,
+        score: index < 2 ? 2 : player.score,
+      }));
 
-      const result = checkWinCondition(players);
+      const result = checkWinCondition(players, {
+        previousPlayers: previous,
+        winningBidderPosition: 0,
+      });
+
+      expect(result.winner).toBe(0);
+      expect(result.gameOver).toBe(true);
+    });
+
+    it('should select first player to reach 0 when bidder not among them', () => {
+      const players = buildPlayersWithScores([4, 0, 0, 6]);
+      const previous = players.map((player, index) => ({
+        ...player,
+        score: index === 1 || index === 2 ? 2 : player.score,
+      }));
+
+      const result = checkWinCondition(players, {
+        previousPlayers: previous,
+        winningBidderPosition: 3,
+      });
+
       expect(result.winner).toBe(1);
       expect(result.gameOver).toBe(true);
     });
 
-    it('should return lowest score when multiple at or below 0', () => {
-      const players = [
-        { ...createPlayer(0, 0, false), score: 0 },
-        { ...createPlayer(1, 0, false), score: -3 },
-        { ...createPlayer(2, 0, false), score: 12 },
-        { ...createPlayer(3, 0, false), score: -1 },
-      ];
+    it('should fall back to first zero player when no previous state provided', () => {
+      const players = buildPlayersWithScores([0, 0, 0, 0]);
 
       const result = checkWinCondition(players);
-      expect(result.winner).toBe(1); // Lowest score (-3)
-      expect(result.gameOver).toBe(true);
-    });
-
-    it('should handle all players at exactly 0', () => {
-      const players = [
-        { ...createPlayer(0, 0, false), score: 0 },
-        { ...createPlayer(1, 0, false), score: 0 },
-        { ...createPlayer(2, 0, false), score: 0 },
-        { ...createPlayer(3, 0, false), score: 0 },
-      ];
-
-      const result = checkWinCondition(players);
-      expect(result.winner).toBe(0); // First player at 0
-      expect(result.gameOver).toBe(true);
-    });
-
-    it('should handle edge case of very negative score', () => {
-      const players = [
-        { ...createPlayer(0, 0, false), score: 10 },
-        { ...createPlayer(1, 0, false), score: -100 },
-        { ...createPlayer(2, 0, false), score: 12 },
-        { ...createPlayer(3, 0, false), score: -5 },
-      ];
-
-      const result = checkWinCondition(players);
-      expect(result.winner).toBe(1); // Lowest score
+      expect(result.winner).toBe(0);
       expect(result.gameOver).toBe(true);
     });
   });

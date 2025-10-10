@@ -490,24 +490,39 @@ describe('state.ts - State Transitions', () => {
     });
 
     it('should transition to GAME_OVER when player reaches 0', () => {
-      state.players[1].score = 3; // Bidder will go to 0 or below
-      
+      state.players[1].score = 3; // Bidder will go to 0 this round
+
       state = finishRound(state);
-      
+
       expect(state.phase).toBe('GAME_OVER');
       expect(state.gameOver).toBe(true);
       expect(state.winner).toBe(1);
     });
 
-    it('should set winner to lowest score', () => {
-      state.players[0].score = 0;
-      state.players[1].score = -2;
-      state.players[2].score = 1;
-      
+    it('should prioritize bidder when multiple players reach 0', () => {
+      state.players[0].score = 1;
+      state.players[1].score = 3;
+
       state = finishRound(state);
-      
-      expect(state.winner).toBe(1); // Lowest score
+
+      expect(state.players[0].score).toBe(0);
+      expect(state.players[1].score).toBe(0);
+      expect(state.winner).toBe(1);
       expect(state.gameOver).toBe(true);
+    });
+
+    it('should not allow scores below zero', () => {
+      state.players[1].score = 1;
+      state.players[1].tricksTaken = 5; // Score change of -5 would go negative without clamp
+      state.players[0].tricksTaken = 0;
+      state.players[2].tricksTaken = 0;
+      state.players[3].tricksTaken = 0;
+
+      state = finishRound(state);
+
+      expect(state.players[1].score).toBe(0);
+      expect(state.gameOver).toBe(true);
+      expect(state.winner).toBe(1);
     });
   });
 
