@@ -24,7 +24,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@buck-euchre/shared": ["../shared/src"]
+      "@buck-euchre/shared": ["../shared/src"],
+      "@buck-euchre/shared/*": ["../shared/src/*"]
     }
   },
   "include": ["src"],

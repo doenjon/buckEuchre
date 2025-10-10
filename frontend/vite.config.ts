@@ -6,10 +6,20 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@buck-euchre/shared': path.resolve(__dirname, '../shared/src')
-    }
+    alias: [
+      {
+        find: '@',
+        replacement: path.resolve(__dirname, './src')
+      },
+      {
+        find: '@buck-euchre/shared',
+        replacement: path.resolve(__dirname, '../shared/src')
+      },
+      {
+        find: '@buck-euchre/shared/',
+        replacement: `${path.resolve(__dirname, '../shared/src')}/`
+      }
+    ]
   },
   server: {
     port: 5173,
