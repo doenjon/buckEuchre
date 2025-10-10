@@ -3,7 +3,7 @@
  * @description Main game board component
  */
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, RotateCcw, LogOut } from 'lucide-react';
 import { Scoreboard } from './Scoreboard';
@@ -17,6 +17,7 @@ import { WaitingForPlayers } from './WaitingForPlayers';
 import { useGame } from '@/hooks/useGame';
 import { createGame } from '@/services/api';
 import { Button } from '@/components/ui/button';
+import { GAME_TIMEOUTS } from '@buck-euchre/shared/constants/rules';
 import type { GameState } from '@buck-euchre/shared';
 
 interface GameBoardProps {
@@ -31,6 +32,26 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
   const [isRematching, setIsRematching] = useState(false);
   const [isReturning, setIsReturning] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [nextHandCountdown, setNextHandCountdown] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (phase === 'ROUND_OVER' && !gameState.gameOver) {
+      const autoStartAt = gameState.updatedAt + GAME_TIMEOUTS.ROUND_OVER_DISPLAY_TIME;
+
+      const updateCountdown = () => {
+        const remainingMs = Math.max(0, autoStartAt - Date.now());
+        setNextHandCountdown(Math.ceil(remainingMs / 1000));
+      };
+
+      updateCountdown();
+      const intervalId = window.setInterval(updateCountdown, 200);
+
+      return () => window.clearInterval(intervalId);
+    }
+
+    setNextHandCountdown(null);
+    return undefined;
+  }, [phase, gameState.gameOver, gameState.updatedAt]);
 
   const handleReturnToLobby = () => {
     if (isReturning) {
@@ -174,30 +195,6 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
         isMyTurn={isMyTurn}
       />
     );
-  } else if (phase === 'ROUND_OVER' && !gameState.gameOver) {
-    inlineActionPanel = (
-      <div className="flex flex-col gap-4">
-        <div className="space-y-2 text-sm text-white/80">
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
-            Round complete
-          </p>
-          <p>
-            Scores have been updated. When you're ready, start the next round to keep the game moving.
-          </p>
-        </div>
-        <Button
-          type="button"
-          size="lg"
-          className="min-w-[180px] justify-center bg-emerald-500/90 text-white transition hover:bg-emerald-500"
-          onClick={startNextRound}
-        >
-          Start next round
-        </Button>
-        <p className="text-xs text-emerald-200/60">
-          The round will auto-start shortly if no one clicks. Starting manually keeps things snappy.
-        </p>
-      </div>
-    );
   }
 
   const gridLayoutClasses = 'grid gap-4 lg:gap-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]';
@@ -248,7 +245,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             </div>
 
             {myPlayer.folded !== true ? (
-              <div className="rounded-[32px] border border-white/10 bg-white/5 p-3 shadow-[0_25px_70px_-40px_rgba(16,185,129,0.8)] backdrop-blur sm:p-4">
+              <div className="relative rounded-[32px] border border-white/10 bg-white/5 p-3 shadow-[0_25px_70px_-40px_rgba(16,185,129,0.8)] backdrop-blur sm:p-4">
                 <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
                   Your hand
                 </p>
@@ -257,6 +254,32 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                   onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
                   disabled={!isMyTurn || phase !== 'PLAYING'}
                 />
+                {phase === 'ROUND_OVER' && !gameState.gameOver && (
+                  <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-3 sm:px-6">
+                    <div className="pointer-events-auto flex w-full max-w-xs flex-col items-center gap-3 rounded-2xl border border-white/15 bg-slate-950/90 px-5 py-4 text-center text-slate-100 shadow-[0_35px_80px_-35px_rgba(16,185,129,0.9)] backdrop-blur-xl">
+                      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
+                        Round complete
+                      </p>
+                      <p className="text-sm text-white" aria-live="polite">
+                        Next hand in{' '}
+                        <span className="font-semibold text-emerald-200">
+                          {nextHandCountdown ?? '—'}s
+                        </span>
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full justify-center bg-emerald-500/90 text-white transition hover:bg-emerald-500"
+                        onClick={startNextRound}
+                      >
+                        Start now
+                      </Button>
+                      <p className="text-[0.7rem] text-emerald-200/70">
+                        Starts automatically when the timer ends.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 text-center shadow-xl backdrop-blur">
