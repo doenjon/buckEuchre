@@ -157,23 +157,23 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       : null
   ].filter(Boolean) as { label: string; value: string | number }[];
 
-  let actionPanel: ReactNode = null;
+  let tableActionPanel: ReactNode = null;
 
   if (phase === 'BIDDING') {
-    actionPanel = (
+    tableActionPanel = (
       <BiddingPanel
         currentBid={gameState.highestBid}
         isMyTurn={isMyTurn}
       />
     );
   } else if (phase === 'DECLARING_TRUMP') {
-    actionPanel = (
+    tableActionPanel = (
       <TrumpSelector
         isMyTurn={gameState.winningBidderPosition === myPosition}
       />
     );
-  } else if (phase === 'FOLDING_DECISION' && gameState.winningBidderPosition !== myPosition) {
-    actionPanel = (
+  } else if (phase === 'FOLDING_DECISION') {
+    tableActionPanel = (
       <FoldDecision
         gameState={gameState}
         myPosition={myPosition}
@@ -181,9 +181,9 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       />
     );
   } else if (phase === 'ROUND_OVER' && !gameState.gameOver) {
-    actionPanel = (
-      <div className="flex flex-col gap-4">
-        <div className="space-y-2 text-sm text-white/80">
+    tableActionPanel = (
+      <div className="flex flex-col items-center gap-4 text-white">
+        <div className="space-y-2 text-center text-sm text-white/80">
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
             Round complete
           </p>
@@ -194,7 +194,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
         <Button
           type="button"
           size="lg"
-          className="w-full justify-center bg-emerald-500/90 text-white shadow-[0_18px_40px_-20px_rgba(16,185,129,0.9)] transition hover:bg-emerald-500"
+          className="min-w-[180px] justify-center bg-emerald-500/90 text-white transition hover:bg-emerald-500"
           onClick={startNextRound}
         >
           Start next round
@@ -206,9 +206,11 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
     );
   }
 
+  const gridLayoutClasses = 'grid gap-4 lg:gap-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]';
+
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
-      <div className="grid gap-4 lg:gap-6 xl:grid-cols-[minmax(0,260px)_minmax(0,1fr)_minmax(0,260px)] lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
+      <div className={gridLayoutClasses}>
         {/* Left Column: Scoreboard + Info */}
         <aside className="order-2 flex flex-col gap-4 xl:order-1">
           <Scoreboard
@@ -258,66 +260,67 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
 
         {/* Middle Column: Table */}
         <section className="order-1 flex flex-col gap-5 sm:gap-6 xl:order-2">
-          {currentPlayer && (
-            <TurnIndicator
-              currentPlayer={currentPlayer}
-              isMyTurn={isMyTurn}
-              phase={phase}
-            />
-          )}
+          <div className="space-y-5 sm:space-y-6">
+            {tableActionPanel && (
+              <div className="flex justify-center px-4">
+                <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-white/5 p-5 text-slate-100 sm:p-6">
+                  {tableActionPanel}
+                </div>
+              </div>
+            )}
 
-          <CurrentTrick
-            trick={displayTrick}
-            players={players}
-            currentPlayerPosition={trickHighlightPosition}
-            myPosition={myPosition}
-          />
-
-          {myPlayer.folded !== true ? (
-            <div className="rounded-[32px] border border-white/10 bg-white/5 p-3 shadow-[0_25px_70px_-40px_rgba(16,185,129,0.8)] backdrop-blur sm:p-4">
-              <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
-                Your hand
-              </p>
-              <PlayerHand
-                cards={myPlayer.hand}
-                onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
-                disabled={!isMyTurn || phase !== 'PLAYING'}
+            {currentPlayer && (
+              <TurnIndicator
+                currentPlayer={currentPlayer}
+                isMyTurn={isMyTurn}
+                phase={phase}
               />
-            </div>
-          ) : (
-            <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 text-center shadow-xl backdrop-blur">
-              <p className="text-lg font-semibold text-white/90">
-                You have folded this round
-              </p>
-              <p className="mt-2 text-sm text-emerald-200/70">
-                Sit back and watch the remaining tricks play out.
-              </p>
-            </div>
-          )}
+            )}
 
-          {phase === 'GAME_OVER' && gameState.winner !== null && (
-            <div className="rounded-[32px] border border-emerald-400/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 p-8 text-center shadow-2xl backdrop-blur">
-              <h2 className="text-2xl font-semibold uppercase tracking-[0.4em] text-emerald-100">
-                Game complete
-              </h2>
-              <p className="mt-3 text-lg text-white">
-                Winner · <span className="font-semibold">{getPlayerByPosition(gameState.winner)?.name}</span>
-              </p>
-              <p className="mt-1 text-sm text-emerald-200/70">
-                Final score {getPlayerByPosition(gameState.winner)?.score}
-              </p>
-            </div>
-          )}
+            <CurrentTrick
+              trick={displayTrick}
+              players={players}
+              currentPlayerPosition={trickHighlightPosition}
+              myPosition={myPosition}
+            />
+
+            {myPlayer.folded !== true ? (
+              <div className="rounded-[32px] border border-white/10 bg-white/5 p-3 backdrop-blur sm:p-4">
+                <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
+                  Your hand
+                </p>
+                <PlayerHand
+                  cards={myPlayer.hand}
+                  onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
+                  disabled={!isMyTurn || phase !== 'PLAYING'}
+                />
+              </div>
+            ) : (
+              <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 text-center backdrop-blur">
+                <p className="text-lg font-semibold text-white/90">
+                  You have folded this round
+                </p>
+                <p className="mt-2 text-sm text-emerald-200/70">
+                  Sit back and watch the remaining tricks play out.
+                </p>
+              </div>
+            )}
+
+            {phase === 'GAME_OVER' && gameState.winner !== null && (
+              <div className="rounded-[32px] border border-emerald-400/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 p-8 text-center shadow-2xl backdrop-blur">
+                <h2 className="text-2xl font-semibold uppercase tracking-[0.4em] text-emerald-100">
+                  Game complete
+                </h2>
+                <p className="mt-3 text-lg text-white">
+                  Winner · <span className="font-semibold">{getPlayerByPosition(gameState.winner)?.name}</span>
+                </p>
+                <p className="mt-1 text-sm text-emerald-200/70">
+                  Final score {getPlayerByPosition(gameState.winner)?.score}
+                </p>
+              </div>
+            )}
+          </div>
         </section>
-
-        {/* Right Column: Actions */}
-        {actionPanel && (
-          <aside className="order-3 flex flex-col gap-4">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-slate-100 shadow-xl backdrop-blur sm:p-5">
-              {actionPanel}
-            </div>
-          </aside>
-        )}
       </div>
     </div>
   );
