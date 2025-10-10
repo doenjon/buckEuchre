@@ -547,16 +547,16 @@ async function handleStartNextRound(io: Server, socket: Socket, payload: unknown
     });
 
     // Deal cards and transition to BIDDING
-    const biddingState = await executeGameAction(validated.gameId, dealNewRound);
+    const roundState = await executeGameAction(validated.gameId, dealNewRound);
 
     // Broadcast update
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
-      gameState: biddingState,
+      gameState: roundState,
       event: 'ROUND_STARTED'
     });
-    
+
     // Trigger AI if needed
-    checkAndTriggerAI(validated.gameId, biddingState, io);
+    checkAndTriggerAI(validated.gameId, roundState, io);
   } catch (error: any) {
     console.error('Error in START_NEXT_ROUND:', error);
     socket.emit('ERROR', {

@@ -13,7 +13,30 @@ import {
   finishRound,
   startNextRound,
 } from '../state';
+import { setCustomDeck } from '../random';
+import { FULL_DECK } from '../../../../shared/src/constants/cards';
 import { GameState, PlayerPosition } from '../../../../shared/src/types/game';
+
+const TURN_UP_INDEX = 20;
+const NON_CLUB_TURN_UP = 'SPADES_ACE';
+const CLUB_TURN_UP = 'CLUBS_ACE';
+
+function buildDeckWithTurnUp(turnUpCardId: string): string[] {
+  const deck = FULL_DECK.map(card => card.id);
+  const desiredIndex = deck.indexOf(turnUpCardId);
+  if (desiredIndex === -1) {
+    throw new Error(`Invalid turn-up card id: ${turnUpCardId}`);
+  }
+
+  const deckCopy = [...deck];
+  [deckCopy[TURN_UP_INDEX], deckCopy[desiredIndex]] = [deckCopy[desiredIndex], deckCopy[TURN_UP_INDEX]];
+  return deckCopy;
+}
+
+function dealRoundWithTurnUp(state: GameState, turnUpCardId: string): GameState {
+  setCustomDeck(buildDeckWithTurnUp(turnUpCardId));
+  return dealNewRound(state);
+}
 
 describe('state.ts - State Transitions', () => {
   const playerIds: [string, string, string, string] = ['p1', 'p2', 'p3', 'p4'];
@@ -63,15 +86,15 @@ describe('state.ts - State Transitions', () => {
     it('should increment round number', () => {
       let state = initializeGame(playerIds);
       expect(state.round).toBe(0);
-      
-      state = dealNewRound(state);
+
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
       expect(state.round).toBe(1);
     });
 
     it('should deal 5 cards to each player', () => {
       let state = initializeGame(playerIds);
-      state = dealNewRound(state);
-      
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
+
       state.players.forEach(player => {
         expect(player.hand).toHaveLength(5);
       });
@@ -79,39 +102,32 @@ describe('state.ts - State Transitions', () => {
 
     it('should create 4-card blind', () => {
       let state = initializeGame(playerIds);
-      state = dealNewRound(state);
-      
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
+
       expect(state.blind).toHaveLength(4);
       expect(state.turnUpCard).toBe(state.blind[0]);
     });
 
     it('should set isClubsTurnUp correctly', () => {
-      let state = initializeGame(playerIds);
-      
-      // Deal until we get a Clubs turn-up (or test both cases)
-      for (let i = 0; i < 10; i++) {
-        state = dealNewRound(state);
-        if (state.turnUpCard!.suit === 'CLUBS') {
-          expect(state.isClubsTurnUp).toBe(true);
-          break;
-        } else {
-          expect(state.isClubsTurnUp).toBe(false);
-        }
-      }
+      const nonClubState = dealRoundWithTurnUp(initializeGame(playerIds), NON_CLUB_TURN_UP);
+      expect(nonClubState.isClubsTurnUp).toBe(false);
+
+      const clubState = dealRoundWithTurnUp(initializeGame(playerIds), CLUB_TURN_UP);
+      expect(clubState.isClubsTurnUp).toBe(true);
     });
 
-    it('should reset player states', () => {
+    it('should reset player states for non-clubs turn-up', () => {
       let state = initializeGame(playerIds);
-      state = dealNewRound(state);
-      
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
+
       // Modify player states
       state.players[0].tricksTaken = 3;
       state.players[0].folded = true;
       state.players[0].foldDecision = 'FOLD';
 
-      // Deal new round
-      state = dealNewRound(state);
-      
+      // Deal new round with non-club turn-up
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
+
       state.players.forEach(player => {
         expect(player.tricksTaken).toBe(0);
         expect(player.folded).toBe(false);
@@ -119,19 +135,38 @@ describe('state.ts - State Transitions', () => {
       });
     });
 
-    it('should transition to BIDDING phase', () => {
-      let state = initializeGame(playerIds);
-      state = dealNewRound(state);
-      
+    it('should transition to BIDDING phase when turn-up is not clubs', () => {
+      const state = dealRoundWithTurnUp(initializeGame(playerIds), NON_CLUB_TURN_UP);
+
       expect(state.phase).toBe('BIDDING');
     });
 
-    it('should set currentBidder to left of dealer', () => {
+    it('should set currentBidder to left of dealer for non-club turn-up', () => {
       let state = initializeGame(playerIds);
       state.dealerPosition = 0;
-      state = dealNewRound(state);
-      
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
+
       expect(state.currentBidder).toBe(1);
+    });
+
+    it('should skip bidding and start playing when clubs turn up', () => {
+      let state = initializeGame(playerIds);
+      state.dealerPosition = 2;
+      state = dealRoundWithTurnUp(state, CLUB_TURN_UP);
+
+      const leftOfDealer = ((state.dealerPosition + 1) % 4) as PlayerPosition;
+
+      expect(state.phase).toBe('PLAYING');
+      expect(state.trumpSuit).toBe('CLUBS');
+      expect(state.isClubsTurnUp).toBe(true);
+      expect(state.currentPlayerPosition).toBe(leftOfDealer);
+      expect(state.currentTrick.leadPlayerPosition).toBe(leftOfDealer);
+      expect(state.winningBidderPosition).toBe(leftOfDealer);
+      expect(state.highestBid).toBe(2);
+      state.players.forEach(player => {
+        expect(player.foldDecision).toBe('STAY');
+        expect(player.folded).toBe(false);
+      });
     });
   });
 
@@ -140,7 +175,7 @@ describe('state.ts - State Transitions', () => {
 
     beforeEach(() => {
       state = initializeGame(playerIds);
-      state = dealNewRound(state);
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
     });
 
     it('should add bid to bids array', () => {
@@ -229,9 +264,9 @@ describe('state.ts - State Transitions', () => {
 
     it('should reset bidding state', () => {
       let state = initializeGame(playerIds);
-      state = dealNewRound(state);
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
       state = applyBid(state, 1, 2);
-      
+
       state = handleAllPlayersPass(state);
       
       expect(state.bids).toHaveLength(0);
@@ -252,9 +287,9 @@ describe('state.ts - State Transitions', () => {
   describe('applyTrumpDeclaration', () => {
     it('should set trump suit', () => {
       let state = initializeGame(playerIds);
-      state = dealNewRound(state);
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
       state = applyBid(state, 1, 3);
-      
+
       state = applyTrumpDeclaration(state, 'HEARTS');
       
       expect(state.trumpSuit).toBe('HEARTS');
@@ -262,9 +297,9 @@ describe('state.ts - State Transitions', () => {
 
     it('should transition to FOLDING_DECISION phase', () => {
       let state = initializeGame(playerIds);
-      state = dealNewRound(state);
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
       state = applyBid(state, 1, 3);
-      
+
       // Ensure clubs are not turned up (otherwise it skips folding)
       state.isClubsTurnUp = false;
       
@@ -275,7 +310,7 @@ describe('state.ts - State Transitions', () => {
 
     it('should mark winning bidder as staying', () => {
       let state = initializeGame(playerIds);
-      state = dealNewRound(state);
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
       state = applyBid(state, 2, 4);
 
       const updated = applyTrumpDeclaration(state, 'DIAMONDS');
@@ -290,7 +325,7 @@ describe('state.ts - State Transitions', () => {
 
     beforeEach(() => {
       state = initializeGame(playerIds);
-      state = dealNewRound(state);
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
       state = applyBid(state, 1, 3);
       state = applyBid(state, 2, 'PASS');
       state = applyBid(state, 3, 'PASS');
@@ -357,7 +392,7 @@ describe('state.ts - State Transitions', () => {
 
     beforeEach(() => {
       state = initializeGame(playerIds);
-      state = dealNewRound(state);
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
       state = applyBid(state, 1, 3);
       state = applyBid(state, 2, 'PASS');
       state = applyBid(state, 3, 'PASS');
@@ -451,7 +486,7 @@ describe('state.ts - State Transitions', () => {
 
     beforeEach(() => {
       state = initializeGame(playerIds);
-      state = dealNewRound(state);
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
       state = applyBid(state, 1, 3);
       state.phase = 'ROUND_OVER';
       state.highestBid = 3;
@@ -535,8 +570,8 @@ describe('state.ts - State Transitions', () => {
     it('should handle full round cycle', () => {
       let state = initializeGame(playerIds);
       expect(state.phase).toBe('DEALING');
-      
-      state = dealNewRound(state);
+
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
       expect(state.phase).toBe('BIDDING');
       expect(state.round).toBe(1);
       
@@ -575,7 +610,7 @@ describe('state.ts - State Transitions', () => {
 
     it('should handle all players pass scenario', () => {
       let state = initializeGame(playerIds);
-      state = dealNewRound(state);
+      state = dealRoundWithTurnUp(state, NON_CLUB_TURN_UP);
 
       const initialDealer = state.dealerPosition;
 

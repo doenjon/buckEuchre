@@ -214,6 +214,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             trumpSuit={gameState.trumpSuit}
             winningBidderPosition={gameState.winningBidderPosition}
             winningBid={gameState.highestBid ?? undefined}
+            isClubsTurnUp={gameState.isClubsTurnUp}
             className="shadow-[0_25px_60px_-35px_rgba(16,185,129,0.75)]"
           />
         </aside>

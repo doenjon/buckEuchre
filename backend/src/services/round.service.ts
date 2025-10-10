@@ -53,7 +53,7 @@ export function scheduleAutoStartNextRound(
         return;
       }
 
-      const biddingState = await executeGameAction(gameId, (currentState) => {
+      const roundState = await executeGameAction(gameId, (currentState) => {
         if (
           currentState.phase !== 'ROUND_OVER' ||
           currentState.round !== snapshot.round ||
@@ -67,16 +67,16 @@ export function scheduleAutoStartNextRound(
         return dealNewRound(dealingState);
       });
 
-      if (biddingState.phase !== 'BIDDING' || biddingState.round <= snapshot.round) {
+      if (roundState.round <= snapshot.round) {
         return;
       }
 
       io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
-        gameState: biddingState,
+        gameState: roundState,
         event: 'ROUND_STARTED'
       });
 
-      await triggerAI(gameId, biddingState, io);
+      await triggerAI(gameId, roundState, io);
     } catch (error: any) {
       console.error(`[ROUND] Error auto-starting next round for game ${gameId}:`, error.message || error);
     }

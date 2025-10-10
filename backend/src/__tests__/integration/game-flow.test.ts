@@ -9,7 +9,7 @@
  */
 
 import { io as ioClient, Socket } from 'socket.io-client';
-import { GameState, GamePhase, Card, Suit } from '@buck-euchre/shared';
+import { GameState, GamePhase, Card, Suit, FULL_DECK } from '@buck-euchre/shared';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
 const TIMEOUT = 90000; // 90 seconds for full game tests
@@ -105,6 +105,45 @@ async function joinGame(player: TestPlayer, gameId: string): Promise<void> {
 
     setTimeout(() => resolve(), 5000);
   });
+}
+
+async function setCustomDeck(deck: string[] | null): Promise<void> {
+  await fetch(`${BACKEND_URL}/api/test/deck`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deck }),
+  });
+}
+
+async function setDealerPosition(position: number | null): Promise<void> {
+  await fetch(`${BACKEND_URL}/api/test/dealer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ position }),
+  });
+}
+
+async function resetTestControls(): Promise<void> {
+  await fetch(`${BACKEND_URL}/api/test/deck`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deck: null }),
+  });
+  await setDealerPosition(null);
+}
+
+const TURN_UP_INDEX = 20;
+
+function buildDeckWithTurnUp(turnUpCardId: string): string[] {
+  const deck = FULL_DECK.map(card => card.id);
+  const desiredIndex = deck.indexOf(turnUpCardId);
+  if (desiredIndex === -1) {
+    throw new Error(`Invalid turn-up card id: ${turnUpCardId}`);
+  }
+
+  const deckCopy = [...deck];
+  [deckCopy[TURN_UP_INDEX], deckCopy[desiredIndex]] = [deckCopy[desiredIndex], deckCopy[TURN_UP_INDEX]];
+  return deckCopy;
 }
 
 /**
@@ -301,9 +340,10 @@ function cleanup(players: TestPlayer[]) {
 describe('Full Game Flow Integration Tests', () => {
   let players: TestPlayer[] = [];
 
-  afterEach(() => {
+  afterEach(async () => {
     cleanup(players);
     players = [];
+    await resetTestControls();
   });
 
   // Full game flow test removed due to flakiness; targeted scenarios below cover critical paths
@@ -311,6 +351,8 @@ describe('Full Game Flow Integration Tests', () => {
   describe('Edge Case: All Players Pass', () => {
     it('should handle all players passing and deal new round', async () => {
       console.log('\n🎮 All Players Pass Test\n');
+
+      await setCustomDeck(buildDeckWithTurnUp('HEARTS_ACE'));
 
       const player1 = await createPlayer('Pass1');
       const player2 = await createPlayer('Pass2');
@@ -353,6 +395,8 @@ describe('Full Game Flow Integration Tests', () => {
   describe('Reconnection Scenarios', () => {
     it('should allow player to reconnect and rejoin game', async () => {
       console.log('\n🎮 Reconnection Test\n');
+
+      await setCustomDeck(buildDeckWithTurnUp('HEARTS_KING'));
 
       const player1 = await createPlayer('Reconnect1');
       const player2 = await createPlayer('Reconnect2');
@@ -400,6 +444,8 @@ describe('Full Game Flow Integration Tests', () => {
     it('should maintain game state when one player disconnects temporarily', async () => {
       console.log('\n🎮 Temporary Disconnect Test\n');
 
+      await setCustomDeck(buildDeckWithTurnUp('HEARTS_QUEEN'));
+
       const player1 = await createPlayer('Temp1');
       const player2 = await createPlayer('Temp2');
       const player3 = await createPlayer('Temp3');
@@ -441,10 +487,11 @@ describe('Full Game Flow Integration Tests', () => {
   });
 
   describe('Dirty Clubs Scenario', () => {
-    it('should skip folding phase when clubs are turned up', async () => {
+    it('should skip bidding and start playing immediately when clubs turn up', async () => {
       console.log('\n🎮 Dirty Clubs Test\n');
-      console.log('Note: This test requires clubs to be turned up (random)');
-      console.log('The test will run but may not encounter dirty clubs');
+
+      await setDealerPosition(1);
+      await setCustomDeck(buildDeckWithTurnUp('CLUBS_ACE'));
 
       const player1 = await createPlayer('Clubs1');
       const player2 = await createPlayer('Clubs2');
@@ -455,38 +502,22 @@ describe('Full Game Flow Integration Tests', () => {
       const gameId = await createGame(player1.token);
       await Promise.all(players.map(p => joinGame(p, gameId)));
 
-      // Game starts and immediately transitions to BIDDING with dealt cards
-      const bidState = await waitForPhase(players, 'BIDDING');
-      
-      if (bidState.isClubsTurnUp) {
-        console.log('✓ Clubs turned up (dirty clubs!)');
-        
-        // Bidding already started
-        const firstBidder = bidState.currentBidder!;
-        const bidder = getPlayerByPosition(players, bidState, firstBidder);
-        
-        bidder!.socket.emit('PLACE_BID', { gameId, amount: 3 });
-        
-        for (let i = 1; i < 4; i++) {
-          const nextPos = (firstBidder + i) % 4;
-          const currentPlayer = getPlayerByPosition(players, players[0].gameState!, nextPos);
-          currentPlayer!.socket.emit('PLACE_BID', { gameId, amount: 'PASS' });
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-        
-        // Declare trump
-        await waitForPhase(players, 'DECLARING_TRUMP');
-        bidder!.socket.emit('DECLARE_TRUMP', { gameId, trumpSuit: 'HEARTS' });
-        
-        // Should skip directly to PLAYING (no FOLDING_DECISION)
-        const playState = await waitForPhase(players, 'PLAYING', 10000);
-        expect(playState.phase).toBe('PLAYING');
-        console.log('✓ Skipped folding phase (as expected for dirty clubs)');
-      } else {
-        console.log('⚠️  Clubs not turned up this time - test inconclusive');
-      }
+      const playState = await waitForPhase(players, 'PLAYING', 10000);
 
-      console.log('\n✅ DIRTY CLUBS TEST COMPLETE\n');
+      expect(playState.isClubsTurnUp).toBe(true);
+      expect(playState.trumpSuit).toBe('CLUBS');
+      expect(playState.bids).toHaveLength(0);
+      expect(playState.currentBidder).toBeNull();
+      expect(playState.phase).toBe('PLAYING');
+
+      const leftOfDealer = (playState.dealerPosition + 1) % 4;
+      expect(playState.currentPlayerPosition).toBe(leftOfDealer);
+      expect(playState.winningBidderPosition).toBe(leftOfDealer);
+      playState.players.forEach(player => {
+        expect(player.foldDecision).toBe('STAY');
+      });
+
+      console.log('✓ Dirty clubs forced immediate play');
     }, TIMEOUT);
   });
 });
