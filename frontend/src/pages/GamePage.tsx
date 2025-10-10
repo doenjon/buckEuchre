@@ -191,9 +191,6 @@ export function GamePage() {
           <span className="text-xs uppercase tracking-[0.35em] text-emerald-300/70 sm:text-sm">
             Buck Euchre
           </span>
-          <h1 className="text-xl font-semibold text-white sm:text-3xl">
-            Game {gameId?.slice(0, 8)}
-          </h1>
         </header>
 
         {myPosition !== null ? (
