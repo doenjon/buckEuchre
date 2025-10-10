@@ -3,7 +3,9 @@
  * @description Main game board component
  */
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, RotateCcw, LogOut } from 'lucide-react';
 import { Scoreboard } from './Scoreboard';
 import { TurnIndicator } from './TurnIndicator';
 import { CurrentTrick } from './CurrentTrick';
@@ -13,6 +15,7 @@ import { TrumpSelector } from './TrumpSelector';
 import { FoldDecision } from './FoldDecision';
 import { WaitingForPlayers } from './WaitingForPlayers';
 import { useGame } from '@/hooks/useGame';
+import { createGame } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import type { GameState } from '@buck-euchre/shared';
 
@@ -22,8 +25,51 @@ interface GameBoardProps {
 }
 
 export function GameBoard({ gameState, myPosition }: GameBoardProps) {
+  const navigate = useNavigate();
   const { phase, currentPlayerPosition, currentBidder, players } = gameState;
-  const { playCard, startNextRound } = useGame();
+  const { playCard, startNextRound, leaveGame } = useGame();
+  const [isRematching, setIsRematching] = useState(false);
+  const [isReturning, setIsReturning] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const handleReturnToLobby = () => {
+    if (isReturning) {
+      return;
+    }
+
+    setActionError(null);
+    setIsReturning(true);
+
+    try {
+      leaveGame(gameState.gameId);
+    } finally {
+      navigate('/lobby');
+    }
+  };
+
+  const handleRematch = async () => {
+    if (isRematching) {
+      return;
+    }
+
+    setActionError(null);
+    setIsRematching(true);
+
+    try {
+      // Leave the completed table before creating a new one
+      leaveGame(gameState.gameId);
+
+      const response = await createGame();
+      navigate(`/game/${response.gameId}`);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message || 'Failed to start a rematch. Please try again.'
+          : 'Failed to start a rematch. Please try again.';
+      setActionError(message);
+      setIsRematching(false);
+    }
+  };
 
   // Wait for all players
   if (phase === 'WAITING_FOR_PLAYERS' || players.length < 4) {
@@ -235,6 +281,43 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                   <p className="mt-1 text-sm text-emerald-200/70">
                     Final score {getPlayerByPosition(gameState.winner)?.score}
                   </p>
+                  <p className="mt-6 text-sm text-emerald-100/80">
+                    Ready for another showdown? Start a fresh table or head back to the lobby to celebrate.
+                  </p>
+                  <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                    <Button
+                      type="button"
+                      size="lg"
+                      className="min-w-[180px] justify-center bg-emerald-500/90 text-white transition hover:bg-emerald-500"
+                      onClick={handleRematch}
+                      disabled={isRematching || isReturning}
+                    >
+                      {isRematching ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <RotateCcw className="mr-2 h-4 w-4" />
+                      )}
+                      Start rematch
+                    </Button>
+                    <Button
+                      type="button"
+                      size="lg"
+                      variant="outline"
+                      className="min-w-[180px] justify-center border-white/40 bg-white/10 text-white transition hover:bg-white/20"
+                      onClick={handleReturnToLobby}
+                      disabled={isRematching || isReturning}
+                    >
+                      {isReturning ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <LogOut className="mr-2 h-4 w-4" />
+                      )}
+                      Return to lobby
+                    </Button>
+                  </div>
+                  {actionError && (
+                    <p className="mt-4 text-sm text-rose-200/80">{actionError}</p>
+                  )}
                 </div>
               )}
             </div>
