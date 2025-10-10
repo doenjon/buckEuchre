@@ -35,10 +35,10 @@ export function CurrentTrick({
 
   // Arrange cards around the center with the local player seated at the bottom
   const cardPositions = [
-    'bottom-10 left-1/2 -translate-x-1/2 sm:bottom-16', // South (you)
-    'left-8 top-1/2 -translate-y-1/2 sm:left-16', // Seat to your left
-    'top-10 left-1/2 -translate-x-1/2 sm:top-16', // Across from you
-    'right-8 top-1/2 -translate-y-1/2 sm:right-16' // Seat to your right
+    'bottom-6 left-1/2 -translate-x-1/2 sm:bottom-14', // South (you)
+    'left-4 top-1/2 -translate-y-1/2 sm:left-14', // Seat to your left
+    'top-6 left-1/2 -translate-x-1/2 sm:top-14', // Across from you
+    'right-4 top-1/2 -translate-y-1/2 sm:right-14' // Seat to your right
   ];
 
   const getPlayerByPosition = (position: number | null) => {
@@ -52,7 +52,7 @@ export function CurrentTrick({
 
   return (
     <div
-      className="relative flex min-h-[280px] items-center justify-center overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 px-4 pb-14 pt-16 shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] sm:min-h-[360px] sm:px-6 sm:pb-20 sm:pt-24 backdrop-blur"
+      className="relative flex min-h-[320px] items-center justify-center overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 px-4 pb-16 pt-20 shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] sm:min-h-[400px] sm:px-6 sm:pb-24 sm:pt-28 backdrop-blur"
       role="region"
       aria-label={`Trick ${trick.number}, ${trick.cards.length} of 4 cards played`}
     >
