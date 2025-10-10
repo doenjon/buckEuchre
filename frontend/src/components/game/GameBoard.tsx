@@ -157,23 +157,23 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       : null
   ].filter(Boolean) as { label: string; value: string | number }[];
 
-  let actionPanel: ReactNode = null;
+  let tableActionPanel: ReactNode = null;
 
   if (phase === 'BIDDING') {
-    actionPanel = (
+    tableActionPanel = (
       <BiddingPanel
         currentBid={gameState.highestBid}
         isMyTurn={isMyTurn}
       />
     );
   } else if (phase === 'DECLARING_TRUMP') {
-    actionPanel = (
+    tableActionPanel = (
       <TrumpSelector
         isMyTurn={gameState.winningBidderPosition === myPosition}
       />
     );
   } else if (phase === 'FOLDING_DECISION' && gameState.winningBidderPosition !== myPosition) {
-    actionPanel = (
+    tableActionPanel = (
       <FoldDecision
         gameState={gameState}
         myPosition={myPosition}
@@ -181,9 +181,9 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       />
     );
   } else if (phase === 'ROUND_OVER' && !gameState.gameOver) {
-    actionPanel = (
-      <div className="flex flex-col gap-4">
-        <div className="space-y-2 text-sm text-white/80">
+    tableActionPanel = (
+      <div className="flex flex-col items-center gap-4 text-white">
+        <div className="space-y-2 text-center text-sm text-white/80">
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
             Round complete
           </p>
@@ -194,7 +194,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
         <Button
           type="button"
           size="lg"
-          className="w-full justify-center bg-emerald-500/90 text-white shadow-[0_18px_40px_-20px_rgba(16,185,129,0.9)] transition hover:bg-emerald-500"
+          className="min-w-[180px] justify-center bg-emerald-500/90 text-white transition hover:bg-emerald-500"
           onClick={startNextRound}
         >
           Start next round
@@ -206,9 +206,11 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
     );
   }
 
+  const gridLayoutClasses = 'grid gap-4 lg:gap-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]';
+
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
-      <div className="grid gap-4 lg:gap-6 xl:grid-cols-[minmax(0,260px)_minmax(0,1fr)_minmax(0,260px)] lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
+      <div className={gridLayoutClasses}>
         {/* Left Column: Scoreboard + Info */}
         <aside className="order-2 flex flex-col gap-4 xl:order-1">
           <Scoreboard
@@ -258,6 +260,14 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
 
         {/* Middle Column: Table */}
         <section className="order-1 flex flex-col gap-5 sm:gap-6 xl:order-2">
+          {tableActionPanel && (
+            <div className="flex justify-center px-4">
+              <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-white/5 p-5 text-slate-100 backdrop-blur sm:p-6">
+                {tableActionPanel}
+              </div>
+            </div>
+          )}
+
           {currentPlayer && (
             <TurnIndicator
               currentPlayer={currentPlayer}
@@ -309,15 +319,6 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             </div>
           )}
         </section>
-
-        {/* Right Column: Actions */}
-        {actionPanel && (
-          <aside className="order-3 flex flex-col gap-4">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-slate-100 shadow-xl backdrop-blur sm:p-5">
-              {actionPanel}
-            </div>
-          </aside>
-        )}
       </div>
     </div>
   );
