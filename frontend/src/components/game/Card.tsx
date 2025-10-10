@@ -4,17 +4,14 @@
  */
 
 import type { Card as CardType } from '@buck-euchre/shared';
-import type { CSSProperties } from 'react';
 
 export interface CardProps {
   card: CardType;
   onClick?: () => void;
   disabled?: boolean;
   faceDown?: boolean;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'small' | 'medium' | 'large' | 'responsive';
   selected?: boolean;
-  className?: string;
-  style?: CSSProperties;
 }
 
 const suitSymbols = {
@@ -35,18 +32,22 @@ const sizeStyles = {
   small: 'w-14 h-20 text-xs sm:w-16 sm:h-24 sm:text-sm',
   medium: 'w-16 h-24 text-sm sm:w-20 sm:h-32 sm:text-base',
   large: 'w-20 h-[8.5rem] text-base sm:w-24 sm:h-36 sm:text-lg',
+  responsive:
+    'w-[clamp(3.65rem,18vw,4.3rem)] h-[clamp(5.2rem,26vw,6.1rem)] text-[clamp(0.7rem,3.5vw,0.85rem)] sm:w-24 sm:h-36 sm:text-lg',
 } as const;
 
 const cornerSymbolStyles = {
   small: 'text-lg sm:text-xl',
   medium: 'text-xl sm:text-2xl',
   large: 'text-2xl sm:text-3xl',
+  responsive: 'text-[clamp(1.1rem,4vw,1.35rem)] sm:text-3xl',
 } as const;
 
 const centerSymbolStyles = {
   small: 'text-2xl sm:text-3xl',
   medium: 'text-3xl sm:text-4xl',
   large: 'text-4xl sm:text-5xl',
+  responsive: 'text-[clamp(1.9rem,7vw,2.4rem)] sm:text-5xl',
 } as const;
 
 export function Card({
@@ -55,19 +56,16 @@ export function Card({
   disabled = false,
   faceDown = false,
   size = 'medium',
-  selected = false,
-  className = '',
-  style
+  selected = false
 }: CardProps) {
   if (faceDown) {
     return (
-      <div
-        className={`${sizeStyles[size]} bg-blue-900 rounded-lg border-2 border-blue-950 flex items-center justify-center shadow-lg cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 ${className}`}
+      <div 
+        className={`${sizeStyles[size]} bg-blue-900 rounded-lg border-2 border-blue-950 flex items-center justify-center shadow-lg cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105`}
         onClick={!disabled ? onClick : undefined}
         role="button"
         aria-label="Face down card"
         tabIndex={!disabled && onClick ? 0 : -1}
-        style={style}
       >
         <div className="text-4xl text-blue-800">🂠</div>
       </div>
@@ -102,9 +100,7 @@ export function Card({
         ${selected ? 'border-green-500 ring-4 ring-green-300 -translate-y-2 scale-105' : 'border-gray-300'}
         focus:outline-none focus:ring-4 focus:ring-blue-300
         animate-in fade-in slide-in-from-bottom-4 duration-500
-        ${className}
       `}
-      style={style}
     >
       <div className={`${suitColor} font-bold flex items-center gap-1`}>
         <span>{card.rank}</span>
