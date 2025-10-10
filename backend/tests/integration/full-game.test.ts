@@ -1233,11 +1233,19 @@ describe('Full Game Flow', () => {
 
       expect(illegalCard).toBeTruthy();
 
-      const errorPromise = waitForSocketError(nextPlayer.socket);
+      const noErrorPromise = waitForSocketError(nextPlayer.socket, 1000);
       nextPlayer.socket.emit('PLAY_CARD', { gameId, cardId: illegalCard!.id });
-      const error = await errorPromise;
-      expect(error.code).toBe('PLAY_CARD_FAILED');
-      expect(error.message).toBe('Must follow suit');
+      await expect(noErrorPromise).rejects.toThrow('Timed out waiting for socket error');
+
+      // Illegal attempt should be ignored and the game state unchanged
+      await new Promise(resolve => setTimeout(resolve, 200));
+      const stateAfterIllegalAttempt = players[0].gameState!;
+      expect(stateAfterIllegalAttempt.currentTrick.cards).toHaveLength(1);
+      expect(stateAfterIllegalAttempt.currentPlayerPosition).toBe(nextPosition);
+      expect(
+        getPlayerHand(stateAfterIllegalAttempt, nextPlayer.playerId)
+          .some(card => card.id === illegalCard!.id)
+      ).toBe(true);
 
       // Play a legal card instead
       const legalCard = getPlayerHand(players[0].gameState!, nextPlayer.playerId)
