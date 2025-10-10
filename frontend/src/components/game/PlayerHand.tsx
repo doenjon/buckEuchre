@@ -66,8 +66,7 @@ export function PlayerHand({
     const aspectRatio = 136 / 80; // Matches large card size (height / width)
     const height = Math.round(clampedWidth * aspectRatio);
 
-    const size: 'small' | 'medium' | 'large' =
-      clampedWidth >= 88 ? 'large' : clampedWidth >= 72 ? 'medium' : 'small';
+    const size = clampedWidth >= 88 ? 'large' : clampedWidth >= 72 ? 'medium' : 'small';
 
     return { cardWidth: clampedWidth, cardHeight: height, cardSize: size };
   }, [cards, containerWidth]);
