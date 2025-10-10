@@ -6,6 +6,7 @@
 import type { Card as CardType } from '@buck-euchre/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from './Card';
+import type { CardProps } from './Card';
 
 export interface PlayerHandProps {
   cards: CardType[];
@@ -52,9 +53,13 @@ export function PlayerHand({
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
-  const { cardWidth, cardHeight, cardSize } = useMemo(() => {
+  const { cardWidth, cardHeight, cardSize } = useMemo<{
+    cardWidth: number;
+    cardHeight: number;
+    cardSize: CardProps['size'];
+  }>(() => {
     if (!cards || cards.length === 0) {
-      return { cardWidth: 80, cardHeight: 136, cardSize: 'large' as const };
+      return { cardWidth: 80, cardHeight: 136, cardSize: 'large' };
     }
 
     const gap = containerWidth >= 640 ? 8 : 4;
@@ -66,7 +71,8 @@ export function PlayerHand({
     const aspectRatio = 136 / 80; // Matches large card size (height / width)
     const height = Math.round(clampedWidth * aspectRatio);
 
-    const size = clampedWidth >= 88 ? 'large' : clampedWidth >= 72 ? 'medium' : 'small';
+    const size: CardProps['size'] =
+      clampedWidth >= 88 ? 'large' : clampedWidth >= 72 ? 'medium' : 'small';
 
     return { cardWidth: clampedWidth, cardHeight: height, cardSize: size };
   }, [cards, containerWidth]);
