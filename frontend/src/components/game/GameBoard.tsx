@@ -195,7 +195,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
         <Button
           type="button"
           size="lg"
-          className="w-full justify-center bg-emerald-500/90 text-white shadow-[0_18px_40px_-20px_rgba(16,185,129,0.9)] transition hover:bg-emerald-500"
+          className="min-w-[180px] justify-center bg-emerald-500/90 text-white transition hover:bg-emerald-500"
           onClick={startNextRound}
         >
           Start next round
