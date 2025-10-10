@@ -229,7 +229,15 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
               />
             )}
 
-            <div className="relative">
+            <div className="space-y-5 sm:space-y-6">
+              {currentPlayer && (
+                <TurnIndicator
+                  currentPlayer={currentPlayer}
+                  isMyTurn={isMyTurn}
+                  phase={phase}
+                />
+              )}
+
               <CurrentTrick
                 trick={displayTrick}
                 players={players}
