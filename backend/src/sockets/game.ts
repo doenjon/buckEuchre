@@ -187,6 +187,10 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
     const playerId = socket.data.playerId;
 
     // Execute action through queue
+    let illegalPlayAttempt = false;
+    let illegalReason: string | null = null;
+    let illegalPlayer: Player | null = null;
+
     const newState = await executeGameAction(validated.gameId, async (currentState) => {
       // Find player position
       const player = currentState.players.find((p: Player) => p.id === playerId);
@@ -430,6 +434,10 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       );
 
       if (!validation.valid) {
+        illegalPlayAttempt = true;
+        illegalReason = validation.reason || 'Invalid card play';
+        illegalPlayer = player;
+
         const ledCard = currentState.currentTrick.cards[0]?.card ?? null;
         const trumpSuit = currentState.trumpSuit ?? null;
         console.warn('[PLAY_CARD] Invalid move', {
@@ -442,7 +450,8 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
           trumpSuit,
           playerPosition: player.position,
         });
-        throw new Error(validation.reason || 'Invalid card play');
+
+        return currentState;
       }
 
       // Apply card play
@@ -485,6 +494,15 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
 
       return nextState;
     });
+
+    if (illegalPlayAttempt) {
+      console.warn('[PLAY_CARD] Ignored illegal card play attempt', {
+        playerId: illegalPlayer?.id ?? playerId,
+        playerPosition: illegalPlayer?.position ?? null,
+        reason: illegalReason,
+      });
+      return;
+    }
 
     // Broadcast update
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
