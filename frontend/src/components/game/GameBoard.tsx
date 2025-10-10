@@ -198,6 +198,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
   }
 
   const gridLayoutClasses = 'grid gap-4 lg:gap-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]';
+  const showNextHandPopup = phase === 'ROUND_OVER' && !gameState.gameOver;
 
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
@@ -244,52 +245,61 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
               )}
             </div>
 
-            {myPlayer.folded !== true ? (
-              <div className="relative rounded-[32px] border border-white/10 bg-white/5 p-3 shadow-[0_25px_70px_-40px_rgba(16,185,129,0.8)] backdrop-blur sm:p-4">
-                <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
-                  Your hand
-                </p>
-                <PlayerHand
-                  cards={myPlayer.hand}
-                  onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
-                  disabled={!isMyTurn || phase !== 'PLAYING'}
-                />
-                {phase === 'ROUND_OVER' && !gameState.gameOver && (
-                  <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-3 sm:px-6">
-                    <div className="pointer-events-auto flex w-full max-w-xs flex-col items-center gap-3 rounded-2xl border border-white/15 bg-slate-950/90 px-5 py-4 text-center text-slate-100 shadow-[0_35px_80px_-35px_rgba(16,185,129,0.9)] backdrop-blur-xl">
-                      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
-                        Round complete
+            <div
+              className={
+                myPlayer.folded !== true
+                  ? 'relative rounded-[32px] border border-white/10 bg-white/5 p-3 shadow-[0_25px_70px_-40px_rgba(16,185,129,0.8)] backdrop-blur sm:p-4'
+                  : 'relative rounded-[32px] border border-white/10 bg-white/5 p-8 text-center shadow-xl backdrop-blur'
+              }
+            >
+              {myPlayer.folded !== true ? (
+                <>
+                  <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
+                    Your hand
+                  </p>
+                  <PlayerHand
+                    cards={myPlayer.hand}
+                    onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
+                    disabled={!isMyTurn || phase !== 'PLAYING'}
+                  />
+                </>
+              ) : (
+                <>
+                  <p className="text-lg font-semibold text-white/90">
+                    You have folded this round
+                  </p>
+                  <p className="mt-2 text-sm text-emerald-200/70">
+                    Sit back and watch the remaining tricks play out.
+                  </p>
+                </>
+              )}
+
+              {showNextHandPopup && (
+                <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-3 sm:px-6">
+                  <div className="pointer-events-auto flex w-full max-w-xs flex-col items-center gap-3 rounded-2xl border border-white/15 bg-slate-950/90 px-5 py-4 text-center text-slate-100 shadow-[0_35px_80px_-35px_rgba(16,185,129,0.9)] backdrop-blur-xl">
+                    <p className="text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-emerald-200/70">
+                      Round complete
+                    </p>
+                    <div className="flex w-full items-center justify-between gap-3">
+                      <p className="text-left text-sm text-white" aria-live="polite">
+                        Next hand in{' '}
+                        <span className="font-semibold text-emerald-200">
+                          {nextHandCountdown ?? '—'}s
+                        </span>
                       </p>
-                      <div className="flex w-full items-center justify-between gap-3">
-                        <p className="text-left text-sm text-white" aria-live="polite">
-                          Next hand in{' '}
-                          <span className="font-semibold text-emerald-200">
-                            {nextHandCountdown ?? '—'}s
-                          </span>
-                        </p>
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="shrink-0 bg-emerald-500/90 text-white transition hover:bg-emerald-500"
-                          onClick={startNextRound}
-                        >
-                          Start now
-                        </Button>
-                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="shrink-0 bg-emerald-500/90 text-white transition hover:bg-emerald-500"
+                        onClick={startNextRound}
+                      >
+                        Start now
+                      </Button>
                     </div>
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 text-center shadow-xl backdrop-blur">
-                <p className="text-lg font-semibold text-white/90">
-                  You have folded this round
-                </p>
-                <p className="mt-2 text-sm text-emerald-200/70">
-                  Sit back and watch the remaining tricks play out.
-                </p>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
 
             {phase === 'GAME_OVER' && gameState.winner !== null && (
               <div className="rounded-[32px] border border-emerald-400/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 p-8 text-center shadow-2xl backdrop-blur">
