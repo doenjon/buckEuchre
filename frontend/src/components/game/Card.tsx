@@ -32,21 +32,22 @@ const sizeStyles = {
   small: 'w-14 h-20 text-xs sm:w-16 sm:h-24 sm:text-sm',
   medium: 'w-16 h-24 text-sm sm:w-20 sm:h-32 sm:text-base',
   large: 'w-20 h-[8.5rem] text-base sm:w-24 sm:h-36 sm:text-lg',
-  responsive: 'w-14 h-20 text-xs sm:w-24 sm:h-36 sm:text-lg',
+  responsive:
+    'w-[min(22vw,5.5rem)] aspect-[63/88] text-[clamp(0.55rem,1.6vw,0.85rem)] sm:w-24 sm:aspect-[63/88] sm:text-lg',
 } as const;
 
 const cornerSymbolStyles = {
   small: 'text-lg sm:text-xl',
   medium: 'text-xl sm:text-2xl',
   large: 'text-2xl sm:text-3xl',
-  responsive: 'text-lg sm:text-3xl',
+  responsive: 'text-[clamp(1.1rem,3.2vw,1.7rem)] sm:text-3xl',
 } as const;
 
 const centerSymbolStyles = {
   small: 'text-2xl sm:text-3xl',
   medium: 'text-3xl sm:text-4xl',
   large: 'text-4xl sm:text-5xl',
-  responsive: 'text-2xl sm:text-5xl',
+  responsive: 'text-[clamp(1.5rem,4.5vw,2.75rem)] sm:text-5xl',
 } as const;
 
 export function Card({
@@ -91,7 +92,7 @@ export function Card({
       className={`
         ${sizeStyles[size]}
         bg-white rounded-lg border-2 shadow-lg
-        flex flex-col items-center justify-between p-2 sm:p-3
+        flex flex-col items-center justify-between p-[clamp(0.35rem,1vw,0.6rem)] sm:p-3
         transition-all duration-300 ease-out
         transform-gpu
         ${interactionClasses}
@@ -101,16 +102,16 @@ export function Card({
         animate-in fade-in slide-in-from-bottom-4 duration-500
       `}
     >
-      <div className={`${suitColor} font-bold flex items-center gap-1`}>
+      <div className={`${suitColor} font-bold flex items-center gap-0.5 leading-none tracking-tight`}>
         <span>{card.rank}</span>
         <span className={cornerSymbolClass}>{suitSymbol}</span>
       </div>
 
-      <div className={`${suitColor} ${centerSymbolClass}`}>
+      <div className={`${suitColor} ${centerSymbolClass} leading-none`}>
         {suitSymbol}
       </div>
 
-      <div className={`${suitColor} font-bold flex items-center gap-1 rotate-180`}>
+      <div className={`${suitColor} font-bold flex items-center gap-0.5 leading-none tracking-tight rotate-180`}>
         <span>{card.rank}</span>
         <span className={cornerSymbolClass}>{suitSymbol}</span>
       </div>
