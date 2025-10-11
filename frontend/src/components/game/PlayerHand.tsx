@@ -33,7 +33,7 @@ export function PlayerHand({
 
   return (
     <div
-      className="flex w-full flex-nowrap items-end justify-center gap-0.5 px-1 sm:gap-2 sm:px-0"
+      className="flex w-full max-w-full flex-nowrap items-end justify-start gap-1 overflow-x-auto px-1 sm:gap-2 sm:overflow-visible sm:justify-center sm:px-0"
       role="group"
       aria-label={`Your hand: ${cards.length} cards`}
     >
