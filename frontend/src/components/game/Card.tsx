@@ -62,8 +62,8 @@ const rankLabels: Record<CardType['rank'], string> = {
   KING: 'K',
   QUEEN: 'Q',
   JACK: 'J',
-  TEN: '10',
-  NINE: '9',
+  '10': '10',
+  '9': '9',
 };
 
 export function Card({
