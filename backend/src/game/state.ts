@@ -379,10 +379,13 @@ export function applyFoldDecision(
 
       const scoredPlayers = playersWithAutoTricks.map((player, position) => ({
         ...player,
-        score: player.score + scoreChanges[position],
+        score: Math.max(0, player.score + scoreChanges[position]),
       })) as [Player, Player, Player, Player];
 
-      const { winner, gameOver } = checkWinCondition(scoredPlayers);
+      const { winner, gameOver } = checkWinCondition(scoredPlayers, {
+        previousPlayers: playersWithAutoTricks,
+        winningBidderPosition: winningBidder,
+      });
 
       const updates: Partial<GameState> = {
         phase: gameOver ? 'GAME_OVER' : 'ROUND_OVER',
@@ -536,11 +539,14 @@ export function finishRound(state: GameState): GameState {
   // Apply score changes
   const players = state.players.map((p, i) => ({
     ...p,
-    score: p.score + scoreChanges[i],
+    score: Math.max(0, p.score + scoreChanges[i]),
   })) as [Player, Player, Player, Player];
-  
+
   // Check for winner
-  const { winner, gameOver } = checkWinCondition(players);
+  const { winner, gameOver } = checkWinCondition(players, {
+    previousPlayers: state.players,
+    winningBidderPosition: state.winningBidderPosition,
+  });
   
   if (gameOver) {
     return withVersion(state, {

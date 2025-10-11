@@ -71,21 +71,49 @@ export function calculateRoundScores(
  * @param players - Array of 4 players
  * @returns Object with winner position and gameOver flag
  */
-export function checkWinCondition(players: Player[]): {
+export function checkWinCondition(
+  players: Player[],
+  options: {
+    previousPlayers?: Player[];
+    winningBidderPosition?: PlayerPosition | null;
+  } = {}
+): {
   winner: PlayerPosition | null;
   gameOver: boolean;
 } {
-  // Check if any player has reached 0 or below
-  const playersAtOrBelowZero = players.filter(p => p.score <= 0);
+  // Only scores exactly at 0 can win – scores never go below 0
+  const playersAtZero = players.filter(p => p.score === 0);
 
-  if (playersAtOrBelowZero.length === 0) {
+  if (playersAtZero.length === 0) {
     return { winner: null, gameOver: false };
   }
 
-  // If multiple players at/below 0, lowest score wins
-  const winner = playersAtOrBelowZero.reduce((lowest, player) =>
-    player.score < lowest.score ? player : lowest
-  );
+  const { previousPlayers, winningBidderPosition } = options;
 
-  return { winner: winner.position, gameOver: true };
+  // Bidder wins ties when they reach 0 in the same hand
+  if (
+    winningBidderPosition !== undefined &&
+    winningBidderPosition !== null &&
+    players[winningBidderPosition].score === 0
+  ) {
+    return { winner: winningBidderPosition, gameOver: true };
+  }
+
+  // Determine first player to newly reach 0 this hand
+  if (
+    Array.isArray(previousPlayers) &&
+    previousPlayers.length === players.length
+  ) {
+    for (let i = 0; i < players.length; i++) {
+      const prev = previousPlayers[i];
+      const current = players[i];
+
+      if (prev.score > 0 && current.score === 0) {
+        return { winner: current.position, gameOver: true };
+      }
+    }
+  }
+
+  // Fallback – if everyone was already at 0 (shouldn't happen mid-game)
+  return { winner: playersAtZero[0].position, gameOver: true };
 }
