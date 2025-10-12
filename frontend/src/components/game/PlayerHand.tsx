@@ -33,12 +33,12 @@ export function PlayerHand({
 
   return (
     <div
-      className="flex w-full max-w-full flex-nowrap items-end justify-start gap-1 overflow-x-auto px-1 py-3 sm:gap-2 sm:overflow-visible sm:justify-center sm:px-0 sm:py-4"
+      className="flex w-full flex-wrap items-end justify-center gap-1 px-2 sm:flex-nowrap sm:gap-2 sm:px-0"
       role="group"
       aria-label={`Your hand: ${cards.length} cards`}
     >
       {cards.map((card, index) => (
-        <div
+        <div 
           key={card.id} 
           className="transition-all duration-300 hover:z-10"
           style={{
@@ -51,7 +51,7 @@ export function PlayerHand({
             onClick={onCardClick ? () => onCardClick(card.id) : undefined}
             disabled={disabled || !onCardClick}
             selected={selectedCardId === card.id}
-            size="responsive"
+            size="large"
           />
         </div>
       ))}

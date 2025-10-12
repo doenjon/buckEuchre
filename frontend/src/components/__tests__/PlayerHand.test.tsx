@@ -300,12 +300,12 @@ describe('PlayerHand Component', () => {
   describe('Visual States', () => {
     it('should render with large card size', () => {
       render(<PlayerHand cards={mockCards} />);
-
+      
       const cards = screen.getAllByRole('button');
       cards.forEach(card => {
-        // Cards should maintain consistent card aspect ratio and responsive width
-        expect(card.className).toContain('aspect-[63/88]');
-        expect(card.className).toMatch(/w-\[/);
+        // Cards should have large size class applied (from Card component)
+        expect(card.className).toContain('w-24');
+        expect(card.className).toContain('h-36');
       });
     });
 

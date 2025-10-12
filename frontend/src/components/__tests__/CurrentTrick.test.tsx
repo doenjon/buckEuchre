@@ -93,16 +93,16 @@ describe('CurrentTrick Component', () => {
     const myBadge = screen.getByText('Charlie');
     const mySeat = myBadge.closest('div')?.parentElement as HTMLDivElement | null;
 
-    expect(mySeat?.className).toContain('bottom-10');
+    expect(mySeat?.className).toContain('bottom-12');
     expect(mySeat?.className).toContain('-translate-x-1/2');
 
     const leftOpponentSeat = screen.getByText('Diana').closest('div')?.parentElement as HTMLDivElement | null;
-    expect(leftOpponentSeat?.className).toContain('left-8');
+    expect(leftOpponentSeat?.className).toContain('left-12');
 
     const acrossOpponentSeat = screen.getByText('Alice').closest('div')?.parentElement as HTMLDivElement | null;
-    expect(acrossOpponentSeat?.className).toContain('top-10');
+    expect(acrossOpponentSeat?.className).toContain('top-12');
 
     const rightOpponentSeat = screen.getByText('Bob').closest('div')?.parentElement as HTMLDivElement | null;
-    expect(rightOpponentSeat?.className).toContain('right-8');
+    expect(rightOpponentSeat?.className).toContain('right-12');
   });
 });
