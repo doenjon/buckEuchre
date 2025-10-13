@@ -3,7 +3,7 @@
  * @description Display player's hand of cards
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 import type { Card as CardType, Suit } from '@buck-euchre/shared';
 import {
@@ -92,6 +92,20 @@ export function PlayerHand({
 
   const [cardOrder, setCardOrder] = useState<string[]>(() => sortedCardIds);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
+  const cardRefs = useRef(new Map<string, HTMLDivElement>());
+  const cardPositions = useRef(new Map<string, DOMRect>());
+
+  const setCardRef = useCallback(
+    (cardId: string) => (node: HTMLDivElement | null) => {
+      if (!node) {
+        cardRefs.current.delete(cardId);
+        return;
+      }
+
+      cardRefs.current.set(cardId, node);
+    },
+    []
+  );
 
   useEffect(() => {
     if (!cards || cards.length === 0) {
@@ -147,6 +161,52 @@ export function PlayerHand({
 
     return [...mappedCards, ...fallbackCards];
   }, [cardOrder, cards, cardsById, sortedCardIds]);
+
+  useLayoutEffect(() => {
+    const previousPositions = cardPositions.current;
+    const nextPositions = new Map<string, DOMRect>();
+
+    orderedCards.forEach(card => {
+      const element = cardRefs.current.get(card.id);
+
+      if (!element) {
+        return;
+      }
+
+      const newRect = element.getBoundingClientRect();
+      nextPositions.set(card.id, newRect);
+
+      const previousRect = previousPositions.get(card.id);
+
+      if (!previousRect) {
+        return;
+      }
+
+      const deltaX = previousRect.left - newRect.left;
+      const deltaY = previousRect.top - newRect.top;
+
+      if (deltaX === 0 && deltaY === 0) {
+        return;
+      }
+
+      if (typeof element.animate !== 'function') {
+        return;
+      }
+
+      element.animate(
+        [
+          { transform: `translate(${deltaX}px, ${deltaY}px)` },
+          { transform: 'translate(0, 0)' }
+        ],
+        {
+          duration: 250,
+          easing: 'ease-in-out'
+        }
+      );
+    });
+
+    cardPositions.current = nextPositions;
+  }, [orderedCards]);
 
   const handleDragStart = (event: DragEvent<HTMLDivElement>, cardId: string) => {
     if (disabled) {
@@ -262,6 +322,7 @@ export function PlayerHand({
           className={`transition-all duration-300 hover:z-10 ${
             draggedCardId === card.id ? 'opacity-60' : 'opacity-100'
           }`}
+          ref={setCardRef(card.id)}
           data-testid="player-hand-card-wrapper"
           draggable={!disabled}
           onDragStart={event => handleDragStart(event, card.id)}
