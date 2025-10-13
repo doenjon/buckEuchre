@@ -157,7 +157,13 @@ export function PlayerHand({
     const existingIds = new Set(mappedCards.map(card => card.id));
     const fallbackCards = sortedCardIds
       .map(cardId => cardsById.get(cardId))
-      .filter((card): card is CardType => Boolean(card) && !existingIds.has(card.id));
+      .filter((card): card is CardType => {
+        if (!card) {
+          return false;
+        }
+
+        return !existingIds.has(card.id);
+      });
 
     return [...mappedCards, ...fallbackCards];
   }, [cardOrder, cards, cardsById, sortedCardIds]);
