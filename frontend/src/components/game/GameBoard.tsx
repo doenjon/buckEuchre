@@ -261,6 +261,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                     cards={myPlayer.hand}
                     onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
                     disabled={!isMyTurn || phase !== 'PLAYING'}
+                    trumpSuit={gameState.trumpSuit}
                   />
                 </>
               ) : (
