@@ -3,7 +3,8 @@
  * @description Display player's hand of cards
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { DragEvent } from 'react';
 import type { Card as CardType, Suit } from '@buck-euchre/shared';
 import {
   TRUMP_RANK_VALUES,
@@ -79,13 +80,161 @@ export function PlayerHand({
   selectedCardId = null,
   trumpSuit = null
 }: PlayerHandProps) {
-  const sortedCards = useMemo(() => {
+  const sortedCardIds = useMemo(() => {
     if (!cards || cards.length === 0) {
-      return [];
+      return [] as string[];
     }
 
-    return [...cards].sort((a, b) => compareCards(a, b, trumpSuit ?? null));
+    return [...cards]
+      .sort((a, b) => compareCards(a, b, trumpSuit ?? null))
+      .map(card => card.id);
   }, [cards, trumpSuit]);
+
+  const [cardOrder, setCardOrder] = useState<string[]>(() => sortedCardIds);
+  const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!cards || cards.length === 0) {
+      setCardOrder([]);
+      return;
+    }
+
+    setCardOrder(previousOrder => {
+      if (!previousOrder || previousOrder.length === 0) {
+        return sortedCardIds;
+      }
+
+      const cardIdSet = new Set(cards.map(card => card.id));
+      const filteredOrder = previousOrder.filter(id => cardIdSet.has(id));
+      const missingCards = sortedCardIds.filter(id => !filteredOrder.includes(id));
+
+      if (filteredOrder.length === previousOrder.length && missingCards.length === 0) {
+        return previousOrder;
+      }
+
+      return [...filteredOrder, ...missingCards];
+    });
+  }, [cards, sortedCardIds]);
+
+  const cardsById = useMemo(() => {
+    if (!cards) {
+      return new Map<string, CardType>();
+    }
+
+    return cards.reduce((map, card) => {
+      map.set(card.id, card);
+      return map;
+    }, new Map<string, CardType>());
+  }, [cards]);
+
+  const orderedCards = useMemo(() => {
+    if (!cards || cards.length === 0) {
+      return [] as CardType[];
+    }
+
+    const mappedCards = cardOrder
+      .map(cardId => cardsById.get(cardId))
+      .filter((card): card is CardType => Boolean(card));
+
+    if (mappedCards.length === cards.length) {
+      return mappedCards;
+    }
+
+    const existingIds = new Set(mappedCards.map(card => card.id));
+    const fallbackCards = sortedCardIds
+      .map(cardId => cardsById.get(cardId))
+      .filter((card): card is CardType => Boolean(card) && !existingIds.has(card.id));
+
+    return [...mappedCards, ...fallbackCards];
+  }, [cardOrder, cards, cardsById, sortedCardIds]);
+
+  const handleDragStart = (event: DragEvent<HTMLDivElement>, cardId: string) => {
+    if (disabled) {
+      return;
+    }
+
+    setDraggedCardId(cardId);
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', cardId);
+    }
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (disabled) {
+      return;
+    }
+
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedCardId(null);
+  };
+
+  const handleDropOnCard = (
+    event: DragEvent<HTMLDivElement>,
+    targetCardId: string
+  ) => {
+    if (disabled) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const draggedId = draggedCardId ?? event.dataTransfer?.getData('text/plain');
+
+    if (!draggedId || draggedId === targetCardId) {
+      setDraggedCardId(null);
+      return;
+    }
+
+    setCardOrder(previousOrder => {
+      if (!previousOrder.includes(draggedId)) {
+        return previousOrder;
+      }
+
+      const nextOrder = previousOrder.filter(id => id !== draggedId);
+      const targetIndex = nextOrder.indexOf(targetCardId);
+
+      const insertionIndex = targetIndex === -1 ? nextOrder.length : targetIndex;
+      nextOrder.splice(insertionIndex, 0, draggedId);
+      return [...nextOrder];
+    });
+
+    setDraggedCardId(null);
+  };
+
+  const handleDropOnContainer = (event: DragEvent<HTMLDivElement>) => {
+    if (disabled) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const draggedId = draggedCardId ?? event.dataTransfer?.getData('text/plain');
+
+    if (!draggedId) {
+      setDraggedCardId(null);
+      return;
+    }
+
+    setCardOrder(previousOrder => {
+      if (!previousOrder.includes(draggedId)) {
+        return previousOrder;
+      }
+
+      const nextOrder = previousOrder.filter(id => id !== draggedId);
+      nextOrder.push(draggedId);
+      return [...nextOrder];
+    });
+
+    setDraggedCardId(null);
+  };
 
   if (!cards || cards.length === 0) {
     return (
@@ -104,11 +253,23 @@ export function PlayerHand({
       className="flex w-full flex-wrap items-end justify-center gap-1 px-2 sm:flex-nowrap sm:gap-2 sm:px-0"
       role="group"
       aria-label={`Your hand: ${cards.length} cards`}
+      onDragOver={handleDragOver}
+      onDrop={handleDropOnContainer}
     >
-      {sortedCards.map((card, index) => (
+      {orderedCards.map((card, index) => (
         <div
           key={card.id}
-          className="transition-all duration-300 hover:z-10"
+          className={`transition-all duration-300 hover:z-10 ${
+            draggedCardId === card.id ? 'opacity-60' : 'opacity-100'
+          }`}
+          data-testid="player-hand-card-wrapper"
+          draggable={!disabled}
+          onDragStart={event => handleDragStart(event, card.id)}
+          onDragOver={handleDragOver}
+          onDrop={event => handleDropOnCard(event, card.id)}
+          onDragEnd={handleDragEnd}
+          aria-grabbed={draggedCardId === card.id}
+          aria-label={`Card position ${index + 1} of ${orderedCards.length}`}
           style={{
             transform: `translateY(${index % 2 === 0 ? '0' : '4px'}) scale(${selectedCardId === card.id ? 1.05 : 1})`,
             animationDelay: `${index * 50}ms`,

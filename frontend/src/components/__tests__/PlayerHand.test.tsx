@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PlayerHand } from '../game/PlayerHand';
 import type { Card } from '@buck-euchre/shared';
@@ -109,6 +109,30 @@ describe('PlayerHand Component', () => {
 
       expect(handleCardClick).toHaveBeenCalledTimes(1);
       expect(handleCardClick).toHaveBeenCalledWith('card-1');
+    });
+
+    it('should allow dragging a card to reorder the hand', () => {
+      render(<PlayerHand cards={mockCards} />);
+
+      const cardWrappers = screen.getAllByTestId('player-hand-card-wrapper');
+      const firstCardWrapper = cardWrappers[0];
+      const targetCardWrapper = cardWrappers[cardWrappers.length - 1];
+
+      const dataTransfer = {
+        setData: vi.fn(),
+        getData: vi.fn().mockReturnValue('card-1'),
+        effectAllowed: '',
+        dropEffect: '',
+      } as unknown as DataTransfer;
+
+      fireEvent.dragStart(firstCardWrapper, { dataTransfer });
+      fireEvent.dragOver(targetCardWrapper, { dataTransfer });
+      fireEvent.drop(targetCardWrapper, { dataTransfer });
+
+      const cardsAfterDrop = screen.getAllByRole('button');
+
+      expect(cardsAfterDrop[0]).toHaveAccessibleName(/10 of SPADES/i);
+      expect(cardsAfterDrop[cardsAfterDrop.length - 2]).toHaveAccessibleName(/ACE of SPADES/i);
     });
 
     it('should call onCardClick with correct card ID for each card', async () => {
