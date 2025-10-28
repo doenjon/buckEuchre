@@ -30,35 +30,67 @@ const suitColors = {
   CLUBS: 'text-gray-900',
 };
 
-const sizeStyles = {
+type ResponsiveFont = {
+  min: string;
+  scale: number;
+  max: string;
+};
+
+type SizeConfig = {
+  width: string;
+  height: string;
+  padding: string;
+  borderRadius: string;
+  fonts: {
+    rank: ResponsiveFont;
+    corner: ResponsiveFont;
+    center: ResponsiveFont;
+  };
+};
+
+const sizeStyles: Record<NonNullable<CardProps['size']>, SizeConfig> = {
   small: {
     width: 'clamp(3.25rem, 11vw, 3.875rem)',
     height: 'calc(1.45 * clamp(3.25rem, 11vw, 3.875rem))',
     padding: 'clamp(0.35rem, 1.5vw, 0.5rem)',
     borderRadius: 'calc(0.12 * clamp(3.25rem, 11vw, 3.875rem))',
-    rankFontSize: 'clamp(0.75rem, 1.9vw, 0.95rem)',
-    cornerSymbolSize: 'clamp(1.15rem, 2.6vw, 1.45rem)',
-    centerSymbolSize: 'clamp(1.9rem, 3.9vw, 2.45rem)',
+    fonts: {
+      rank: { min: '0.7rem', scale: 0.22, max: '0.95rem' },
+      corner: { min: '1.1rem', scale: 0.32, max: '1.45rem' },
+      center: { min: '1.8rem', scale: 0.52, max: '2.45rem' },
+    },
   },
   medium: {
     width: 'clamp(3.75rem, 12.5vw, 4.75rem)',
     height: 'calc(1.45 * clamp(3.75rem, 12.5vw, 4.75rem))',
     padding: 'clamp(0.45rem, 1.65vw, 0.7rem)',
     borderRadius: 'calc(0.12 * clamp(3.75rem, 12.5vw, 4.75rem))',
-    rankFontSize: 'clamp(0.8rem, 2.1vw, 1.05rem)',
-    cornerSymbolSize: 'clamp(1.3rem, 2.9vw, 1.7rem)',
-    centerSymbolSize: 'clamp(2.2rem, 4.3vw, 2.95rem)',
+    fonts: {
+      rank: { min: '0.8rem', scale: 0.22, max: '1.05rem' },
+      corner: { min: '1.25rem', scale: 0.32, max: '1.7rem' },
+      center: { min: '2.1rem', scale: 0.52, max: '2.95rem' },
+    },
   },
   large: {
     width: 'clamp(4.25rem, 15vw, 6rem)',
     height: 'calc(1.45 * clamp(4.25rem, 15vw, 6rem))',
     padding: 'clamp(0.55rem, 1.85vw, 0.9rem)',
     borderRadius: 'calc(0.12 * clamp(4.25rem, 15vw, 6rem))',
-    rankFontSize: 'clamp(0.85rem, 2.3vw, 1.15rem)',
-    cornerSymbolSize: 'clamp(1.45rem, 3.2vw, 1.9rem)',
-    centerSymbolSize: 'clamp(2.4rem, 4.8vw, 3.5rem)',
+    fonts: {
+      rank: { min: '0.85rem', scale: 0.22, max: '1.15rem' },
+      corner: { min: '1.4rem', scale: 0.32, max: '1.9rem' },
+      center: { min: '2.3rem', scale: 0.52, max: '3.5rem' },
+    },
   },
 } as const;
+
+type CardCSSProperties = CSSProperties & {
+  '--card-width'?: string;
+};
+
+function responsiveFont({ min, scale, max }: ResponsiveFont) {
+  return `clamp(${min}, calc(var(--card-width) * ${scale}), ${max})`;
+}
 
 export function Card({
   card,
@@ -69,12 +101,17 @@ export function Card({
   selected = false
 }: CardProps) {
   const sizeConfig = sizeStyles[size];
-  const baseCardStyle: CSSProperties = {
+  const baseCardStyle: CardCSSProperties = {
     width: sizeConfig.width,
     height: sizeConfig.height,
     padding: sizeConfig.padding,
     borderRadius: sizeConfig.borderRadius,
+    '--card-width': sizeConfig.width,
   };
+
+  const rankFontSize = responsiveFont(sizeConfig.fonts.rank);
+  const cornerFontSize = responsiveFont(sizeConfig.fonts.corner);
+  const centerFontSize = responsiveFont(sizeConfig.fonts.center);
 
   if (faceDown) {
     return (
@@ -88,7 +125,7 @@ export function Card({
       >
         <div
           className="text-blue-800"
-          style={{ fontSize: sizeConfig.centerSymbolSize }}
+          style={{ fontSize: centerFontSize }}
         >
           🂠
         </div>
@@ -126,25 +163,25 @@ export function Card({
     >
       <div
         className={`${suitColor} font-bold flex items-center`}
-        style={{ fontSize: sizeConfig.rankFontSize, gap: '0.2em' }}
+        style={{ fontSize: rankFontSize, gap: '0.2em' }}
       >
         <span>{card.rank}</span>
-        <span style={{ fontSize: sizeConfig.cornerSymbolSize }}>{suitSymbol}</span>
+        <span style={{ fontSize: cornerFontSize }}>{suitSymbol}</span>
       </div>
 
       <div
         className={suitColor}
-        style={{ fontSize: sizeConfig.centerSymbolSize }}
+        style={{ fontSize: centerFontSize }}
       >
         {suitSymbol}
       </div>
 
       <div
         className={`${suitColor} font-bold flex items-center rotate-180`}
-        style={{ fontSize: sizeConfig.rankFontSize, gap: '0.2em' }}
+        style={{ fontSize: rankFontSize, gap: '0.2em' }}
       >
         <span>{card.rank}</span>
-        <span style={{ fontSize: sizeConfig.cornerSymbolSize }}>{suitSymbol}</span>
+        <span style={{ fontSize: cornerFontSize }}>{suitSymbol}</span>
       </div>
     </button>
   );
