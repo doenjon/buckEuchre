@@ -3,8 +3,6 @@
  * @description Visual playing card representation
  */
 
-import type { CSSProperties } from 'react';
-
 import type { Card as CardType } from '@buck-euchre/shared';
 
 export interface CardProps {
@@ -30,67 +28,23 @@ const suitColors = {
   CLUBS: 'text-gray-900',
 };
 
-type ResponsiveFont = {
-  min: string;
-  scale: number;
-  max: string;
-};
-
-type SizeConfig = {
-  width: string;
-  height: string;
-  padding: string;
-  borderRadius: string;
-  fonts: {
-    rank: ResponsiveFont;
-    corner: ResponsiveFont;
-    center: ResponsiveFont;
-  };
-};
-
-const sizeStyles: Record<NonNullable<CardProps['size']>, SizeConfig> = {
-  small: {
-    width: 'clamp(3.25rem, 11vw, 3.875rem)',
-    height: 'calc(1.45 * clamp(3.25rem, 11vw, 3.875rem))',
-    padding: 'clamp(0.35rem, 1.5vw, 0.5rem)',
-    borderRadius: 'calc(0.12 * clamp(3.25rem, 11vw, 3.875rem))',
-    fonts: {
-      rank: { min: '0.7rem', scale: 0.22, max: '0.95rem' },
-      corner: { min: '1.1rem', scale: 0.32, max: '1.45rem' },
-      center: { min: '1.8rem', scale: 0.52, max: '2.45rem' },
-    },
-  },
-  medium: {
-    width: 'clamp(3.75rem, 12.5vw, 4.75rem)',
-    height: 'calc(1.45 * clamp(3.75rem, 12.5vw, 4.75rem))',
-    padding: 'clamp(0.45rem, 1.65vw, 0.7rem)',
-    borderRadius: 'calc(0.12 * clamp(3.75rem, 12.5vw, 4.75rem))',
-    fonts: {
-      rank: { min: '0.8rem', scale: 0.22, max: '1.05rem' },
-      corner: { min: '1.25rem', scale: 0.32, max: '1.7rem' },
-      center: { min: '2.1rem', scale: 0.52, max: '2.95rem' },
-    },
-  },
-  large: {
-    width: 'clamp(4.25rem, 15vw, 6rem)',
-    height: 'calc(1.45 * clamp(4.25rem, 15vw, 6rem))',
-    padding: 'clamp(0.55rem, 1.85vw, 0.9rem)',
-    borderRadius: 'calc(0.12 * clamp(4.25rem, 15vw, 6rem))',
-    fonts: {
-      rank: { min: '0.85rem', scale: 0.22, max: '1.15rem' },
-      corner: { min: '1.4rem', scale: 0.32, max: '1.9rem' },
-      center: { min: '2.3rem', scale: 0.52, max: '3.5rem' },
-    },
-  },
+const sizeStyles = {
+  small: 'w-14 h-20 text-xs sm:w-16 sm:h-24 sm:text-sm',
+  medium: 'w-16 h-24 text-sm sm:w-20 sm:h-32 sm:text-base',
+  large: 'w-20 h-[8.5rem] text-base sm:w-24 sm:h-36 sm:text-lg',
 } as const;
 
-type CardCSSProperties = CSSProperties & {
-  '--card-width'?: string;
-};
+const cornerSymbolStyles = {
+  small: 'text-lg sm:text-xl',
+  medium: 'text-xl sm:text-2xl',
+  large: 'text-2xl sm:text-3xl',
+} as const;
 
-function responsiveFont({ min, scale, max }: ResponsiveFont) {
-  return `clamp(${min}, calc(var(--card-width) * ${scale}), ${max})`;
-}
+const centerSymbolStyles = {
+  small: 'text-2xl sm:text-3xl',
+  medium: 'text-3xl sm:text-4xl',
+  large: 'text-4xl sm:text-5xl',
+} as const;
 
 export function Card({
   card,
@@ -100,35 +54,16 @@ export function Card({
   size = 'medium',
   selected = false
 }: CardProps) {
-  const sizeConfig = sizeStyles[size];
-  const baseCardStyle: CardCSSProperties = {
-    width: sizeConfig.width,
-    height: sizeConfig.height,
-    padding: sizeConfig.padding,
-    borderRadius: sizeConfig.borderRadius,
-    '--card-width': sizeConfig.width,
-  };
-
-  const rankFontSize = responsiveFont(sizeConfig.fonts.rank);
-  const cornerFontSize = responsiveFont(sizeConfig.fonts.corner);
-  const centerFontSize = responsiveFont(sizeConfig.fonts.center);
-
   if (faceDown) {
     return (
-      <div
-        className={`bg-blue-900 border-2 border-blue-950 flex items-center justify-center shadow-lg cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105`}
+      <div 
+        className={`${sizeStyles[size]} bg-blue-900 rounded-lg border-2 border-blue-950 flex items-center justify-center shadow-lg cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105`}
         onClick={!disabled ? onClick : undefined}
         role="button"
         aria-label="Face down card"
         tabIndex={!disabled && onClick ? 0 : -1}
-        style={baseCardStyle}
       >
-        <div
-          className="text-blue-800"
-          style={{ fontSize: centerFontSize }}
-        >
-          🂠
-        </div>
+        <div className="text-4xl text-blue-800">🂠</div>
       </div>
     );
   }
@@ -136,12 +71,14 @@ export function Card({
   const suitSymbol = suitSymbols[card.suit];
   const suitColor = suitColors[card.suit];
   const ariaLabel = `${card.rank} of ${card.suit}${selected ? ' (selected)' : ''}${disabled ? ' (disabled)' : ''}`;
+  const cornerSymbolClass = cornerSymbolStyles[size];
+  const centerSymbolClass = centerSymbolStyles[size];
   const interactionClasses = !disabled && onClick
     ? 'cursor-pointer hover:shadow-2xl hover:-translate-y-3 hover:scale-105 active:scale-95'
     : disabled
       ? 'cursor-not-allowed'
       : 'cursor-default';
-
+  
   return (
     <button
       onClick={onClick}
@@ -149,8 +86,9 @@ export function Card({
       aria-label={ariaLabel}
       aria-pressed={selected}
       className={`
+        ${sizeStyles[size]}
         bg-white rounded-lg border-2 shadow-lg
-        flex flex-col items-center justify-between
+        flex flex-col items-center justify-between p-2 sm:p-3
         transition-all duration-300 ease-out
         transform-gpu
         ${interactionClasses}
@@ -159,29 +97,19 @@ export function Card({
         focus:outline-none focus:ring-4 focus:ring-blue-300
         animate-in fade-in slide-in-from-bottom-4 duration-500
       `}
-      style={baseCardStyle}
     >
-      <div
-        className={`${suitColor} font-bold flex items-center`}
-        style={{ fontSize: rankFontSize, gap: '0.2em' }}
-      >
+      <div className={`${suitColor} font-bold flex items-center gap-1`}>
         <span>{card.rank}</span>
-        <span style={{ fontSize: cornerFontSize }}>{suitSymbol}</span>
+        <span className={cornerSymbolClass}>{suitSymbol}</span>
       </div>
 
-      <div
-        className={suitColor}
-        style={{ fontSize: centerFontSize }}
-      >
+      <div className={`${suitColor} ${centerSymbolClass}`}>
         {suitSymbol}
       </div>
 
-      <div
-        className={`${suitColor} font-bold flex items-center rotate-180`}
-        style={{ fontSize: rankFontSize, gap: '0.2em' }}
-      >
+      <div className={`${suitColor} font-bold flex items-center gap-1 rotate-180`}>
         <span>{card.rank}</span>
-        <span style={{ fontSize: cornerFontSize }}>{suitSymbol}</span>
+        <span className={cornerSymbolClass}>{suitSymbol}</span>
       </div>
     </button>
   );

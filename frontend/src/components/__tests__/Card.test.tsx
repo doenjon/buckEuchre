@@ -64,35 +64,30 @@ describe('Card Component', () => {
     });
 
     it('should render with correct size styles', () => {
-      const expectedStyles = {
-        small: {
-          width: 'clamp(3.25rem, 11vw, 3.875rem)',
-          height: 'calc(1.45 * clamp(3.25rem, 11vw, 3.875rem))',
-          padding: 'clamp(0.35rem, 1.5vw, 0.5rem)',
-        },
-        medium: {
-          width: 'clamp(3.75rem, 12.5vw, 4.75rem)',
-          height: 'calc(1.45 * clamp(3.75rem, 12.5vw, 4.75rem))',
-          padding: 'clamp(0.45rem, 1.65vw, 0.7rem)',
-        },
-        large: {
-          width: 'clamp(4.25rem, 15vw, 6rem)',
-          height: 'calc(1.45 * clamp(4.25rem, 15vw, 6rem))',
-          padding: 'clamp(0.55rem, 1.85vw, 0.9rem)',
-        },
-      } as const;
-
       const { rerender } = render(<Card card={mockCard} size="small" />);
       let button = screen.getByRole('button');
-      expect(button).toHaveStyle(expectedStyles.small);
-
+      expect(button.className).toContain('w-14');
+      expect(button.className).toContain('h-20');
+      expect(button.className).toContain('text-xs');
+      expect(button.className).toContain('sm:w-16');
+      expect(button.className).toContain('sm:h-24');
+      expect(button.className).toContain('sm:text-sm');
+      
       rerender(<Card card={mockCard} size="medium" />);
       button = screen.getByRole('button');
-      expect(button).toHaveStyle(expectedStyles.medium);
-
+      expect(button.className).toContain('w-16');
+      expect(button.className).toContain('h-24');
+      expect(button.className).toContain('sm:w-20');
+      expect(button.className).toContain('sm:h-32');
+      expect(button.className).toContain('sm:text-base');
+      
       rerender(<Card card={mockCard} size="large" />);
       button = screen.getByRole('button');
-      expect(button).toHaveStyle(expectedStyles.large);
+      expect(button.className).toContain('w-20');
+      expect(button.className).toContain('h-[8.5rem]');
+      expect(button.className).toContain('sm:w-24');
+      expect(button.className).toContain('sm:h-36');
+      expect(button.className).toContain('sm:text-lg');
     });
   });
 
