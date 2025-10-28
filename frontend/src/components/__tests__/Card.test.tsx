@@ -64,17 +64,35 @@ describe('Card Component', () => {
     });
 
     it('should render with correct size styles', () => {
+      const expectedStyles = {
+        small: {
+          width: 'clamp(3.25rem, 11vw, 3.875rem)',
+          height: 'calc(1.45 * clamp(3.25rem, 11vw, 3.875rem))',
+          padding: 'clamp(0.35rem, 1.5vw, 0.5rem)',
+        },
+        medium: {
+          width: 'clamp(3.75rem, 12.5vw, 4.75rem)',
+          height: 'calc(1.45 * clamp(3.75rem, 12.5vw, 4.75rem))',
+          padding: 'clamp(0.45rem, 1.65vw, 0.7rem)',
+        },
+        large: {
+          width: 'clamp(4.25rem, 15vw, 6rem)',
+          height: 'calc(1.45 * clamp(4.25rem, 15vw, 6rem))',
+          padding: 'clamp(0.55rem, 1.85vw, 0.9rem)',
+        },
+      } as const;
+
       const { rerender } = render(<Card card={mockCard} size="small" />);
       let button = screen.getByRole('button');
-      expect(button.className).toContain('w-16 h-24 text-sm');
-      
+      expect(button).toHaveStyle(expectedStyles.small);
+
       rerender(<Card card={mockCard} size="medium" />);
       button = screen.getByRole('button');
-      expect(button.className).toContain('w-20 h-32 text-base');
-      
+      expect(button).toHaveStyle(expectedStyles.medium);
+
       rerender(<Card card={mockCard} size="large" />);
       button = screen.getByRole('button');
-      expect(button.className).toContain('w-24 h-36 text-lg');
+      expect(button).toHaveStyle(expectedStyles.large);
     });
   });
 
