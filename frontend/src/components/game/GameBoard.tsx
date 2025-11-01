@@ -440,14 +440,14 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 trumpSuit={gameState.trumpSuit}
               />
             ) : (
-              <>
+              <div className="text-center">
                 <p className="text-base md:text-lg font-semibold text-white/90">
                   You have folded this round
                 </p>
                 <p className="mt-2 text-xs md:text-sm text-emerald-200/70">
                   Sit back and watch the remaining tricks play out.
                 </p>
-              </>
+              </div>
             )}
 
             {showNextHandPopup && (
