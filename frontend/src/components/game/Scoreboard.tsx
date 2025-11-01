@@ -76,22 +76,18 @@ export function Scoreboard({
         )}
       >
         <div className="grid grid-cols-4 gap-1.5" role="list" aria-label="Player scores">
-          {entries.map(({ player, index, isCurrentTurn, hasFolded }) => (
+          {entries.map(({ player, index, hasFolded }) => (
             <div
               key={player.id}
               className={cn(
                 'flex flex-col items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 p-1.5 text-center transition-colors duration-200',
-                isCurrentTurn && 'ring-1 ring-emerald-400/70 bg-emerald-500/10',
                 hasFolded && 'opacity-50'
               )}
               role="listitem"
               aria-label={`${player.name}, score ${player.score}`}
             >
               <span 
-                className={cn(
-                  'text-[11px] md:text-xs font-semibold truncate max-w-full px-0.5',
-                  isCurrentTurn ? 'text-emerald-100' : 'text-white'
-                )} 
+                className="text-[11px] md:text-xs font-semibold truncate max-w-full px-0.5 text-white"
                 title={player.name || `Player ${index + 1}`}
               >
                 {player.name || `P${index + 1}`}
@@ -233,7 +229,7 @@ export function Scoreboard({
                       )}
                     </div>
                     <div className="text-[10px] uppercase tracking-[0.3em] text-emerald-200/60">
-                      Seat {index + 1} • Tricks {player.tricksTaken}
+                      Seat {index + 1} ? Tricks {player.tricksTaken}
                     </div>
                     {isLeader && player.score <= 0 && (
                       <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-200/80">
