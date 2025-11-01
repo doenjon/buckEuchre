@@ -13,7 +13,14 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('24h'),
   
   // Server
-  PORT: z.string().regex(/^\d+$/, 'PORT must be a number').transform(Number).default('3000'),
+  PORT: z.preprocess(
+    (val) => {
+      if (typeof val === 'number') return val;
+      if (typeof val === 'string') return val.trim();
+      return val;
+    },
+    z.string().regex(/^\d+$/, 'PORT must be a number').transform(Number)
+  ).default('3000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   
   // CORS
