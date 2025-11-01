@@ -373,7 +373,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
               })()}
 
               {/* Desktop: Oval table - full width with margins for side labels */}
-              <div className="absolute left-16 right-16 top-1/2 -translate-y-1/2 aspect-[1.6/1] max-h-[min(60vh,20rem)] flex items-center justify-center">
+              <div className="absolute left-16 right-16 top-1/2 -translate-y-1/2 aspect-[2.2/1] max-h-[min(60vh,20rem)] flex items-center justify-center">
                 <CurrentTrick
                   trick={displayTrick}
                   players={players}
@@ -384,7 +384,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             </div>
 
             {/* Mobile: Oval table - full width, scaled to fit */}
-            <div className="md:hidden w-full h-full max-w-full max-h-full aspect-[1.6/1] flex items-center justify-center" style={{ maxHeight: '100%', maxWidth: '100%' }}>
+            <div className="md:hidden w-full h-full max-w-full max-h-full aspect-[2.2/1] flex items-center justify-center" style={{ maxHeight: '100%', maxWidth: '100%' }}>
               <CurrentTrick
                 trick={displayTrick}
                 players={players}
