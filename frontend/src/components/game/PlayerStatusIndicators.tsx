@@ -50,7 +50,6 @@ export function PlayerStatusIndicators({
   const tricksWon = player?.tricksTaken ?? 0;
   
   const iconSize = size === 'sm' ? 'h-2.5 w-2.5' : 'h-3 w-3';
-  const textSize = size === 'sm' ? 'text-[8px]' : 'text-[9px]';
   
   // Get suit symbol for display
   const getSuitSymbol = (suit: Suit | null) => {

@@ -424,7 +424,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
           {/* Mobile: Current player label above hand */}
           <div className="md:hidden px-2 pt-1 pb-1 flex-shrink-0">
             {(() => {
-              const absolutePosition = myPosition;
+              const absolutePosition = myPosition as 0 | 1 | 2 | 3;
               const isCurrentTurn = absolutePosition === trickHighlightPosition;
               const hasCardInTrick = displayTrick?.cards.some(c => c.playerPosition === absolutePosition) ?? false;
 
