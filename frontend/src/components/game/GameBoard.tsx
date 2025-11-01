@@ -116,7 +116,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
   if (!myPlayer) {
     return (
       <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-slate-200 backdrop-blur">
-        <p className="text-sm font-medium tracking-wide text-emerald-200/80">
+        <p className="text-base font-medium tracking-wide text-emerald-200/80">
           Locating your seat at the table…
         </p>
       </div>
@@ -212,11 +212,11 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             variant="outline"
             size="sm"
             onClick={() => setShowScoreboard(!showScoreboard)}
-            className="rounded-full border-white/20 bg-white/5 text-emerald-200 hover:bg-white/10 backdrop-blur text-[10px] px-2 py-1 shadow-lg"
+            className="rounded-full border-white/20 bg-white/5 text-emerald-200 hover:bg-white/10 backdrop-blur text-xs px-2 py-1 shadow-lg"
             aria-label={showScoreboard ? 'Hide scoreboard' : 'Show scoreboard'}
           >
             <Trophy className="h-3 w-3 mr-1" />
-            <span className="text-[9px]">Scores</span>
+            <span className="text-xs">Scores</span>
           </Button>
         </div>
 
@@ -228,7 +228,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             <div className="pointer-events-none fixed inset-x-0 top-16 z-30 flex items-start justify-center px-4 pt-2" style={{ opacity: 1, filter: 'none', isolation: 'isolate' }}>
               <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-slate-950 p-3 text-slate-100 shadow-lg" style={{ opacity: 1, filter: 'none' }}>
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-sm font-semibold text-white">Table Tally</h2>
+                  <h2 className="text-base font-semibold text-white">Table Tally</h2>
                   <Button
                     type="button"
                     variant="ghost"
@@ -255,8 +255,38 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
           )}
         </div>
 
-        {/* Desktop Sidebar - Visible sidebar like before */}
+        {/* Desktop Sidebar - Visible sidebar with info panel */}
         <aside className="hidden md:flex md:flex-col gap-6 md:order-1 py-4 lg:py-6">
+          {/* Desktop Info Panel - shows trump, bidder, bid amount, etc. */}
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-slate-100 shadow-lg backdrop-blur">
+            <div className="space-y-3">
+              {gameState.trumpSuit && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300">TRUMP:</span>
+                  <span className={`text-xl font-bold ${gameState.trumpSuit === 'HEARTS' || gameState.trumpSuit === 'DIAMONDS' ? 'text-red-400' : 'text-gray-300'}`}>
+                    {gameState.trumpSuit === 'SPADES' ? '♠' : gameState.trumpSuit === 'HEARTS' ? '♥' : gameState.trumpSuit === 'DIAMONDS' ? '♦' : '♣'}
+                  </span>
+                </div>
+              )}
+              {gameState.winningBidderPosition !== null && gameState.highestBid !== null && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300">BID:</span>
+                  <span className="text-base font-bold text-white">{gameState.highestBid}</span>
+                  <span className="text-xs text-emerald-200/70">by</span>
+                  <span className="text-sm font-medium text-white">
+                    {players.find(p => p.position === gameState.winningBidderPosition)?.name || `P${gameState.winningBidderPosition}`}
+                  </span>
+                </div>
+              )}
+              {phase === 'BIDDING' && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300">PHASE:</span>
+                  <span className="text-sm font-medium text-white">Bidding</span>
+                </div>
+              )}
+            </div>
+          </div>
+          
           <Scoreboard
             players={players}
             currentPlayerPosition={activePosition}
@@ -274,9 +304,47 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
 
 
           {/* Mobile: Top bar with opponents | Desktop: Labels around table */}
-          
+
+          {/* Mobile: Info Bar - floating just above player names */}
+          <div className="md:hidden px-2 pt-10 pb-1.5 flex-shrink-0">
+            <div className="w-full rounded-lg px-3 py-2 bg-white/15 border border-white/20 shadow-md backdrop-blur">
+              <div className="flex items-center justify-center gap-2 text-xs text-emerald-200/90">
+                {gameState.trumpSuit && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-emerald-300 font-semibold">TRUMP:</span>
+                    <span className={`font-bold ${gameState.trumpSuit === 'HEARTS' || gameState.trumpSuit === 'DIAMONDS' ? 'text-red-400' : 'text-gray-300'}`}>
+                      {gameState.trumpSuit === 'SPADES' ? '♠' : gameState.trumpSuit === 'HEARTS' ? '♥' : gameState.trumpSuit === 'DIAMONDS' ? '♦' : '♣'}
+                    </span>
+                  </div>
+                )}
+                {gameState.winningBidderPosition !== null && gameState.highestBid !== null && (
+                  <>
+                    {gameState.trumpSuit && <span className="text-emerald-200/50">•</span>}
+                    <div className="flex items-center gap-1">
+                      <span className="text-emerald-300 font-semibold">BID:</span>
+                      <span className="text-white font-bold">{gameState.highestBid}</span>
+                      <span className="text-emerald-200/70">by</span>
+                      <span className="text-white font-medium">
+                        {players.find(p => p.position === gameState.winningBidderPosition)?.name || `P${gameState.winningBidderPosition}`}
+                      </span>
+                    </div>
+                  </>
+                )}
+                {phase === 'BIDDING' && (
+                  <>
+                    {(gameState.trumpSuit || (gameState.winningBidderPosition !== null && gameState.highestBid !== null)) && <span className="text-emerald-200/50">•</span>}
+                    <div className="flex items-center gap-1">
+                      <span className="text-emerald-300 font-semibold">PHASE:</span>
+                      <span className="text-white font-medium">Bidding</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Mobile: Opponents bar at top - below score button */}
-          <div className="md:hidden px-2 pt-10 pb-1 flex-shrink-0">
+          <div className="md:hidden px-2 pb-1 flex-shrink-0">
             <div className="flex items-center justify-between gap-1">
               {[1, 2, 3].map((offset) => {
                 const absolutePosition = ((myPosition + offset) % 4) as 0 | 1 | 2 | 3;
@@ -287,7 +355,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 return (
                   <div key={offset} className="flex-1 flex flex-col items-center gap-0.5">
                     <div className={`
-                      w-full rounded-lg px-2 py-1 text-[10px] font-medium uppercase tracking-[0.15em] text-center whitespace-nowrap overflow-hidden text-ellipsis
+                      w-full rounded-lg px-2 py-1 text-xs font-medium uppercase tracking-[0.15em] text-center whitespace-nowrap overflow-hidden text-ellipsis
                       ${isCurrentTurn ? 'bg-emerald-400 text-slate-900 ring-1 ring-emerald-300' : hasCardInTrick ? 'bg-white/20 text-emerald-100' : 'bg-white/10 text-emerald-200/70'}
                     `} title={player?.name || `Player ${absolutePosition + 1}`}>
                       {player?.name || `P${absolutePosition}`}
@@ -392,7 +460,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
               })()}
 
               {/* Desktop: Stadium-shaped poker table - full width with margins for side labels */}
-              <div className="absolute left-16 right-16 top-1/2 -translate-y-1/2 aspect-[2.2/1] max-h-[min(60vh,20rem)] flex items-center justify-center">
+              <div className="absolute left-16 right-16 top-1/2 -translate-y-1/2 aspect-[1.5/1] flex items-center justify-center">
                 <CurrentTrick
                   trick={displayTrick}
                   players={players}
@@ -414,7 +482,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
 
             {inlineActionPanel && (
               <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4 md:px-6 lg:px-8" style={{ opacity: 1, filter: 'none', isolation: 'isolate' }}>
-                <div className="pointer-events-auto w-full max-w-md rounded-2xl md:rounded-3xl border border-white/10 bg-slate-950 p-5 md:p-6 lg:p-8 text-slate-100 shadow-lg md:shadow-[0_35px_80px_-35px_rgba(16,185,129,0.9)]" style={{ opacity: 1, filter: 'none' }}>
+                <div className={`pointer-events-auto w-full ${gameState.phase === 'DECLARING_TRUMP' ? 'max-w-xs' : 'max-w-md'} rounded-2xl md:rounded-3xl border border-white/10 bg-slate-950 ${gameState.phase === 'DECLARING_TRUMP' ? 'p-[0.875rem] md:p-4 lg:p-[1.375rem]' : 'p-5 md:p-6 lg:p-8'} text-slate-100 shadow-lg md:shadow-[0_35px_80px_-35px_rgba(16,185,129,0.9)]`} style={{ opacity: 1, filter: 'none' }}>
                   {inlineActionPanel}
                 </div>
               </div>
@@ -431,7 +499,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
               return (
                 <div className="flex flex-col items-center gap-0.5">
                   <div className={`
-                    w-full max-w-[200px] rounded-lg px-3 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-center
+                    w-full max-w-[200px] rounded-lg px-3 py-1.5 text-sm font-medium uppercase tracking-[0.2em] text-center
                     ${isCurrentTurn ? 'bg-emerald-400 text-slate-900 ring-1 ring-emerald-300' : hasCardInTrick ? 'bg-white/20 text-emerald-100' : 'bg-white/10 text-emerald-200/70'}
                   `}>
                     {myPlayer?.name || `P${absolutePosition}`}
@@ -468,7 +536,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 <p className="text-base md:text-lg font-semibold text-white/90">
                   You have folded this round
                 </p>
-                <p className="mt-2 text-xs md:text-sm text-emerald-200/70">
+                <p className="mt-2 text-base md:text-sm text-emerald-200/70">
                   Sit back and watch the remaining tricks play out.
                 </p>
               </div>
@@ -477,11 +545,11 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             {showNextHandPopup && (
               <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4 md:px-6 lg:px-8" style={{ opacity: 1, filter: 'none', isolation: 'isolate' }}>
                 <div className="pointer-events-auto flex w-full max-w-xs flex-col items-center gap-3 md:gap-4 rounded-2xl border border-white/15 bg-slate-950 px-5 md:px-6 py-4 md:py-5 text-center text-slate-100 shadow-lg md:shadow-[0_35px_80px_-35px_rgba(16,185,129,0.9)]" style={{ opacity: 1, filter: 'none' }}>
-                  <p className="text-[0.65rem] md:text-[0.7rem] font-semibold uppercase tracking-[0.3em] md:tracking-[0.35em] text-emerald-200/70">
+                  <p className="text-sm md:text-[0.7rem] font-semibold uppercase tracking-[0.3em] md:tracking-[0.35em] text-emerald-200/70">
                     Round complete
                   </p>
                   <div className="flex w-full items-center justify-between gap-2 md:gap-3">
-                    <p className="text-left text-xs md:text-sm text-white" aria-live="polite">
+                      <p className="text-left text-base md:text-sm text-white" aria-live="polite">
                       Next hand in{' '}
                       <span className="font-semibold text-emerald-200">
                         {nextHandCountdown ?? '—'}s
@@ -507,13 +575,13 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
               <h2 className="text-xl md:text-2xl font-semibold uppercase tracking-[0.35em] md:tracking-[0.4em] text-emerald-100">
                 Game complete
               </h2>
-              <p className="mt-2 md:mt-3 text-base md:text-lg text-white">
+              <p className="mt-2 md:mt-3 text-lg md:text-lg text-white">
                 Winner · <span className="font-semibold">{getPlayerByPosition(gameState.winner)?.name}</span>
               </p>
-              <p className="mt-1 text-xs md:text-sm text-emerald-200/70">
+              <p className="mt-1 text-base md:text-sm text-emerald-200/70">
                 Final score {getPlayerByPosition(gameState.winner)?.score}
               </p>
-              <p className="mt-4 md:mt-6 text-xs md:text-sm text-emerald-100/80">
+              <p className="mt-4 md:mt-6 text-base md:text-sm text-emerald-100/80">
                 Ready for another showdown? Start a fresh table or head back to the lobby to celebrate.
               </p>
               <div className="mt-4 md:mt-6 flex flex-col items-center justify-center gap-2 md:gap-3 sm:flex-row">
@@ -548,7 +616,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 </Button>
               </div>
               {actionError && (
-                <p className="mt-3 md:mt-4 text-xs md:text-sm text-rose-200/80">{actionError}</p>
+                <p className="mt-3 md:mt-4 text-base md:text-sm text-rose-200/80">{actionError}</p>
               )}
             </div>
           )}

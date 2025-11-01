@@ -3,6 +3,7 @@
  * @description Display cards played in current trick
  */
 
+import { useRef, useLayoutEffect, useState } from 'react';
 import type { Trick, Player } from '@buck-euchre/shared';
 import { Card } from './Card';
 
@@ -15,30 +16,72 @@ export interface CurrentTrickProps {
 
 export function CurrentTrick({
   trick,
+  players,
+  currentPlayerPosition,
   myPosition
 }: CurrentTrickProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [borderRadius, setBorderRadius] = useState<string>('9999px');
+
+  useLayoutEffect(() => {
+    const updateBorderRadius = () => {
+      if (containerRef.current && window.innerWidth < 768) {
+        const height = containerRef.current.offsetHeight;
+        // Use 30% of height instead of 50% to create squished elliptical ends (not perfect semicircles)
+        // This creates a more pill-shaped stadium look on mobile
+        const radius = height * 0.3; // Squished curve, not a semicircle
+        setBorderRadius(`${radius}px`);
+        containerRef.current.style.borderRadius = `${radius}px`;
+      } else {
+        setBorderRadius('9999px');
+        if (containerRef.current) {
+          containerRef.current.style.borderRadius = '9999px';
+        }
+      }
+    };
+
+    const resizeObserver = new ResizeObserver(updateBorderRadius);
+    const currentRef = containerRef.current;
+    
+    if (currentRef) {
+      resizeObserver.observe(currentRef);
+      setTimeout(updateBorderRadius, 0);
+    }
+
+    window.addEventListener('resize', updateBorderRadius);
+
+    return () => {
+      window.removeEventListener('resize', updateBorderRadius);
+      resizeObserver.disconnect();
+    };
+  }, [trick]);
+
   if (!trick || trick.cards.length === 0) {
     return (
       <div
-        className="flex w-full h-full items-center justify-center rounded-[25%] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 shadow-lg md:shadow-2xl backdrop-blur"
+        ref={containerRef}
+        className="flex w-full h-full items-center justify-center border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 shadow-lg md:shadow-2xl backdrop-blur"
+        style={{ borderRadius }}
         role="region"
-        aria-label="Current trick area - waiting for lead card"
+        aria-label="Current trick area"
       />
     );
   }
 
-  // Arrange cards around the stadium-shaped poker table
-  // Cards positioned at edges of table, accounting for card size
+  // Arrange cards around the center with the local player seated at the bottom
   const cardPositions = [
-    'bottom-[5%] left-1/2 -translate-x-1/2', // South (you) - slightly above bottom edge
-    'left-[5%] top-1/2 -translate-y-1/2', // Seat to your left - slightly in from left edge
-    'top-[5%] left-1/2 -translate-x-1/2', // Across from you - slightly below top edge
-    'right-[5%] top-1/2 -translate-y-1/2' // Seat to your right - slightly in from right edge
+    'bottom-10 left-1/2 -translate-x-1/2 sm:bottom-16', // South (you)
+    'left-8 top-1/2 -translate-y-1/2 sm:left-16', // Seat to your left
+    'top-10 left-1/2 -translate-x-1/2 sm:top-16', // Across from you
+    'right-8 top-1/2 -translate-y-1/2 sm:right-16' // Seat to your right
   ];
+
 
   return (
     <div
-      className="relative flex w-full h-full items-center justify-center overflow-visible rounded-[25%] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 shadow-lg md:shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] backdrop-blur"
+      ref={containerRef}
+      className="relative flex w-full h-full items-center justify-center overflow-visible border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 shadow-lg md:shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] backdrop-blur"
+      style={{ borderRadius }}
       role="region"
       aria-label={`Trick ${trick.number}, ${trick.cards.length} of 4 cards played`}
     >
@@ -57,12 +100,12 @@ export function CurrentTrick({
             className={`
               absolute ${positionClass} z-10
               flex flex-col items-center transition-transform duration-500
-              ${isWinner ? 'scale-110 drop-shadow-[0_10px_20px_rgba(250,204,21,0.35)]' : ''}
+              ${isWinner ? 'scale-105 drop-shadow-[0_15px_25px_rgba(250,204,21,0.35)]' : ''}
             `}
-            style={{ animationDelay: `${index * 150}ms`, opacity: 1 }}
+            style={{ animationDelay: `${index * 150}ms` }}
           >
-            <div className={`${isWinner ? 'rounded-lg md:rounded-2xl ring-2 md:ring-4 ring-emerald-300/60' : 'drop-shadow-[0_15px_25px_rgba(16,185,129,0.35)]'}`} style={{ opacity: 1 }}>
-              <Card card={playedCard.card} size="small" />
+            <div className={`${isWinner ? 'rounded-2xl ring-4 ring-emerald-300/60' : 'drop-shadow-[0_20px_32px_rgba(16,185,129,0.35)]'}`}>
+              <Card card={playedCard.card} size="large" />
             </div>
           </div>
         );

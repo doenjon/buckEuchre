@@ -5,7 +5,7 @@
 
 import { useMemo, useEffect, useState } from 'react';
 import { Crown } from 'lucide-react';
-import type { GameState, PlayerPosition, Suit } from '@buck-euchre/shared';
+import type { GameState, PlayerPosition } from '@buck-euchre/shared';
 
 interface PlayerStatusIndicatorsProps {
   gameState: GameState;
@@ -53,38 +53,17 @@ export function PlayerStatusIndicators({
 
   const isLeader = currentLeaders.includes(playerPosition);
   const isDealer = dealerPosition === playerPosition;
-  const isBidWinner = winningBidderPosition === playerPosition && 
-                      phase !== 'WAITING_FOR_PLAYERS' && 
-                      phase !== 'DEALING';
   const tricksWon = player?.tricksTaken ?? 0;
   const hasFolded = player?.folded === true;
   
   const iconSize = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4';
-  
-  // Get suit symbol for display
-  const getSuitSymbol = (suit: Suit | null) => {
-    if (!suit) return '';
-    switch (suit) {
-      case 'SPADES': return '♠';
-      case 'HEARTS': return '♥';
-      case 'DIAMONDS': return '♦';
-      case 'CLUBS': return '♣';
-      default: return '';
-    }
-  };
-  
-  // Get suit color
-  const getSuitColor = (suit: Suit | null) => {
-    if (!suit) return 'text-white';
-    return (suit === 'HEARTS' || suit === 'DIAMONDS') ? 'text-red-500' : 'text-slate-900';
-  };
   
   // Determine if we should show the trick counter
   // Show during PLAYING and ROUND_OVER phases (but not for folded players)
   const shouldShowTrickCounter = !hasFolded && (phase === 'PLAYING' || phase === 'ROUND_OVER');
   
   // Don't show anything if no indicators are active
-  if (!isLeader && !isDealer && !isBidWinner && !shouldShowTrickCounter) {
+  if (!isLeader && !isDealer && !shouldShowTrickCounter) {
     return <div className="h-3 w-full" />;
   }
 
@@ -116,23 +95,6 @@ export function PlayerStatusIndicators({
           aria-label="Dealer"
         >
           <span className="text-[14px] leading-none" style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.3))' }}>🃏</span>
-        </div>
-      )}
-
-      {/* Bid Winner - Trump Suit */}
-      {isBidWinner && gameState.trumpSuit && (
-        <div 
-          className="flex items-center gap-0.5 animate-fade-in"
-          title={`Won bid - ${gameState.trumpSuit.toLowerCase()} is trump`}
-          role="img"
-          aria-label={`Won bidding with ${gameState.trumpSuit.toLowerCase()} as trump`}
-        >
-          <span 
-            className={`text-[11px] font-bold leading-none ${getSuitColor(gameState.trumpSuit)}`}
-            style={{ textShadow: '0 0 3px rgba(255,255,255,0.5)' }}
-          >
-            {getSuitSymbol(gameState.trumpSuit)}
-          </span>
         </div>
       )}
 

@@ -30,9 +30,9 @@ const suitColors = {
 
 // Calculate text sizes as percentage of card width for proportional scaling
 const sizeStyles = {
-  small: 'w-[min(calc((100vw-3rem)/7*1.1),4rem)] h-[calc(min(calc((100vw-3rem)/7*1.1),4rem)*1.5)] md:w-16 md:h-24 lg:w-20 lg:h-[7.5rem]',
-  medium: 'w-[min(calc((100vw-3rem)/6),4rem)] h-[calc(min(calc((100vw-3rem)/6),4rem)*1.5)] md:w-16 md:h-24',
-  large: 'w-[min(calc((100vw-3rem)/5.5*1.05),4.725rem)] h-[calc(min(calc((100vw-3rem)/5.5*1.05),4.725rem)*1.5)] md:w-[5.25rem] md:h-[7.875rem]',
+  small: 'w-[min(calc((100vw-3rem)/6.2*1.1),4.5rem)] h-[calc(min(calc((100vw-3rem)/6.2*1.1),4.5rem)*1.5)] md:w-[4.5rem] md:h-[6.75rem] lg:w-[5.5rem] lg:h-[8.25rem]',
+  medium: 'w-[min(calc((100vw-3rem)/5.3),4.5rem)] h-[calc(min(calc((100vw-3rem)/5.3),4.5rem)*1.5)] md:w-[4.5rem] md:h-[6.75rem]',
+  large: 'w-[min(calc((100vw-3rem)/4.9*1.05),5.3rem)] h-[calc(min(calc((100vw-3rem)/4.9*1.05),5.3rem)*1.5)] md:w-[4.5rem] md:h-[6.75rem] lg:w-[4.5rem] lg:h-[6.75rem]',
 } as const;
 
 // Text sizes as percentage of card width - scales proportionally
