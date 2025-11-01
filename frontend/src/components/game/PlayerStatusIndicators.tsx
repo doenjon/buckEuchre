@@ -65,10 +65,10 @@ export function PlayerStatusIndicators({
   const getSuitSymbol = (suit: Suit | null) => {
     if (!suit) return '';
     switch (suit) {
-      case 'SPADES': return '?';
-      case 'HEARTS': return '?';
-      case 'DIAMONDS': return '?';
-      case 'CLUBS': return '?';
+      case 'SPADES': return '♠';
+      case 'HEARTS': return '♥';
+      case 'DIAMONDS': return '♦';
+      case 'CLUBS': return '♣';
       default: return '';
     }
   };
@@ -115,7 +115,7 @@ export function PlayerStatusIndicators({
           role="img"
           aria-label="Dealer"
         >
-          <span className="text-[14px] leading-none" style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.3))' }}>??</span>
+          <span className="text-[14px] leading-none" style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.3))' }}>🃏</span>
         </div>
       )}
 
