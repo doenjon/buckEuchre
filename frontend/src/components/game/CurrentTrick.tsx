@@ -20,7 +20,7 @@ export function CurrentTrick({
   if (!trick || trick.cards.length === 0) {
     return (
       <div
-        className="flex w-full h-full items-center justify-center rounded-[30%] md:rounded-full border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 shadow-lg md:shadow-2xl backdrop-blur"
+        className="flex w-full h-full items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 shadow-lg md:shadow-2xl backdrop-blur"
         role="region"
         aria-label="Current trick area - waiting for lead card"
       />
@@ -38,7 +38,7 @@ export function CurrentTrick({
 
   return (
     <div
-      className="relative flex w-full h-full items-center justify-center overflow-visible rounded-[30%] md:rounded-full border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 shadow-lg md:shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] backdrop-blur"
+      className="relative flex w-full h-full items-center justify-center overflow-visible rounded-full border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 shadow-lg md:shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] backdrop-blur"
       role="region"
       aria-label={`Trick ${trick.number}, ${trick.cards.length} of 4 cards played`}
     >

@@ -26,30 +26,37 @@ export function PlayerStatusIndicators({
   const [previousLeader, setPreviousLeader] = useState<PlayerPosition | null>(null);
   const [isLeaderTransitioning, setIsLeaderTransitioning] = useState(false);
 
-  // Determine current leader (lowest score)
-  const currentLeader = useMemo(() => {
+  // Determine current leader(s) - all players tied for lowest score
+  // Don't show crown on first hand (when all scores are 0)
+  const currentLeaders = useMemo(() => {
     const minScore = Math.min(...players.map(p => p.score));
-    return players.find(p => p.score === minScore)?.position ?? null;
+    // Don't show crown if all players have 0 score (first hand)
+    if (minScore === 0 && players.every(p => p.score === 0)) {
+      return [];
+    }
+    return players.filter(p => p.score === minScore).map(p => p.position);
   }, [players]);
 
   // Detect leader change and trigger animation
   useEffect(() => {
-    if (previousLeader !== null && currentLeader !== null && previousLeader !== currentLeader) {
+    const currentLeaderStr = currentLeaders.sort().join(',');
+    const prevLeaderStr = previousLeader ? previousLeader.toString() : '';
+    if (prevLeaderStr && currentLeaderStr && prevLeaderStr !== currentLeaderStr) {
       setIsLeaderTransitioning(true);
       const timer = setTimeout(() => setIsLeaderTransitioning(false), 600);
       return () => clearTimeout(timer);
     }
-    setPreviousLeader(currentLeader);
-  }, [currentLeader, previousLeader]);
+    setPreviousLeader(currentLeaders.length > 0 ? currentLeaders[0] : null);
+  }, [currentLeaders, previousLeader]);
 
-  const isLeader = currentLeader === playerPosition;
+  const isLeader = currentLeaders.includes(playerPosition);
   const isDealer = dealerPosition === playerPosition;
   const isBidWinner = winningBidderPosition === playerPosition && 
                       phase !== 'WAITING_FOR_PLAYERS' && 
                       phase !== 'DEALING';
   const tricksWon = player?.tricksTaken ?? 0;
   
-  const iconSize = size === 'sm' ? 'h-2.5 w-2.5' : 'h-3 w-3';
+  const iconSize = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4';
   
   // Get suit symbol for display
   const getSuitSymbol = (suit: Suit | null) => {
@@ -70,7 +77,7 @@ export function PlayerStatusIndicators({
   };
   
   // Don't show anything if no indicators are active
-  if (!isLeader && !isDealer && !isBidWinner && tricksWon === 0) {
+  if (!isLeader && !isDealer && !isBidWinner && tricksWon === 0 && phase !== 'PLAYING') {
     return <div className="h-3 w-full" />;
   }
 
@@ -122,14 +129,17 @@ export function PlayerStatusIndicators({
         </div>
       )}
 
-      {/* Tricks Won - Number Only */}
-      {tricksWon > 0 && (
+      {/* Tricks Won - Number (show 0 during PLAYING phase) */}
+      {(tricksWon > 0 || phase === 'PLAYING') && (
         <div 
-          className="flex items-center justify-center animate-fade-in min-w-[12px]"
+          className="flex items-center justify-center animate-fade-in gap-0.5"
           title={`${tricksWon} trick${tricksWon > 1 ? 's' : ''} won`}
           role="img"
           aria-label={`${tricksWon} tricks won`}
         >
+          <span className="text-[9px] font-semibold text-emerald-300/70 leading-none">
+            Tricks:
+          </span>
           <span className="text-[10px] font-bold text-emerald-300 leading-none">
             {tricksWon}
           </span>
