@@ -36,7 +36,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-buckeuchre}
       POSTGRES_USER: ${POSTGRES_USER:-buckeuchre}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password_123}
       PGDATA: /var/lib/postgresql/data/pgdata
     
     volumes:
@@ -75,10 +75,10 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3000"
-      DATABASE_URL: ${DATABASE_URL}
-      JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://buckeuchre:dev_password_123@postgres:5432/buckeuchre}
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_SECRET_TO_AT_LEAST_32_CHARS}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
-      CORS_ORIGIN: ${CORS_ORIGIN}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       WS_HEARTBEAT_INTERVAL: ${WS_HEARTBEAT_INTERVAL:-30000}
       WS_GRACE_PERIOD: ${WS_GRACE_PERIOD:-30000}
