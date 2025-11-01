@@ -4,7 +4,7 @@
  */
 
 import { useMemo, useEffect, useState } from 'react';
-import { Crown, Layers } from 'lucide-react';
+import { Crown } from 'lucide-react';
 import type { GameState, PlayerPosition, Suit } from '@buck-euchre/shared';
 
 interface PlayerStatusIndicatorsProps {
@@ -27,14 +27,16 @@ export function PlayerStatusIndicators({
   const [isLeaderTransitioning, setIsLeaderTransitioning] = useState(false);
 
   // Determine current leader(s) - all players tied for lowest score
-  // Don't show crown on first hand (when all scores are 0)
+  // Show crown for leaders, but not when ALL players are tied (4-way tie)
   const currentLeaders = useMemo(() => {
     const minScore = Math.min(...players.map(p => p.score));
-    // Don't show crown if all players have 0 score (first hand)
-    if (minScore === 0 && players.every(p => p.score === 0)) {
+    const leadersAtMinScore = players.filter(p => p.score === minScore);
+    // Don't show crown if all players are tied (4-way tie on first hand or later)
+    if (leadersAtMinScore.length === players.length) {
       return [];
     }
-    return players.filter(p => p.score === minScore).map(p => p.position);
+    // Show crown for 2-way or 3-way ties
+    return leadersAtMinScore.map(p => p.position);
   }, [players]);
 
   // Detect leader change and trigger animation
@@ -108,7 +110,7 @@ export function PlayerStatusIndicators({
           role="img"
           aria-label="Dealer"
         >
-          <Layers className={`${iconSize} text-slate-300`} strokeWidth={2.5} />
+          <span className="text-[14px] leading-none" style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.3))' }}>??</span>
         </div>
       )}
 
