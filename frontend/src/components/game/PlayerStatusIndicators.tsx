@@ -132,11 +132,14 @@ export function PlayerStatusIndicators({
       {/* Tricks Won - Number (show 0 during PLAYING phase) */}
       {(tricksWon > 0 || phase === 'PLAYING') && (
         <div 
-          className="flex items-center justify-center animate-fade-in min-w-[12px]"
+          className="flex items-center justify-center animate-fade-in gap-0.5"
           title={`${tricksWon} trick${tricksWon > 1 ? 's' : ''} won`}
           role="img"
           aria-label={`${tricksWon} tricks won`}
         >
+          <span className="text-[9px] font-semibold text-emerald-300/70 leading-none">
+            Tricks:
+          </span>
           <span className="text-[10px] font-bold text-emerald-300 leading-none">
             {tricksWon}
           </span>
