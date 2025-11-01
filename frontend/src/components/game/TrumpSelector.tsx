@@ -3,7 +3,6 @@
  * @description Trump suit declaration interface
  */
 
-import { Button } from '@/components/ui/button';
 import { useGame } from '@/hooks/useGame';
 import type { Card } from '@buck-euchre/shared';
 
