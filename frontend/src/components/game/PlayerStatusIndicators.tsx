@@ -27,15 +27,16 @@ export function PlayerStatusIndicators({
   const [isLeaderTransitioning, setIsLeaderTransitioning] = useState(false);
 
   // Determine current leader(s) - all players tied for lowest score
-  // Don't show crown when all players are tied (including first hand)
+  // Show crown for leaders, but not when ALL players are tied (4-way tie)
   const currentLeaders = useMemo(() => {
     const minScore = Math.min(...players.map(p => p.score));
-    const maxScore = Math.max(...players.map(p => p.score));
-    // Don't show crown if all players have the same score (tie)
-    if (minScore === maxScore) {
+    const leadersAtMinScore = players.filter(p => p.score === minScore);
+    // Don't show crown if all players are tied (4-way tie on first hand or later)
+    if (leadersAtMinScore.length === players.length) {
       return [];
     }
-    return players.filter(p => p.score === minScore).map(p => p.position);
+    // Show crown for 2-way or 3-way ties
+    return leadersAtMinScore.map(p => p.position);
   }, [players]);
 
   // Detect leader change and trigger animation
