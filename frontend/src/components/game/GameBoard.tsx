@@ -13,6 +13,7 @@ import { BiddingPanel } from './BiddingPanel';
 import { TrumpSelector } from './TrumpSelector';
 import { FoldDecision } from './FoldDecision';
 import { WaitingForPlayers } from './WaitingForPlayers';
+import { PlayerStatusIndicators } from './PlayerStatusIndicators';
 import { useGame } from '@/hooks/useGame';
 import { createGame } from '@/services/api';
 import { Button } from '@/components/ui/button';
@@ -291,8 +292,11 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                     `} title={player?.name || `Player ${absolutePosition + 1}`}>
                       {player?.name || `P${absolutePosition}`}
                     </div>
-                    {/* Reserved space for future status info */}
-                    <div className="h-3 w-full"></div>
+                    <PlayerStatusIndicators 
+                      gameState={gameState} 
+                      playerPosition={absolutePosition}
+                      size="sm"
+                    />
                   </div>
                 );
               })}
@@ -311,13 +315,18 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 const hasCardInTrick = displayTrick?.cards.some(c => c.playerPosition === absolutePosition) ?? false;
                 
                 return (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10">
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-0.5">
                     <div className={`
                       rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.25em] whitespace-nowrap
                       ${isCurrentTurn ? 'bg-emerald-400 text-slate-900 ring-1 ring-emerald-300' : hasCardInTrick ? 'bg-white/20 text-emerald-100' : 'bg-white/10 text-emerald-200/70'}
                     `}>
                       {leftPlayer?.name || `P${absolutePosition}`}
                     </div>
+                    <PlayerStatusIndicators 
+                      gameState={gameState} 
+                      playerPosition={absolutePosition}
+                      size="sm"
+                    />
                   </div>
                 );
               })()}
@@ -330,13 +339,18 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 const hasCardInTrick = displayTrick?.cards.some(c => c.playerPosition === absolutePosition) ?? false;
                 
                 return (
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10">
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-0.5">
                     <div className={`
                       rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.25em] whitespace-nowrap
                       ${isCurrentTurn ? 'bg-emerald-400 text-slate-900 ring-1 ring-emerald-300' : hasCardInTrick ? 'bg-white/20 text-emerald-100' : 'bg-white/10 text-emerald-200/70'}
                     `}>
                       {rightPlayer?.name || `P${absolutePosition}`}
                     </div>
+                    <PlayerStatusIndicators 
+                      gameState={gameState} 
+                      playerPosition={absolutePosition}
+                      size="sm"
+                    />
                   </div>
                 );
               })()}
@@ -360,13 +374,18 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                   const hasCardInTrick = displayTrick?.cards.some(c => c.playerPosition === absolutePosition) ?? false;
 
                   return (
-                    <div key={relativeIndex} className={`absolute ${position} z-10`}>
+                    <div key={relativeIndex} className={`absolute ${position} z-10 flex flex-col items-center gap-0.5`}>
                       <div className={`
                         rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.25em] whitespace-nowrap
                         ${isCurrentTurn ? 'bg-emerald-400 text-slate-900 ring-1 ring-emerald-300' : hasCardInTrick ? 'bg-white/20 text-emerald-100' : 'bg-white/10 text-emerald-200/70'}
                       `}>
                         {player?.name || `P${absolutePosition}`}
                       </div>
+                      <PlayerStatusIndicators 
+                        gameState={gameState} 
+                        playerPosition={absolutePosition}
+                        size="sm"
+                      />
                     </div>
                   );
                 });
@@ -417,8 +436,13 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                   `}>
                     {myPlayer?.name || `P${absolutePosition}`}
                   </div>
-                  {/* Reserved space for future status info */}
-                  <div className="h-3 w-full max-w-[200px]"></div>
+                  <div className="w-full max-w-[200px]">
+                    <PlayerStatusIndicators 
+                      gameState={gameState} 
+                      playerPosition={absolutePosition}
+                      size="sm"
+                    />
+                  </div>
                 </div>
               );
             })()}
