@@ -49,20 +49,19 @@ export function TrumpSelector({ isMyTurn }: TrumpSelectorProps) {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:gap-4 max-w-xs mx-auto">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 max-w-xs mx-auto justify-items-center items-center">
         {SUITS.map(suit => (
-          <Button
+          <button
             key={suit}
             onClick={() => declareTrump(suit)}
-            variant="default"
-            size="lg"
-            className="aspect-[3/4] min-h-[120px] md:min-h-[140px] flex items-center justify-center border-2 border-gray-300 bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 touch-target tap-feedback"
+            className="w-full aspect-[3/4] min-h-[120px] md:min-h-[140px] flex items-center justify-center border-2 border-gray-300 rounded-lg shadow-md md:shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 touch-target tap-feedback focus:outline-none focus:ring-2 focus:ring-emerald-400 active:scale-95"
+            style={{ backgroundColor: '#ffffff' }}
             aria-label={`Select ${suit} as trump`}
           >
-            <span className={`text-6xl md:text-7xl lg:text-8xl font-bold ${SUIT_COLORS[suit]}`}>
+            <span className={`text-6xl md:text-7xl lg:text-8xl leading-none ${SUIT_COLORS[suit]}`}>
               {SUIT_SYMBOLS[suit]}
             </span>
-          </Button>
+          </button>
         ))}
       </div>
     </div>
