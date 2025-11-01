@@ -215,10 +215,6 @@ export function PlayerHand({
   }, [orderedCards]);
 
   const handleDragStart = (event: DragEvent<HTMLDivElement>, cardId: string) => {
-    if (disabled) {
-      return;
-    }
-
     setDraggedCardId(cardId);
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
@@ -227,10 +223,6 @@ export function PlayerHand({
   };
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (disabled) {
-      return;
-    }
-
     event.preventDefault();
     if (event.dataTransfer) {
       event.dataTransfer.dropEffect = 'move';
@@ -245,10 +237,6 @@ export function PlayerHand({
     event: DragEvent<HTMLDivElement>,
     targetCardId: string
   ) => {
-    if (disabled) {
-      return;
-    }
-
     event.preventDefault();
     event.stopPropagation();
 
@@ -276,10 +264,6 @@ export function PlayerHand({
   };
 
   const handleDropOnContainer = (event: DragEvent<HTMLDivElement>) => {
-    if (disabled) {
-      return;
-    }
-
     event.preventDefault();
 
     const draggedId = draggedCardId ?? event.dataTransfer?.getData('text/plain');
@@ -314,43 +298,68 @@ export function PlayerHand({
     );
   }
 
+  const handleCardClick = (card: CardType) => {
+    if (!disabled && onCardClick) {
+      onCardClick(card.id);
+    }
+  };
+
+  // Always fan cards - calculate rotation based on card count
+  const cardCount = cards.length;
+
   return (
-    <div
-      className="flex w-full flex-wrap items-end justify-center gap-1 px-2 sm:flex-nowrap sm:gap-2 sm:px-0"
+    <div 
+      className="flex items-center justify-center w-full"
       role="group"
-      aria-label={`Your hand: ${cards.length} cards`}
-      onDragOver={handleDragOver}
+      aria-label="Your hand of cards"
       onDrop={handleDropOnContainer}
+      onDragOver={handleDragOver}
     >
-      {orderedCards.map((card, index) => (
-        <div
-          key={card.id}
-          className={`transition-all duration-300 hover:z-10 ${
-            draggedCardId === card.id ? 'opacity-60' : 'opacity-100'
-          }`}
-          ref={setCardRef(card.id)}
-          data-testid="player-hand-card-wrapper"
-          draggable={!disabled}
-          onDragStart={event => handleDragStart(event, card.id)}
-          onDragOver={handleDragOver}
-          onDrop={event => handleDropOnCard(event, card.id)}
-          onDragEnd={handleDragEnd}
-          aria-grabbed={draggedCardId === card.id}
-          aria-label={`Card position ${index + 1} of ${orderedCards.length}`}
-          style={{
-            transform: `translateY(${index % 2 === 0 ? '0' : '4px'}) scale(${selectedCardId === card.id ? 1.05 : 1})`,
-            animationDelay: `${index * 50}ms`,
-          }}
-        >
-          <Card
-            card={card}
-            onClick={onCardClick ? () => onCardClick(card.id) : undefined}
-            disabled={disabled || !onCardClick}
-            selected={selectedCardId === card.id}
-            size="large"
-          />
-        </div>
-      ))}
+      <div 
+        className="flex items-end justify-center -space-x-2 md:-space-x-3 max-w-full px-2"
+      >
+        {orderedCards.map((card, index) => {
+          const isTrump = trumpSuit && card.suit === trumpSuit;
+          
+          return (
+            <div
+              key={card.id}
+              className={`
+                transition-all duration-300 ease-out
+                hover:z-10 focus-within:z-10
+                ${isTrump ? 'relative' : ''}
+              `}
+              ref={setCardRef(card.id)}
+              draggable={true}
+              onDragStart={event => handleDragStart(event, card.id)}
+              onDragOver={handleDragOver}
+              onDrop={event => handleDropOnCard(event, card.id)}
+              onDragEnd={handleDragEnd}
+              style={{
+                // Slight rotation for fanning effect
+                transform: `rotate(${(index - cardCount / 2) * 2}deg)`,
+                animationDelay: `${index * 50}ms`,
+                opacity: 1,
+              }}
+            >
+              {isTrump && (
+                <div 
+                  className="absolute -top-1 -right-1 z-20 w-3 h-3 md:w-4 md:h-4 bg-emerald-400 rounded-full border-2 border-white shadow-md"
+                  aria-label="Trump suit"
+                  title="Trump suit"
+                />
+              )}
+              <Card
+                card={card}
+                onClick={() => handleCardClick(card)}
+                disabled={disabled}
+                selected={selectedCardId === card.id}
+                size="large"
+              />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -130,12 +130,48 @@ body {
   }
 }
 
-/* Card size adjustments for mobile */
-@media (max-width: 640px) {
-  .w-24 {
-    width: 4.5rem !important;
+/* Responsive card sizing system */
+:root {
+  /* Mobile-first card dimensions (5-6 cards fit horizontally) */
+  --card-width-mobile: min(calc((100vw - 4rem) / 6), 3.75rem);
+  --card-height-mobile: calc(var(--card-width-mobile) * 1.5);
+  
+  /* Desktop card dimensions */
+  --card-width-desktop: 5rem;
+  --card-height-desktop: 7.5rem;
+  
+  /* Safe area insets for modern phones */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --card-width-mobile: 4.5rem;
+    --card-height-mobile: 6.75rem;
   }
-  .h-36 {
-    height: 6.75rem !important;
+}
+
+@layer utilities {
+  /* Remove hover effects on touch devices */
+  @media (hover: none) {
+    .hover\:shadow-2xl:hover {
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .hover\:-translate-y-3:hover {
+      transform: translateY(0);
+    }
+    .hover\:scale-105:hover {
+      transform: scale(1);
+    }
+  }
+  
+  /* Enhanced tap feedback for mobile */
+  .tap-feedback {
+    transition: transform 0.1s ease;
+  }
+  
+  .tap-feedback:active {
+    transform: scale(0.95);
   }
 }

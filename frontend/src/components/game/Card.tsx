@@ -28,22 +28,30 @@ const suitColors = {
   CLUBS: 'text-gray-900',
 };
 
+// Calculate text sizes as percentage of card width for proportional scaling
 const sizeStyles = {
-  small: 'w-14 h-20 text-xs sm:w-16 sm:h-24 sm:text-sm',
-  medium: 'w-16 h-24 text-sm sm:w-20 sm:h-32 sm:text-base',
-  large: 'w-20 h-[8.5rem] text-base sm:w-24 sm:h-36 sm:text-lg',
+  small: 'w-[min(calc((100vw-3rem)/7*1.1),4rem)] h-[calc(min(calc((100vw-3rem)/7*1.1),4rem)*1.5)] md:w-16 md:h-24 lg:w-20 lg:h-[7.5rem]',
+  medium: 'w-[min(calc((100vw-3rem)/6),4rem)] h-[calc(min(calc((100vw-3rem)/6),4rem)*1.5)] md:w-16 md:h-24',
+  large: 'w-[min(calc((100vw-3rem)/5.5*1.05),4.725rem)] h-[calc(min(calc((100vw-3rem)/5.5*1.05),4.725rem)*1.5)] md:w-[5.25rem] md:h-[7.875rem]',
+} as const;
+
+// Text sizes as percentage of card width - scales proportionally
+const cornerTextStyles = {
+  small: 'text-[clamp(0.375rem,5vw,0.625rem)] md:text-[clamp(0.5rem,3vw,0.75rem)] lg:text-xs',
+  medium: 'text-[clamp(0.375rem,4.5vw,0.625rem)] md:text-[clamp(0.625rem,3vw,0.75rem)]',
+  large: 'text-[clamp(0.5rem,4vw,0.75rem)] md:text-[clamp(0.75rem,4vw,0.875rem)]',
 } as const;
 
 const cornerSymbolStyles = {
-  small: 'text-lg sm:text-xl',
-  medium: 'text-xl sm:text-2xl',
-  large: 'text-2xl sm:text-3xl',
+  small: 'text-[clamp(0.5rem,6vw,0.875rem)] md:text-[clamp(0.75rem,4vw,1rem)] lg:text-sm',
+  medium: 'text-[clamp(0.625rem,5.5vw,0.875rem)] md:text-[clamp(0.875rem,4vw,1.125rem)]',
+  large: 'text-[clamp(0.75rem,5vw,1rem)] md:text-[clamp(1rem,5vw,1.125rem)]',
 } as const;
 
 const centerSymbolStyles = {
-  small: 'text-2xl sm:text-3xl',
-  medium: 'text-3xl sm:text-4xl',
-  large: 'text-4xl sm:text-5xl',
+  small: 'text-[clamp(0.875rem,10vw,1.5rem)] md:text-[clamp(1.25rem,6vw,1.75rem)] lg:text-xl',
+  medium: 'text-[clamp(1rem,11vw,1.75rem)] md:text-[clamp(1.5rem,7vw,2rem)]',
+  large: 'text-[clamp(1.25rem,12vw,2rem)] md:text-[clamp(2rem,8vw,2.5rem)]',
 } as const;
 
 export function Card({
@@ -58,6 +66,7 @@ export function Card({
     return (
       <div 
         className={`${sizeStyles[size]} bg-blue-900 rounded-lg border-2 border-blue-950 flex items-center justify-center shadow-lg cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105`}
+        style={{ backgroundColor: '#1e3a8a', opacity: 1 }}
         onClick={!disabled ? onClick : undefined}
         role="button"
         aria-label="Face down card"
@@ -73,8 +82,9 @@ export function Card({
   const ariaLabel = `${card.rank} of ${card.suit}${selected ? ' (selected)' : ''}${disabled ? ' (disabled)' : ''}`;
   const cornerSymbolClass = cornerSymbolStyles[size];
   const centerSymbolClass = centerSymbolStyles[size];
+  const cornerTextClass = cornerTextStyles[size];
   const interactionClasses = !disabled && onClick
-    ? 'cursor-pointer hover:shadow-2xl hover:-translate-y-3 hover:scale-105 active:scale-95'
+    ? 'cursor-pointer md:hover:shadow-2xl md:hover:-translate-y-3 md:hover:scale-105 active:scale-95 tap-feedback touch-target'
     : disabled
       ? 'cursor-not-allowed'
       : 'cursor-default';
@@ -87,29 +97,33 @@ export function Card({
       aria-pressed={selected}
       className={`
         ${sizeStyles[size]}
-        bg-white rounded-lg border-2 shadow-lg
-        flex flex-col items-center justify-between p-2 sm:p-3
-        transition-all duration-300 ease-out
+        bg-white rounded-md md:rounded-lg border-2 shadow-md md:shadow-lg
+        flex flex-col items-center justify-between
+        transition-all duration-200 ease-out
         transform-gpu
         ${interactionClasses}
-        opacity-100
-        ${selected ? 'border-green-500 ring-4 ring-green-300 -translate-y-2 scale-105' : 'border-gray-300'}
-        focus:outline-none focus:ring-4 focus:ring-blue-300
-        animate-in fade-in slide-in-from-bottom-4 duration-500
+        ${selected ? 'border-emerald-500 ring-2 md:ring-4 ring-emerald-300 -translate-y-1 md:-translate-y-2 scale-105' : 'border-gray-300'}
+        focus:outline-none focus:ring-2 focus:ring-blue-400
+        animate-in fade-in slide-in-from-bottom-4 duration-300
       `}
+      style={{ 
+        backgroundColor: '#ffffff', 
+        opacity: 1,
+        padding: 'clamp(0.25rem, 3vw, 0.75rem) clamp(0.375rem, 4vw, 0.875rem)',
+      }}
     >
-      <div className={`${suitColor} font-bold flex items-center gap-1`}>
-        <span>{card.rank}</span>
-        <span className={cornerSymbolClass}>{suitSymbol}</span>
+      <div className={`${suitColor} font-bold flex items-center gap-[clamp(0.125rem,1.5vw,0.25rem)] ${cornerTextClass}`}>
+        <span className="leading-none">{card.rank}</span>
+        <span className={`leading-none ${cornerSymbolClass}`}>{suitSymbol}</span>
       </div>
 
-      <div className={`${suitColor} ${centerSymbolClass}`}>
+      <div className={`${suitColor} ${centerSymbolClass} leading-none`}>
         {suitSymbol}
       </div>
 
-      <div className={`${suitColor} font-bold flex items-center gap-1 rotate-180`}>
-        <span>{card.rank}</span>
-        <span className={cornerSymbolClass}>{suitSymbol}</span>
+      <div className={`${suitColor} font-bold flex items-center gap-[clamp(0.125rem,1.5vw,0.25rem)] rotate-180 ${cornerTextClass}`}>
+        <span className="leading-none">{card.rank}</span>
+        <span className={`leading-none ${cornerSymbolClass}`}>{suitSymbol}</span>
       </div>
     </button>
   );

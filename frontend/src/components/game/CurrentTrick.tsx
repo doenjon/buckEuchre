@@ -15,68 +15,40 @@ export interface CurrentTrickProps {
 
 export function CurrentTrick({
   trick,
-  players,
-  currentPlayerPosition,
   myPosition
 }: CurrentTrickProps) {
   if (!trick || trick.cards.length === 0) {
     return (
       <div
-        className="flex min-h-[260px] items-center justify-center rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 p-6 shadow-2xl backdrop-blur sm:min-h-[320px] sm:p-8"
+        className="flex w-full h-full items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 shadow-lg md:shadow-2xl backdrop-blur"
         role="region"
-        aria-label="Current trick area"
-      >
-        <p className="text-sm font-medium uppercase tracking-[0.35em] text-emerald-100/70">
-          Waiting for the lead card…
-        </p>
-      </div>
+        aria-label="Current trick area - waiting for lead card"
+      />
     );
   }
 
-  // Arrange cards around the center with the local player seated at the bottom
+  // Arrange cards around the oval table
+  // Cards positioned at edges of oval, accounting for card size
   const cardPositions = [
-    'bottom-10 left-1/2 -translate-x-1/2 sm:bottom-16', // South (you)
-    'left-8 top-1/2 -translate-y-1/2 sm:left-16', // Seat to your left
-    'top-10 left-1/2 -translate-x-1/2 sm:top-16', // Across from you
-    'right-8 top-1/2 -translate-y-1/2 sm:right-16' // Seat to your right
+    'bottom-[5%] left-1/2 -translate-x-1/2', // South (you) - slightly above bottom edge
+    'left-[5%] top-1/2 -translate-y-1/2', // Seat to your left - slightly in from left edge
+    'top-[5%] left-1/2 -translate-x-1/2', // Across from you - slightly below top edge
+    'right-[5%] top-1/2 -translate-y-1/2' // Seat to your right - slightly in from right edge
   ];
-
-  const getPlayerByPosition = (position: number | null) => {
-    if (position === null) {
-      return null;
-    }
-    return players.find(player => player.position === position) ?? null;
-  };
-
-  const winner = getPlayerByPosition(trick.winner);
 
   return (
     <div
-      className="relative flex min-h-[280px] items-center justify-center overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 px-4 pb-14 pt-16 shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] sm:min-h-[360px] sm:px-6 sm:pb-20 sm:pt-24 backdrop-blur"
+      className="relative flex w-full h-full items-center justify-center overflow-visible rounded-full border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 shadow-lg md:shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] backdrop-blur"
       role="region"
       aria-label={`Trick ${trick.number}, ${trick.cards.length} of 4 cards played`}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-5 flex justify-center px-4 sm:top-8 sm:px-6">
-        <div className="flex flex-col items-center gap-1 rounded-full bg-emerald-950/70 px-3 py-2 text-center text-emerald-100/80 shadow-[0_20px_40px_-30px_rgba(16,185,129,0.9)] sm:px-4">
-          <span className="text-[10px] uppercase tracking-[0.4em] sm:text-[11px]">Trick {trick.number}</span>
-          <span className="text-sm font-medium leading-tight">
-            Lead • {getPlayerByPosition(trick.leadPlayerPosition)?.name || `Player ${trick.leadPlayerPosition}`}
-          </span>
-          {winner && (
-            <span className="mt-1 rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-white sm:text-[11px]">
-              Winner {winner.name}
-            </span>
-          )}
-        </div>
-        <div className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-900/60 blur-3xl sm:h-56 sm:w-56" />
-      </div>
+      {/* Glow effect in center */}
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[40%] w-[40%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-900/60 blur-3xl" />
 
       {trick.cards.map((playedCard, index) => {
-        const player = getPlayerByPosition(playedCard.playerPosition);
         const relativeSeatIndex =
           ((playedCard.playerPosition - myPosition) % 4 + 4) % 4;
         const positionClass = cardPositions[relativeSeatIndex];
-        const isCurrentPlayer = playedCard.playerPosition === currentPlayerPosition;
         const isWinner = trick.winner === playedCard.playerPosition;
         
         return (
@@ -84,21 +56,13 @@ export function CurrentTrick({
             key={playedCard.playerPosition}
             className={`
               absolute ${positionClass} z-10
-              flex flex-col items-center gap-3 transition-transform duration-500
-              ${isWinner ? 'scale-105 drop-shadow-[0_15px_25px_rgba(250,204,21,0.35)]' : ''}
+              flex flex-col items-center transition-transform duration-500
+              ${isWinner ? 'scale-110 drop-shadow-[0_10px_20px_rgba(250,204,21,0.35)]' : ''}
             `}
-            style={{ animationDelay: `${index * 150}ms` }}
+            style={{ animationDelay: `${index * 150}ms`, opacity: 1 }}
           >
-            <div className={`${isWinner ? 'rounded-2xl ring-4 ring-emerald-300/60' : 'drop-shadow-[0_20px_32px_rgba(16,185,129,0.35)]'}`}>
-              <Card card={playedCard.card} size="medium" />
-            </div>
-            <div
-              className={`
-                rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.3em] sm:px-3 sm:text-xs
-                ${isWinner ? 'bg-emerald-400 text-slate-900' : isCurrentPlayer ? 'bg-white text-slate-900' : 'bg-white/10 text-emerald-100'}
-              `}
-            >
-              {player?.name || `P${playedCard.playerPosition}`}
+            <div className={`${isWinner ? 'rounded-lg md:rounded-2xl ring-2 md:ring-4 ring-emerald-300/60' : 'drop-shadow-[0_15px_25px_rgba(16,185,129,0.35)]'}`} style={{ opacity: 1 }}>
+              <Card card={playedCard.card} size="small" />
             </div>
           </div>
         );

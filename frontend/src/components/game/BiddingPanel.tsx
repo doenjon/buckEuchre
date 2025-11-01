@@ -34,26 +34,26 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
   );
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="space-y-1 text-center">
-        <h3 className="text-base font-semibold tracking-wide text-white sm:text-lg">
+    <div className="space-y-3 md:space-y-4 lg:space-y-6">
+      <div className="space-y-0.5 md:space-y-1 text-center">
+        <h3 className="text-sm md:text-base font-semibold tracking-wide text-white">
           Your bid
         </h3>
         {currentBid !== null && (
-          <p className="text-xs uppercase tracking-[0.25em] text-emerald-200/80">
+          <p className="text-[10px] md:text-xs uppercase tracking-[0.2em] md:tracking-[0.25em] text-emerald-200/80">
             Current high {currentBid}
           </p>
         )}
       </div>
 
-      <div className="flex flex-wrap justify-center gap-2">
+      <div className="flex flex-wrap justify-center gap-1.5 md:gap-2">
         {availableBids.map(bid => (
           <Button
             key={bid}
             onClick={() => placeBid(bid as 2 | 3 | 4 | 5)}
             variant="default"
             size="lg"
-            className="min-w-[84px] flex-1 bg-emerald-500 text-slate-900 hover:bg-emerald-400 sm:flex-none"
+            className="min-w-[72px] md:min-w-[84px] flex-1 bg-emerald-500 text-slate-900 hover:bg-emerald-400 sm:flex-none touch-target tap-feedback"
           >
             Bid {bid}
           </Button>
@@ -63,7 +63,7 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
           onClick={() => placeBid('PASS')}
           variant="outline"
           size="lg"
-          className="min-w-[84px] flex-1 border-emerald-500/60 text-emerald-200 hover:bg-emerald-500/10 sm:flex-none"
+          className="min-w-[72px] md:min-w-[84px] flex-1 border-emerald-500/60 text-emerald-200 hover:bg-emerald-500/10 sm:flex-none touch-target tap-feedback"
         >
           Pass
         </Button>

@@ -185,16 +185,18 @@ export function GamePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
-        <header className="flex flex-col gap-2 text-center">
+    <div className="h-screen overflow-hidden bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
+      <div className="mx-auto flex h-full w-full max-w-6xl flex-col gap-2 md:gap-5 px-4 py-2 sm:px-6 sm:py-4 lg:px-8 md:py-6 md:py-8">
+        <header className="flex-shrink-0 flex flex-col gap-2 text-center">
           <span className="text-xs uppercase tracking-[0.35em] text-emerald-300/70 sm:text-sm">
             Buck Euchre
           </span>
         </header>
 
         {myPosition !== null ? (
-          <GameBoard gameState={gameState} myPosition={myPosition} />
+          <div className="flex-1 min-h-0">
+            <GameBoard gameState={gameState} myPosition={myPosition} />
+          </div>
         ) : (
           <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-slate-200 backdrop-blur">
             <p className="text-sm font-medium tracking-wide text-emerald-200/80">

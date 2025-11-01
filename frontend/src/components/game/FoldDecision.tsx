@@ -29,32 +29,32 @@ export function FoldDecision({ gameState, myPosition, isMyTurn }: FoldDecisionPr
   const canFold = !isClubs && !isBidder;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="space-y-2 text-center">
-        <h3 className="text-base font-semibold tracking-wide text-white sm:text-lg">
+    <div className="space-y-3 md:space-y-4 lg:space-y-6">
+      <div className="space-y-1 md:space-y-2 text-center">
+        <h3 className="text-sm md:text-base font-semibold tracking-wide text-white">
           Stay in or sit out?
         </h3>
-        <p className="text-xs uppercase tracking-[0.3em] text-emerald-200/80">
+        <p className="text-[10px] md:text-xs uppercase tracking-[0.25em] md:tracking-[0.3em] text-emerald-200/80">
           Trump: {gameState.trumpSuit}
         </p>
         {isClubs && (
-          <p className="text-xs font-medium text-rose-300/90">
-            Clubs are up—folding isn’t available this round.
+          <p className="text-[10px] md:text-xs font-medium text-rose-300/90">
+            Clubs are up—folding isn't available this round.
           </p>
         )}
         {isBidder && (
-          <p className="text-xs font-medium text-sky-200/90">
-            You won the bid, so you’re locked in.
+          <p className="text-[10px] md:text-xs font-medium text-sky-200/90">
+            You won the bid, so you're locked in.
           </p>
         )}
       </div>
 
-      <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+      <div className="flex flex-wrap justify-center gap-1.5 md:gap-2 lg:gap-3">
         <Button
           onClick={() => makeFoldDecision(false)}
           variant="default"
           size="lg"
-          className="min-w-[120px] flex-1 bg-emerald-500 text-slate-900 hover:bg-emerald-400 sm:flex-none"
+          className="min-w-[100px] md:min-w-[120px] flex-1 bg-emerald-500 text-slate-900 hover:bg-emerald-400 sm:flex-none touch-target tap-feedback"
         >
           Stay in
         </Button>
@@ -63,7 +63,7 @@ export function FoldDecision({ gameState, myPosition, isMyTurn }: FoldDecisionPr
           onClick={() => makeFoldDecision(true)}
           variant="outline"
           size="lg"
-          className="min-w-[120px] flex-1 border-emerald-500/60 text-emerald-200 hover:bg-emerald-500/10 sm:flex-none"
+          className="min-w-[100px] md:min-w-[120px] flex-1 border-emerald-500/60 text-emerald-200 hover:bg-emerald-500/10 sm:flex-none touch-target tap-feedback"
           disabled={!canFold}
         >
           Fold
@@ -71,7 +71,7 @@ export function FoldDecision({ gameState, myPosition, isMyTurn }: FoldDecisionPr
       </div>
 
       {!canFold && (
-        <p className="text-center text-xs text-slate-300/80">
+        <p className="text-center text-[10px] md:text-xs text-slate-300/80">
           {isClubs ? 'Cannot fold when clubs are trump.' : 'Bidder must play the hand.'}
         </p>
       )}

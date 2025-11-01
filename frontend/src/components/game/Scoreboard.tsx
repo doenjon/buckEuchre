@@ -18,24 +18,14 @@ export interface ScoreboardProps {
   winningBid?: number | null;
   isClubsTurnUp?: boolean;
   className?: string;
-  variant?: 'default' | 'compact';
+  variant?: 'default' | 'compact' | 'mobile';
 }
-
-const suitSymbols = {
-  SPADES: '♠',
-  HEARTS: '♥',
-  DIAMONDS: '♦',
-  CLUBS: '♣',
-};
 
 export function Scoreboard({
   players,
   currentPlayerPosition,
   phase,
-  trumpSuit,
   winningBidderPosition,
-  winningBid,
-  isClubsTurnUp = false,
   className,
   variant = 'default'
 }: ScoreboardProps) {
@@ -53,12 +43,6 @@ export function Scoreboard({
     return () => clearTimeout(timeout);
   }, [players]);
 
-  const bidderLabel = isClubsTurnUp
-    ? 'Dirty Clubs'
-    : winningBid !== null && winningBid !== undefined
-      ? `Bid ${winningBid}`
-      : 'Bidder';
-
   const entries = players.map((player, index) => {
     const needsFoldDecision = (
       phase === 'FOLDING_DECISION' &&
@@ -68,7 +52,6 @@ export function Scoreboard({
     const isCurrentTurn = phase === 'FOLDING_DECISION'
       ? needsFoldDecision
       : currentPlayerPosition === index;
-    const isBidder = winningBidderPosition === index;
     const isLeader = player.id === leader.id;
     const hasFolded = player.folded === true;
     const previousScore = previousScores.current.get(player.id);
@@ -78,12 +61,48 @@ export function Scoreboard({
       player,
       index,
       isCurrentTurn,
-      isBidder,
       isLeader,
       hasFolded,
       scoreChanged,
     };
   });
+
+  if (variant === 'mobile') {
+    return (
+      <div
+        className={cn(
+          'rounded-xl border border-white/10 bg-white/5 p-2 text-slate-100 shadow-md backdrop-blur',
+          className
+        )}
+      >
+        <div className="grid grid-cols-4 gap-1.5" role="list" aria-label="Player scores">
+          {entries.map(({ player, index, isCurrentTurn, hasFolded }) => (
+            <div
+              key={player.id}
+              className={cn(
+                'flex flex-col items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 p-1.5 text-center transition-colors duration-200',
+                isCurrentTurn && 'ring-1 ring-emerald-400/70 bg-emerald-500/10',
+                hasFolded && 'opacity-50'
+              )}
+              role="listitem"
+              aria-label={`${player.name}, score ${player.score}`}
+            >
+              <span 
+                className={cn(
+                  'text-[11px] md:text-xs font-semibold truncate max-w-full px-0.5',
+                  isCurrentTurn ? 'text-emerald-100' : 'text-white'
+                )} 
+                title={player.name || `Player ${index + 1}`}
+              >
+                {player.name || `P${index + 1}`}
+              </span>
+              <span className="text-base font-bold text-emerald-100">{player.score}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (variant === 'compact') {
     return (
@@ -103,7 +122,7 @@ export function Scoreboard({
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-2" role="list" aria-label="Player scores">
-          {entries.map(({ player, index, isCurrentTurn, isBidder, hasFolded }) => (
+          {entries.map(({ player, index, isCurrentTurn, hasFolded }) => (
             <div
               key={player.id}
               className={cn(
@@ -133,11 +152,6 @@ export function Scoreboard({
                     Offline
                   </Badge>
                 )}
-                {isBidder && (
-                  <Badge variant="outline" className="text-[9px] uppercase tracking-wide text-emerald-200">
-                    {bidderLabel}
-                  </Badge>
-                )}
                 {player.foldDecision === 'UNDECIDED' && phase === 'FOLDING_DECISION' && index !== winningBidderPosition && (
                   <Badge variant="outline" className="text-[9px] uppercase tracking-wide text-white/80">
                     Decide
@@ -152,15 +166,6 @@ export function Scoreboard({
             </div>
           ))}
         </div>
-
-        {trumpSuit && (
-          <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-2 py-1.5 text-[11px] uppercase tracking-[0.3em] text-emerald-200/80">
-            <span>Trump</span>
-            <span className="text-lg font-semibold text-white">
-              {suitSymbols[trumpSuit as keyof typeof suitSymbols] || trumpSuit}
-            </span>
-          </div>
-        )}
       </div>
     );
   }
@@ -188,7 +193,6 @@ export function Scoreboard({
             const isCurrentTurn = phase === 'FOLDING_DECISION'
               ? needsFoldDecision
               : currentPlayerPosition === index;
-            const isBidder = winningBidderPosition === index;
             const isLeader = player.id === leader.id;
             const isWinner = isLeader && player.score <= 0;
             const hasFolded = player.folded === true;
@@ -220,11 +224,6 @@ export function Scoreboard({
                       {!player.connected && (
                         <Badge variant="danger" className="text-[10px] uppercase tracking-wide">
                           Offline
-                        </Badge>
-                      )}
-                      {isBidder && (
-                        <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-emerald-200">
-                          {bidderLabel}
                         </Badge>
                       )}
                       {hasFolded && (
@@ -262,21 +261,6 @@ export function Scoreboard({
             );
           })}
         </div>
-
-        {trumpSuit && (
-          <div
-            className="mt-5 border-t border-white/5 pt-5 animate-in fade-in slide-in-from-top-2 duration-500"
-            role="status"
-            aria-label={`Trump suit is ${trumpSuit}`}
-          >
-            <div className="flex items-center justify-between text-sm uppercase tracking-[0.3em] text-emerald-200/80">
-              <span>Trump suit</span>
-              <span className="text-3xl font-semibold text-white">
-                {suitSymbols[trumpSuit as keyof typeof suitSymbols] || trumpSuit}
-              </span>
-            </div>
-          </div>
-        )}
 
         <div className="mt-4 border-t border-white/5 pt-4 sm:mt-5 sm:pt-5">
           <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.3em] text-emerald-200/80 sm:text-xs">
