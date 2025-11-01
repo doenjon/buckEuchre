@@ -4,8 +4,8 @@
  */
 
 import { useMemo, useEffect, useState } from 'react';
-import { Crown, CircleDot, Gavel, Award } from 'lucide-react';
-import type { GameState, PlayerPosition } from '@buck-euchre/shared';
+import { Crown, Layers } from 'lucide-react';
+import type { GameState, PlayerPosition, Suit } from '@buck-euchre/shared';
 
 interface PlayerStatusIndicatorsProps {
   gameState: GameState;
@@ -52,6 +52,24 @@ export function PlayerStatusIndicators({
   const iconSize = size === 'sm' ? 'h-2.5 w-2.5' : 'h-3 w-3';
   const textSize = size === 'sm' ? 'text-[8px]' : 'text-[9px]';
   
+  // Get suit symbol for display
+  const getSuitSymbol = (suit: Suit | null) => {
+    if (!suit) return '';
+    switch (suit) {
+      case 'SPADES': return '?';
+      case 'HEARTS': return '?';
+      case 'DIAMONDS': return '?';
+      case 'CLUBS': return '?';
+      default: return '';
+    }
+  };
+  
+  // Get suit color
+  const getSuitColor = (suit: Suit | null) => {
+    if (!suit) return 'text-white';
+    return (suit === 'HEARTS' || suit === 'DIAMONDS') ? 'text-red-500' : 'text-slate-900';
+  };
+  
   // Don't show anything if no indicators are active
   if (!isLeader && !isDealer && !isBidWinner && tricksWon === 0) {
     return <div className="h-3 w-full" />;
@@ -84,32 +102,36 @@ export function PlayerStatusIndicators({
           role="img"
           aria-label="Dealer"
         >
-          <CircleDot className={`${iconSize} text-blue-400`} />
+          <Layers className={`${iconSize} text-slate-300`} strokeWidth={2.5} />
         </div>
       )}
 
-      {/* Bid Winner Indicator */}
-      {isBidWinner && (
+      {/* Bid Winner - Trump Suit */}
+      {isBidWinner && gameState.trumpSuit && (
         <div 
           className="flex items-center gap-0.5 animate-fade-in"
-          title="Won the bidding"
+          title={`Won bid - ${gameState.trumpSuit.toLowerCase()} is trump`}
           role="img"
-          aria-label="Won the bidding"
+          aria-label={`Won bidding with ${gameState.trumpSuit.toLowerCase()} as trump`}
         >
-          <Gavel className={`${iconSize} text-purple-400`} />
+          <span 
+            className={`text-[11px] font-bold leading-none ${getSuitColor(gameState.trumpSuit)}`}
+            style={{ textShadow: '0 0 3px rgba(255,255,255,0.5)' }}
+          >
+            {getSuitSymbol(gameState.trumpSuit)}
+          </span>
         </div>
       )}
 
-      {/* Tricks Won */}
+      {/* Tricks Won - Number Only */}
       {tricksWon > 0 && (
         <div 
-          className="flex items-center gap-0.5 animate-fade-in"
+          className="flex items-center justify-center animate-fade-in min-w-[12px]"
           title={`${tricksWon} trick${tricksWon > 1 ? 's' : ''} won`}
           role="img"
           aria-label={`${tricksWon} tricks won`}
         >
-          <Award className={`${iconSize} text-emerald-400`} />
-          <span className={`${textSize} font-semibold text-emerald-300`}>
+          <span className="text-[10px] font-bold text-emerald-300 leading-none">
             {tricksWon}
           </span>
         </div>

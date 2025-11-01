@@ -11,20 +11,21 @@ Added animated status indicators below each player name showing current game sta
    - Animates with rotation and scale when transferring between players
    - Visible to all players
 
-2. **Dealer Button (🔵)** - Current dealer
-   - Blue circular dot indicator
+2. **Card Deck (🃏)** - Current dealer
+   - Layered cards icon in slate/white
    - Shows which player is dealing this round
    - Rotates each round
 
-3. **Gavel (🔨)** - Bid winner
-   - Purple indicator showing who won the bidding
-   - Appears after bidding phase completes
+3. **Trump Suit Symbol (♠/♥/♦/♣)** - Bid winner
+   - Displays the actual trump suit they declared
+   - Red for hearts/diamonds, black for spades/clubs
+   - Appears after trump is declared
    - Persists until round ends
 
-4. **Trophy + Number (🏆 N)** - Tricks won
-   - Emerald/green trophy with number
+4. **Number** - Tricks won
+   - Just the count (1-5) in emerald green
+   - No icon, clean and minimal
    - Updates in real-time as tricks are won
-   - Shows count from 0-5 tricks
 
 ### Animations
 
@@ -108,9 +109,9 @@ interface PlayerStatusIndicatorsProps {
 
 ### Color Scheme
 - **Crown**: Yellow-400 with amber glow
-- **Dealer**: Blue-400 (trust/stability)
-- **Bidder**: Purple-400 (authority/decision)
-- **Tricks**: Emerald-400 (success/progress)
+- **Dealer**: Slate-300 (card deck appearance)
+- **Trump Suit**: Red-500 for hearts/diamonds, Slate-900 for spades/clubs
+- **Tricks**: Emerald-300 (success/progress)
 
 ### Layout
 - Horizontal flexbox layout
