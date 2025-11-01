@@ -4,7 +4,7 @@
  */
 
 import { useMemo, useEffect, useState } from 'react';
-import { Crown, Layers } from 'lucide-react';
+import { Crown } from 'lucide-react';
 import type { GameState, PlayerPosition, Suit } from '@buck-euchre/shared';
 
 interface PlayerStatusIndicatorsProps {
@@ -109,7 +109,7 @@ export function PlayerStatusIndicators({
           role="img"
           aria-label="Dealer"
         >
-          <Layers className={`${iconSize} text-slate-300`} strokeWidth={2.5} />
+          <span className="text-[14px] leading-none" style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.3))' }}>??</span>
         </div>
       )}
 
