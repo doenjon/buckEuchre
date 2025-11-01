@@ -55,6 +55,7 @@ export function PlayerStatusIndicators({
                       phase !== 'WAITING_FOR_PLAYERS' && 
                       phase !== 'DEALING';
   const tricksWon = player?.tricksTaken ?? 0;
+  const hasFolded = player?.folded === true;
   
   const iconSize = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4';
   
@@ -76,8 +77,12 @@ export function PlayerStatusIndicators({
     return (suit === 'HEARTS' || suit === 'DIAMONDS') ? 'text-red-500' : 'text-slate-900';
   };
   
+  // Determine if we should show the trick counter
+  // Show during PLAYING and ROUND_OVER phases (but not for folded players)
+  const shouldShowTrickCounter = !hasFolded && (phase === 'PLAYING' || phase === 'ROUND_OVER');
+  
   // Don't show anything if no indicators are active
-  if (!isLeader && !isDealer && !isBidWinner && tricksWon === 0 && phase !== 'PLAYING') {
+  if (!isLeader && !isDealer && !isBidWinner && !shouldShowTrickCounter) {
     return <div className="h-3 w-full" />;
   }
 
@@ -129,8 +134,8 @@ export function PlayerStatusIndicators({
         </div>
       )}
 
-      {/* Tricks Won - Number (show 0 during PLAYING phase) */}
-      {(tricksWon > 0 || phase === 'PLAYING') && (
+      {/* Tricks Won - Number (show during playing and after until next hand, but not for folded players) */}
+      {shouldShowTrickCounter && (
         <div 
           className="flex items-center justify-center animate-fade-in gap-0.5"
           title={`${tricksWon} trick${tricksWon > 1 ? 's' : ''} won`}
