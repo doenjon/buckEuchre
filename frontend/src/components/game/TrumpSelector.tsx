@@ -14,10 +14,10 @@ interface TrumpSelectorProps {
 const SUITS: Card['suit'][] = ['SPADES', 'HEARTS', 'DIAMONDS', 'CLUBS'];
 
 const SUIT_COLORS: Record<Card['suit'], string> = {
-  SPADES: 'text-slate-900',
-  CLUBS: 'text-slate-900',
-  HEARTS: 'text-rose-500',
-  DIAMONDS: 'text-rose-500',
+  SPADES: 'text-gray-900',
+  CLUBS: 'text-gray-900',
+  HEARTS: 'text-red-600',
+  DIAMONDS: 'text-red-600',
 };
 
 const SUIT_SYMBOLS: Record<Card['suit'], string> = {
@@ -49,18 +49,18 @@ export function TrumpSelector({ isMyTurn }: TrumpSelectorProps) {
         </p>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-1.5 md:gap-2 lg:gap-3">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 max-w-xs mx-auto">
         {SUITS.map(suit => (
           <Button
             key={suit}
             onClick={() => declareTrump(suit)}
             variant="default"
             size="lg"
-            className="min-w-[100px] md:min-w-[120px] flex-1 border border-white/20 bg-white text-base font-semibold text-slate-900 shadow-md md:shadow-lg hover:bg-emerald-100 sm:flex-none touch-target tap-feedback"
+            className="aspect-[3/4] min-h-[120px] md:min-h-[140px] flex items-center justify-center border-2 border-gray-300 bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 touch-target tap-feedback"
+            aria-label={`Select ${suit} as trump`}
           >
-            <span className={`flex items-center gap-1.5 md:gap-2 ${SUIT_COLORS[suit]}`}>
-              <span className="text-lg md:text-xl lg:text-2xl">{SUIT_SYMBOLS[suit]}</span>
-              <span className="text-xs md:text-sm lg:text-base">{suit}</span>
+            <span className={`text-6xl md:text-7xl lg:text-8xl font-bold ${SUIT_COLORS[suit]}`}>
+              {SUIT_SYMBOLS[suit]}
             </span>
           </Button>
         ))}
