@@ -27,11 +27,12 @@ export function PlayerStatusIndicators({
   const [isLeaderTransitioning, setIsLeaderTransitioning] = useState(false);
 
   // Determine current leader(s) - all players tied for lowest score
-  // Don't show crown on first hand (when all scores are 0)
+  // Don't show crown when all players are tied (including first hand)
   const currentLeaders = useMemo(() => {
     const minScore = Math.min(...players.map(p => p.score));
-    // Don't show crown if all players have 0 score (first hand)
-    if (minScore === 0 && players.every(p => p.score === 0)) {
+    const maxScore = Math.max(...players.map(p => p.score));
+    // Don't show crown if all players have the same score (tie)
+    if (minScore === maxScore) {
       return [];
     }
     return players.filter(p => p.score === minScore).map(p => p.position);
