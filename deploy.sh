@@ -9,7 +9,7 @@ git fetch --all --prune
 git reset --hard origin/main
 
 echo "[deploy] Building & starting…"
-docker compose build --pull --no-cache
+docker compose build --pull
 docker compose down --remove-orphans || true
 docker compose up -d --remove-orphans
 
