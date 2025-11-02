@@ -69,7 +69,7 @@ export function PlayerStatusIndicators({
   const tricksWon = player?.tricksTaken ?? 0;
   const hasFolded = player?.folded === true;
   
-  const iconSize = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4';
+  const iconSize = size === 'sm' ? 'h-4 w-4' : 'h-5 w-5';
   
   // Determine if we should show the trick counter
   // Show during PLAYING and ROUND_OVER phases (but not for folded players)
@@ -107,7 +107,7 @@ export function PlayerStatusIndicators({
           role="img"
           aria-label="Dealer"
         >
-          <span className="text-[14px] leading-none" style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.3))' }}>🃏</span>
+          <span className="text-[16px] leading-none" style={{ filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.3))' }}>🃏</span>
         </div>
       )}
 
@@ -119,10 +119,10 @@ export function PlayerStatusIndicators({
           role="img"
           aria-label={`${tricksWon} tricks won`}
         >
-          <span className="text-[9px] font-semibold text-emerald-300/70 leading-none">
+          <span className="text-xs font-semibold text-emerald-300/70 leading-none">
             Tricks:
           </span>
-          <span className="text-[10px] font-bold text-emerald-300 leading-none">
+          <span className="text-sm font-bold text-emerald-300 leading-none">
             {tricksWon}
           </span>
         </div>
