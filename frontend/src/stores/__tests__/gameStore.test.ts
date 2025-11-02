@@ -62,6 +62,51 @@ function createGameState(overrides: Partial<GameState> = {}): GameState {
   return baseState;
 }
 
+describe('gameStore state management', () => {
+  beforeEach(() => {
+    useGameStore.setState({
+      gameState: null,
+      myPosition: null,
+      error: null,
+      waitingInfo: null,
+      currentNotification: null,
+      isGameStartNotification: false,
+    });
+  });
+
+  it('resets myPosition when switching to a different game', () => {
+    // Set up initial game state
+    const gameState1 = createGameState({ gameId: 'game-1' });
+    useGameStore.setState({ gameState: gameState1, myPosition: 2 });
+    
+    // Verify initial state
+    expect(useGameStore.getState().myPosition).toBe(2);
+    expect(useGameStore.getState().gameState?.gameId).toBe('game-1');
+    
+    // Switch to a new game
+    const gameState2 = createGameState({ gameId: 'game-2' });
+    useGameStore.getState().setGameState(gameState2);
+    
+    // myPosition should be reset to null when game changes
+    expect(useGameStore.getState().myPosition).toBe(null);
+    expect(useGameStore.getState().gameState?.gameId).toBe('game-2');
+  });
+
+  it('preserves myPosition when updating the same game', () => {
+    // Set up initial game state
+    const gameState1 = createGameState({ gameId: 'game-1', version: 1 });
+    useGameStore.setState({ gameState: gameState1, myPosition: 2 });
+    
+    // Update same game with new version
+    const gameState2 = createGameState({ gameId: 'game-1', version: 2 });
+    useGameStore.getState().setGameState(gameState2);
+    
+    // myPosition should be preserved
+    expect(useGameStore.getState().myPosition).toBe(2);
+    expect(useGameStore.getState().gameState?.version).toBe(2);
+  });
+});
+
 describe('gameStore folding decision selectors', () => {
   beforeEach(() => {
     useGameStore.setState({
@@ -69,6 +114,8 @@ describe('gameStore folding decision selectors', () => {
       myPosition: null,
       error: null,
       waitingInfo: null,
+      currentNotification: null,
+      isGameStartNotification: false,
     });
   });
 
