@@ -5,6 +5,7 @@
 
 import { Button } from '@/components/ui/button';
 import { useGame } from '@/hooks/useGame';
+import { useGameStore } from '@/stores/gameStore';
 
 interface BiddingPanelProps {
   currentBid: number | null;
@@ -13,6 +14,10 @@ interface BiddingPanelProps {
 
 export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
   const { placeBid } = useGame();
+  const isGameStartNotification = useGameStore((state) => state.isGameStartNotification);
+  
+  // Disable bidding if "Let's play!" notification is showing
+  const isDisabled = isMyTurn && isGameStartNotification;
 
   if (!isMyTurn) {
     return (
@@ -46,6 +51,11 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
         )}
       </div>
 
+      {isDisabled && (
+        <p className="text-xs uppercase tracking-wide text-emerald-200/80 text-center py-2">
+          Let's play!
+        </p>
+      )}
       <div className="flex flex-wrap justify-center gap-1.5 md:gap-2">
         {availableBids.map(bid => (
           <Button
@@ -53,7 +63,8 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
             onClick={() => placeBid(bid as 2 | 3 | 4 | 5)}
             variant="default"
             size="lg"
-            className="min-w-[72px] md:min-w-[84px] flex-1 bg-emerald-500 text-slate-900 hover:bg-emerald-400 sm:flex-none touch-target tap-feedback"
+            disabled={isDisabled}
+            className="min-w-[72px] md:min-w-[84px] flex-1 bg-emerald-500 text-slate-900 hover:bg-emerald-400 sm:flex-none touch-target tap-feedback disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Bid {bid}
           </Button>
@@ -63,7 +74,8 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
           onClick={() => placeBid('PASS')}
           variant="outline"
           size="lg"
-          className="min-w-[72px] md:min-w-[84px] flex-1 border-emerald-500/60 text-emerald-200 hover:bg-emerald-500/10 sm:flex-none touch-target tap-feedback"
+          disabled={isDisabled}
+          className="min-w-[72px] md:min-w-[84px] flex-1 border-emerald-500/60 text-emerald-200 hover:bg-emerald-500/10 sm:flex-none touch-target tap-feedback disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Pass
         </Button>

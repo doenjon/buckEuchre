@@ -14,7 +14,9 @@ import { TrumpSelector } from './TrumpSelector';
 import { FoldDecision } from './FoldDecision';
 import { WaitingForPlayers } from './WaitingForPlayers';
 import { PlayerStatusIndicators } from './PlayerStatusIndicators';
+import { GameNotification } from './GameNotification';
 import { useGame } from '@/hooks/useGame';
+import { useGameNotifications } from '@/hooks/useGameNotifications';
 import { createGame } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { GAME_TIMEOUTS } from '@buck-euchre/shared';
@@ -34,6 +36,9 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [nextHandCountdown, setNextHandCountdown] = useState<number | null>(null);
   const [showScoreboard, setShowScoreboard] = useState(false);
+
+  // Setup game notifications
+  useGameNotifications(gameState, myPosition);
 
   useEffect(() => {
     if (phase === 'ROUND_OVER' && !gameState.gameOver) {
@@ -301,6 +306,8 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
 
         {/* Main Game Area */}
         <section className="flex flex-col md:gap-8 lg:gap-12 md:order-2 flex-1 min-h-0 md:h-auto md:overflow-visible relative md:py-6 lg:py-8">
+          {/* Game Notifications - absolutely positioned, doesn't affect layout */}
+          <GameNotification />
 
 
           {/* Mobile: Top bar with opponents | Desktop: Labels around table */}
@@ -487,6 +494,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 </div>
               </div>
             )}
+
           </div>
 
           {/* Mobile: Current player label above hand */}

@@ -18,7 +18,7 @@ export function PlayerStatusIndicators({
   playerPosition,
   size = 'sm',
 }: PlayerStatusIndicatorsProps) {
-  const { players, dealerPosition, winningBidderPosition, phase } = gameState;
+  const { players, dealerPosition, phase } = gameState;
   
   const player = players.find(p => p.position === playerPosition);
   
@@ -26,30 +26,43 @@ export function PlayerStatusIndicators({
   const [previousLeader, setPreviousLeader] = useState<PlayerPosition | null>(null);
   const [isLeaderTransitioning, setIsLeaderTransitioning] = useState(false);
 
+  // Create a stable key from scores - only recalculate when scores actually change
+  const scoresString = useMemo(() => players.map(p => p.score).join(','), 
+    [players.map(p => `${p.position}:${p.score}`).join('|')]
+  );
+  
   // Determine current leader(s) - all players tied for lowest score
   // Show crown for leaders, but not when ALL players are tied (4-way tie)
   const currentLeaders = useMemo(() => {
-    const minScore = Math.min(...players.map(p => p.score));
+    const scores = players.map(p => p.score);
+    const minScore = Math.min(...scores);
     const leadersAtMinScore = players.filter(p => p.score === minScore);
     // Don't show crown if all players are tied (4-way tie on first hand or later)
     if (leadersAtMinScore.length === players.length) {
       return [];
     }
-    // Show crown for 2-way or 3-way ties
-    return leadersAtMinScore.map(p => p.position);
-  }, [players]);
+    // Show crown for 2-way or 3-way ties - sort to ensure stable reference
+    const leaderPositions = leadersAtMinScore.map(p => p.position).sort();
+    return leaderPositions;
+    // Only depend on scores string, not entire players array
+  }, [scoresString, players.length]);
 
   // Detect leader change and trigger animation
   useEffect(() => {
-    const currentLeaderStr = currentLeaders.sort().join(',');
+    // Use sorted array from useMemo (already sorted, no need to sort again)
+    const currentLeaderStr = currentLeaders.join(',');
     const prevLeaderStr = previousLeader ? previousLeader.toString() : '';
     if (prevLeaderStr && currentLeaderStr && prevLeaderStr !== currentLeaderStr) {
       setIsLeaderTransitioning(true);
       const timer = setTimeout(() => setIsLeaderTransitioning(false), 600);
       return () => clearTimeout(timer);
     }
-    setPreviousLeader(currentLeaders.length > 0 ? currentLeaders[0] : null);
-  }, [currentLeaders, previousLeader]);
+    // Only update previousLeader if leaders actually changed
+    const newLeader = currentLeaders.length > 0 ? currentLeaders[0] : null;
+    if (previousLeader !== newLeader) {
+      setPreviousLeader(newLeader);
+    }
+  }, [currentLeaders.join(','), previousLeader]);
 
   const isLeader = currentLeaders.includes(playerPosition);
   const isDealer = dealerPosition === playerPosition;

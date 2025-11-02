@@ -13,11 +13,18 @@ export interface WaitingInfo {
   message?: string;
 }
 
+export interface GameNotification {
+  message: string;
+  type: 'success' | 'info' | 'warning' | 'special';
+}
+
 export interface GameStoreState {
   gameState: GameState | null;
   myPosition: number | null;
   error: string | null;
   waitingInfo: WaitingInfo | null;
+  currentNotification: GameNotification | null;
+  isGameStartNotification: boolean; // Track if "Let's play!" is showing
 }
 
 export interface GameStoreActions {
@@ -26,6 +33,8 @@ export interface GameStoreActions {
   setError: (error: string | null) => void;
   clearGame: () => void;
   setWaitingInfo: (info: WaitingInfo | null) => void;
+  showNotification: (message: string, type: GameNotification['type'], isGameStart?: boolean) => void;
+  clearNotification: () => void;
 
   // Computed getters (selectors)
   getMyPlayer: () => Player | null;
@@ -41,6 +50,8 @@ const initialState: GameStoreState = {
   myPosition: null,
   error: null,
   waitingInfo: null,
+  currentNotification: null,
+  isGameStartNotification: false,
 };
 
 /**
@@ -67,6 +78,20 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
   setWaitingInfo: (info) => {
     set({ waitingInfo: info });
+  },
+
+  showNotification: (message, type, isGameStart = false) => {
+    set({ 
+      currentNotification: { message, type },
+      isGameStartNotification: isGameStart,
+    });
+  },
+
+  clearNotification: () => {
+    set({ 
+      currentNotification: null,
+      isGameStartNotification: false,
+    });
   },
 
   // Computed getters
