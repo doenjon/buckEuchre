@@ -25,11 +25,17 @@ export interface JoinSessionRequest {
  * Response after joining session
  */
 export interface JoinSessionResponse {
-  playerId: string;
-  playerName: string;
+  userId: string;
+  username: string;
+  displayName: string;
+  email?: string | null;
+  avatarUrl?: string | null;
   token: string;  // JWT token for authentication
   expiresAt: number;  // Unix timestamp
-  isGuest?: boolean;  // Indicates if the session was created for a guest user
+  isGuest: boolean;  // Indicates if the session was created for a guest user
+  // Legacy fields for backward compatibility
+  playerId?: string;
+  playerName?: string;
 }
 
 // ============================================================================

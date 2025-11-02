@@ -19,7 +19,19 @@ export function GamePage() {
   const navigate = useNavigate();
   const { checkAuth, loginAsGuest } = useAuth();
   const { joinGame, gameState, myPosition, setMyPosition, waitingInfo, error, clearGame } = useGame();
-  const { playerId } = useAuthStore();
+  const authStore = useAuthStore();
+  const userId = authStore.userId;
+  
+  // Debug: Log auth state changes
+  useEffect(() => {
+    console.log('[GamePage] Auth store state:', {
+      userId: authStore.userId,
+      username: authStore.username,
+      displayName: authStore.displayName,
+      isAuthenticated: authStore.isAuthenticated,
+      isGuest: authStore.isGuest
+    });
+  }, [authStore.userId, authStore.username, authStore.displayName, authStore.isAuthenticated, authStore.isGuest]);
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -84,20 +96,52 @@ export function GamePage() {
       return;
     }
 
-    if (gameId && playerId) {
+    if (gameId && userId) {
       joinGame(gameId);
     }
-  }, [authReady, gameId, playerId, joinGame]);
+  }, [authReady, gameId, userId, joinGame]);
 
   // Set player position when game state updates
   useEffect(() => {
-    if (gameState && playerId && myPosition === null) {
-      const player = gameState.players.find(p => p.id === playerId);
-      if (player) {
+    console.log('[GamePage] useEffect triggered:', {
+      hasGameState: !!gameState,
+      hasUserId: !!userId,
+      userId,
+      gameStatePhase: gameState?.phase,
+      myPosition,
+      gameStatePlayers: gameState?.players?.map(p => ({ id: p.id, name: p.name, position: p.position }))
+    });
+
+    if (gameState && userId) {
+      console.log('[GamePage] Looking for player with userId:', userId, {
+        gameId: gameState.gameId,
+        phase: gameState.phase,
+        availablePlayers: gameState.players.map(p => ({ id: p.id, name: p.name, position: p.position }))
+      });
+      
+      const player = gameState.players.find(p => p.id === userId);
+      
+      if (player && myPosition !== player.position) {
+        console.log('[GamePage] ✓ Found player! Setting myPosition:', player.position, 'for userId:', userId, 'playerId:', player.id);
         setMyPosition(player.position);
+      } else if (!player) {
+        console.error('[GamePage] ✗ Could not find player with userId:', userId, {
+          userId,
+          userIdType: typeof userId,
+          availablePlayerIds: gameState.players.map(p => ({ id: p.id, idType: typeof p.id, name: p.name, position: p.position })),
+          matches: gameState.players.filter(p => {
+            const match = p.id === userId;
+            console.log('[GamePage] Comparing:', { playerId: p.id, userId, match, strictEqual: p.id === userId, looseEqual: p.id == userId });
+            return match;
+          })
+        });
+      } else {
+        console.log('[GamePage] Player found but position already set:', { myPosition, playerPosition: player.position });
       }
+    } else {
+      console.log('[GamePage] Skipping position check:', { hasGameState: !!gameState, hasUserId: !!userId, userId });
     }
-  }, [gameState, playerId, myPosition, setMyPosition]);
+  }, [gameState, userId, myPosition, setMyPosition]);
 
   const activeError = useMemo(() => authError || error, [authError, error]);
 
@@ -153,10 +197,10 @@ export function GamePage() {
         ? waitingInfo
         : {
             gameId: gameId ?? '',
-            playerCount: waitingInfo?.playerCount ?? (playerId ? 1 : 0),
+            playerCount: waitingInfo?.playerCount ?? (userId ? 1 : 0),
             playersNeeded:
               waitingInfo?.playersNeeded ??
-              Math.max(0, 4 - (waitingInfo?.playerCount ?? (playerId ? 1 : 0))),
+              Math.max(0, 4 - (waitingInfo?.playerCount ?? (userId ? 1 : 0))),
             message: waitingInfo?.message ?? 'Waiting for more players to join...'
           };
 

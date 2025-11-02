@@ -299,8 +299,18 @@ export function PlayerHand({
   }
 
   const handleCardClick = (card: CardType) => {
+    console.log('[PlayerHand] Card clicked:', {
+      cardId: card.id,
+      card: card,
+      disabled,
+      hasOnClick: !!onCardClick,
+      onCardClick
+    });
     if (!disabled && onCardClick) {
+      console.log('[PlayerHand] Calling onCardClick with:', card.id);
       onCardClick(card.id);
+    } else {
+      console.warn('[PlayerHand] Card click ignored:', { disabled, hasOnClick: !!onCardClick });
     }
   };
 

@@ -1,73 +1,226 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { createGuestPlayer, createPlayer } from '../services/player.service';
+import {
+  createUser,
+  createGuestUser,
+  authenticateUser,
+  invalidateSession,
+  getUserWithStats,
+} from '../services/user.service';
+import { authenticateToken } from '../auth/middleware';
 
 const router = Router();
 
-// Validation schema for join request
-const JoinRequestSchema = z.object({
-  playerName: z.string().trim().min(2, 'Name must be at least 2 characters').max(20, 'Name must be at most 20 characters')
+// Validation schemas
+const RegisterSchema = z.object({
+  email: z.string().email('Invalid email address').optional(),
+  username: z
+    .string()
+    .trim()
+    .min(3, 'Username must be at least 3 characters')
+    .max(20, 'Username must be at most 20 characters')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  displayName: z
+    .string()
+    .trim()
+    .min(2, 'Display name must be at least 2 characters')
+    .max(30, 'Display name must be at most 30 characters'),
+});
+
+const LoginSchema = z.object({
+  emailOrUsername: z.string().trim().min(1, 'Email or username is required'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 /**
- * POST /api/auth/join
- * Create a new player session with just a name
+ * POST /api/auth/register
+ * Register a new user account with email/password
  */
-router.post('/join', async (req: Request, res: Response) => {
+router.post('/register', async (req: Request, res: Response) => {
   try {
     // Validate request body
-    const validation = JoinRequestSchema.safeParse(req.body);
-    
+    const validation = RegisterSchema.safeParse(req.body);
+
     if (!validation.success) {
       return res.status(400).json({
         error: 'Invalid request',
-        message: validation.error.errors[0].message
+        message: validation.error.errors[0].message,
+        details: validation.error.errors,
       });
     }
 
-    const { playerName } = validation.data;
+    const { email, username, password, displayName } = validation.data;
 
-    // Create player and generate token
-    const { player, token } = await createPlayer(playerName);
-    const expiresAt = player.expiresAt.getTime();
+    // Create user
+    const { user, token, session } = await createUser({
+      email,
+      username,
+      password,
+      displayName,
+      isGuest: false,
+    });
 
     res.status(201).json({
-      playerId: player.id,
-      playerName: player.name,
+      userId: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      email: user.email,
       token,
-      expiresAt,
-      isGuest: false
+      expiresAt: session.expiresAt.getTime(),
+      isGuest: false,
     });
   } catch (error) {
-    console.error('Error creating player:', error);
+    console.error('Error registering user:', error);
+
+    if (error instanceof Error) {
+      if (error.message === 'Username already taken' || error.message === 'Email already registered') {
+        return res.status(409).json({
+          error: 'Conflict',
+          message: error.message,
+        });
+      }
+    }
+
     res.status(500).json({
       error: 'Server error',
-      message: 'Failed to create player session'
+      message: 'Failed to register user',
+    });
+  }
+});
+
+/**
+ * POST /api/auth/login
+ * Login with email/username and password
+ */
+router.post('/login', async (req: Request, res: Response) => {
+  try {
+    // Validate request body
+    const validation = LoginSchema.safeParse(req.body);
+
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: validation.error.errors[0].message,
+      });
+    }
+
+    const { emailOrUsername, password } = validation.data;
+
+    // Authenticate user
+    const { user, token, session } = await authenticateUser(emailOrUsername, password);
+
+    res.status(200).json({
+      userId: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      email: user.email,
+      avatarUrl: user.avatarUrl,
+      token,
+      expiresAt: session.expiresAt.getTime(),
+      isGuest: user.isGuest,
+    });
+  } catch (error) {
+    console.error('Error logging in:', error);
+
+    if (error instanceof Error && error.message === 'Invalid credentials') {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid email/username or password',
+      });
+    }
+
+    res.status(500).json({
+      error: 'Server error',
+      message: 'Failed to login',
     });
   }
 });
 
 /**
  * POST /api/auth/guest
- * Create a guest player session
+ * Create a guest user session
  */
 router.post('/guest', async (_req: Request, res: Response) => {
   try {
-    const { player, token } = await createGuestPlayer();
-    const expiresAt = player.expiresAt.getTime();
+    const { user, token, session } = await createGuestUser();
 
     res.status(201).json({
-      playerId: player.id,
-      playerName: player.name,
+      userId: user.id,
+      username: user.username,
+      displayName: user.displayName,
       token,
-      expiresAt,
-      isGuest: true
+      expiresAt: session.expiresAt.getTime(),
+      isGuest: true,
     });
   } catch (error) {
-    console.error('Error creating guest player:', error);
+    console.error('Error creating guest user:', error);
     res.status(500).json({
       error: 'Server error',
-      message: 'Failed to create guest session'
+      message: 'Failed to create guest session',
+    });
+  }
+});
+
+/**
+ * POST /api/auth/logout
+ * Logout and invalidate session
+ */
+router.post('/logout', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+
+    if (token) {
+      await invalidateSession(token);
+    }
+
+    res.status(200).json({
+      message: 'Logged out successfully',
+    });
+  } catch (error) {
+    console.error('Error logging out:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: 'Failed to logout',
+    });
+  }
+});
+
+/**
+ * GET /api/auth/me
+ * Get current user profile with stats
+ */
+router.get('/me', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+
+    const userWithStats = await getUserWithStats(userId);
+
+    if (!userWithStats) {
+      return res.status(404).json({
+        error: 'Not found',
+        message: 'User not found',
+      });
+    }
+
+    res.status(200).json({
+      user: {
+        id: userWithStats.id,
+        username: userWithStats.username,
+        displayName: userWithStats.displayName,
+        email: userWithStats.email,
+        avatarUrl: userWithStats.avatarUrl,
+        isGuest: userWithStats.isGuest,
+        createdAt: userWithStats.createdAt,
+        lastLoginAt: userWithStats.lastLoginAt,
+      },
+      stats: userWithStats.stats,
+    });
+  } catch (error) {
+    console.error('Error getting user profile:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: 'Failed to get user profile',
     });
   }
 });

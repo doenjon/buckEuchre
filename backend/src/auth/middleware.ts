@@ -1,16 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import { extractTokenFromHeader, verifyToken, TokenPayload } from './jwt';
-import { validatePlayer } from '../services/player.service';
+import { validateSession } from '../services/user.service';
 
 /**
- * Extend Express Request to include authenticated player info
+ * Extend Express Request to include authenticated user info
  */
 declare global {
   namespace Express {
     interface Request {
-      player?: {
+      user?: {
         id: string;
-        name: string;
+        username: string;
+        displayName: string;
+        isGuest: boolean;
       };
     }
   }
@@ -20,15 +22,15 @@ declare global {
  * Authentication middleware for Express routes
  * 
  * Validates JWT token from Authorization header and verifies
- * the player exists and is not expired.
+ * the user session is valid.
  * 
- * If authentication succeeds, adds `req.player` with player info.
+ * If authentication succeeds, adds `req.user` with user info.
  * If authentication fails, sends 401 Unauthorized response.
  * 
  * @example
  * ```typescript
  * router.post('/games/create', authenticateToken, async (req, res) => {
- *   const playerId = req.player!.id;
+ *   const userId = req.user!.id;
  *   // ... create game
  * });
  * ```
@@ -47,26 +49,20 @@ export async function authenticateToken(
       return;
     }
 
-    // Verify token
-    const decoded = verifyToken(token);
+    // Validate session
+    const result = await validateSession(token);
 
-    if (!decoded) {
-      res.status(401).json({ error: 'Invalid or expired token' });
+    if (!result) {
+      res.status(401).json({ error: 'Invalid or expired session' });
       return;
     }
 
-    // Validate player still exists and is not expired
-    const player = await validatePlayer(decoded.playerId);
-
-    if (!player) {
-      res.status(401).json({ error: 'Player session expired or invalid' });
-      return;
-    }
-
-    // Attach player info to request
-    req.player = {
-      id: player.id,
-      name: player.name,
+    // Attach user info to request
+    req.user = {
+      id: result.user.id,
+      username: result.user.username,
+      displayName: result.user.displayName,
+      isGuest: result.user.isGuest,
     };
 
     next();
@@ -81,8 +77,8 @@ export async function authenticateToken(
  * Optional authentication middleware
  * 
  * Similar to authenticateToken, but allows requests without a token to proceed.
- * If a valid token is provided, sets req.player.
- * If no token or invalid token, req.player remains undefined.
+ * If a valid token is provided, sets req.user.
+ * If no token or invalid token, req.user remains undefined.
  * 
  * Useful for endpoints that work for both authenticated and unauthenticated users.
  */
@@ -95,17 +91,15 @@ export async function optionalAuth(
     const token = extractTokenFromHeader(req.headers.authorization);
 
     if (token) {
-      const decoded = verifyToken(token);
+      const result = await validateSession(token);
 
-      if (decoded) {
-        const player = await validatePlayer(decoded.playerId);
-
-        if (player) {
-          req.player = {
-            id: player.id,
-            name: player.name,
-          };
-        }
+      if (result) {
+        req.user = {
+          id: result.user.id,
+          username: result.user.username,
+          displayName: result.user.displayName,
+          isGuest: result.user.isGuest,
+        };
       }
     }
 

@@ -60,19 +60,27 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
   try {
     // Validate payload
     const validated = JoinGameSchema.parse(payload);
-    const playerId = socket.data.playerId;
-    const playerName = socket.data.playerName;
+    const userId = socket.data.userId;
+    const displayName = socket.data.displayName;
 
-    console.log(`[JOIN_GAME] Player ${playerName} attempting to join game ${validated.gameId}`);
+    if (!userId) {
+      socket.emit('ERROR', {
+        code: 'AUTHENTICATION_REQUIRED',
+        message: 'Authentication required to join game'
+      });
+      return;
+    }
+
+    console.log(`[JOIN_GAME] User ${displayName} (${userId}) attempting to join game ${validated.gameId}`);
 
     // Add player to game (uses game service)
-    const gameState = await joinGame(validated.gameId, playerId);
+    const gameState = await joinGame(validated.gameId, userId);
 
     // Join socket room regardless of whether game has started
     socket.join(`game:${validated.gameId}`);
     
     // Update connection service to track this player's game
-    updateConnectionGame(playerId, validated.gameId);
+    updateConnectionGame(userId, validated.gameId);
 
     if (!gameState) {
       // Game exists but hasn't started yet (still in WAITING)
@@ -96,7 +104,7 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
         message: `Waiting for ${4 - game.players.length} more player(s)...`
       });
       
-      console.log(`[JOIN_GAME] Player ${playerName} joined. ${game.players.length}/4 players`);
+      console.log(`[JOIN_GAME] User ${displayName} joined. ${game.players.length}/4 players`);
       return;
     }
 
@@ -124,7 +132,10 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
         gameState,
         event: 'PLAYER_RECONNECTED'
       });
-      console.log(`[JOIN_GAME] Player ${playerName} reconnected to game ${validated.gameId} (phase: ${gameState.phase})`);
+      console.log(`[JOIN_GAME] User ${displayName} reconnected to game ${validated.gameId} (phase: ${gameState.phase})`);
+
+      // Trigger AI if needed (game might be waiting for AI to act)
+      checkAndTriggerAI(validated.gameId, gameState, io);
 
       if (gameState.phase === 'ROUND_OVER' && gameState.gameOver !== true) {
         scheduleAutoStartNextRound(
@@ -136,7 +147,7 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
       }
     }
   } catch (error: any) {
-    console.error(`[JOIN_GAME] Error for player ${socket.data.playerName}:`, error.message || error);
+    console.error(`[JOIN_GAME] Error for user ${socket.data.displayName}:`, error.message || error);
     socket.emit('ERROR', {
       code: 'JOIN_GAME_FAILED',
       message: error.message || 'Failed to join game'
@@ -151,23 +162,31 @@ async function handleLeaveGame(io: Server, socket: Socket, payload: unknown): Pr
   try {
     // Validate payload
     const validated = LeaveGameSchema.parse(payload);
-    const playerId = socket.data.playerId;
+    const userId = socket.data.userId;
+
+    if (!userId) {
+      socket.emit('ERROR', {
+        code: 'AUTHENTICATION_REQUIRED',
+        message: 'Authentication required to leave game'
+      });
+      return;
+    }
 
     // Remove player from game
-    await leaveGame(validated.gameId, playerId);
+    await leaveGame(validated.gameId, userId);
 
     // Leave socket room
     socket.leave(`game:${validated.gameId}`);
     
     // Update connection service to clear this player's game
-    updateConnectionGame(playerId, null);
+    updateConnectionGame(userId, null);
 
     // Notify other players
     io.to(`game:${validated.gameId}`).emit('PLAYER_DISCONNECTED', {
-      playerId
+      playerId: userId  // Keep as playerId for backward compatibility with client
     });
 
-    console.log(`Player ${socket.data.playerName} left game ${validated.gameId}`);
+    console.log(`User ${socket.data.displayName} left game ${validated.gameId}`);
   } catch (error: any) {
     console.error('Error in LEAVE_GAME:', error);
     socket.emit('ERROR', {
@@ -184,7 +203,15 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
   try {
     // Validate payload
     const validated = PlaceBidSchema.parse(payload);
-    const playerId = socket.data.playerId;
+    const userId = socket.data.userId;
+
+    if (!userId) {
+      socket.emit('ERROR', {
+        code: 'AUTHENTICATION_REQUIRED',
+        message: 'Authentication required to place bid'
+      });
+      return;
+    }
 
     // Execute action through queue
     let illegalPlayAttempt = false;
@@ -193,7 +220,7 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
 
     const newState = await executeGameAction(validated.gameId, async (currentState) => {
       // Find player position
-      const player = currentState.players.find((p: Player) => p.id === playerId);
+      const player = currentState.players.find((p: Player) => p.id === userId);
       if (!player) {
         throw new Error('Player not in game');
       }
@@ -268,12 +295,20 @@ async function handleDeclareTrump(io: Server, socket: Socket, payload: unknown):
   try {
     // Validate payload
     const validated = DeclareTrumpSchema.parse(payload);
-    const playerId = socket.data.playerId;
+    const userId = socket.data.userId;
+
+    if (!userId) {
+      socket.emit('ERROR', {
+        code: 'AUTHENTICATION_REQUIRED',
+        message: 'Authentication required to declare trump'
+      });
+      return;
+    }
 
     // Execute action through queue
     const newState = await executeGameAction(validated.gameId, async (currentState) => {
       // Find player position
-      const player = currentState.players.find((p: Player) => p.id === playerId);
+      const player = currentState.players.find((p: Player) => p.id === userId);
       if (!player) {
         throw new Error('Player not in game');
       }
@@ -316,12 +351,20 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
   try {
     // Validate payload
     const validated = FoldDecisionSchema.parse(payload);
-    const playerId = socket.data.playerId;
+    const userId = socket.data.userId;
+
+    if (!userId) {
+      socket.emit('ERROR', {
+        code: 'AUTHENTICATION_REQUIRED',
+        message: 'Authentication required to make fold decision'
+      });
+      return;
+    }
 
     // Execute action through queue
     const newState = await executeGameAction(validated.gameId, async (currentState) => {
       // Find player position
-      const player = currentState.players.find((p: Player) => p.id === playerId);
+      const player = currentState.players.find((p: Player) => p.id === userId);
       if (!player) {
         throw new Error('Player not in game');
       }
@@ -391,7 +434,15 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
   try {
     // Validate payload
     const validated = PlayCardSchema.parse(payload);
-    const playerId = socket.data.playerId;
+    const userId = socket.data.userId;
+
+    if (!userId) {
+      socket.emit('ERROR', {
+        code: 'AUTHENTICATION_REQUIRED',
+        message: 'Authentication required to play card'
+      });
+      return;
+    }
 
     // Execute action through queue
     let illegalPlayAttempt = false;
@@ -402,13 +453,13 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
     const newState = await executeGameAction(validated.gameId, async (currentState) => {
       console.log(`[PLAY_CARD] Incoming`, {
         gameId: validated.gameId,
-        playerId,
+        userId,
         phase: currentState.phase,
         currentPlayerPosition: currentState.currentPlayerPosition,
         cardsInTrick: currentState.currentTrick.cards.length,
       });
       // Find player position
-      const player = currentState.players.find((p: Player) => p.id === playerId);
+      const player = currentState.players.find((p: Player) => p.id === userId);
       if (!player) {
         throw new Error('Player not in game');
       }
@@ -503,7 +554,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
 
     if (illegalPlayAttempt) {
       console.warn('[PLAY_CARD] Ignored illegal card play attempt', {
-        playerId: illegalPlayerId ?? playerId,
+        playerId: illegalPlayerId ?? userId,
         playerPosition: illegalPlayerPosition,
         reason: illegalReason,
       });
@@ -600,7 +651,7 @@ async function handleRequestState(socket: Socket, payload: unknown): Promise<voi
 
     if (!gameState) {
       console.warn(
-        `[REQUEST_STATE] No active state found for game ${validated.gameId} (player: ${socket.data.playerName})`
+        `[REQUEST_STATE] No active state found for game ${validated.gameId} (user: ${socket.data.displayName})`
       );
       socket.emit('ERROR', {
         code: 'STATE_NOT_AVAILABLE',

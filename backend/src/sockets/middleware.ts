@@ -1,11 +1,10 @@
 import { Socket } from 'socket.io';
 import { ExtendedError } from 'socket.io/dist/namespace';
-import { verifyToken } from '../auth/jwt';
-import { validatePlayer } from '../services/player.service';
+import { validateSession } from '../services/user.service';
 
 /**
  * Socket.io middleware for authentication
- * Validates JWT token and attaches player data to socket
+ * Validates JWT token and attaches user data to socket
  */
 export async function authenticateSocket(
   socket: Socket,
@@ -19,21 +18,17 @@ export async function authenticateSocket(
       return next(new Error('Authentication token required'));
     }
 
-    // Verify JWT token
-    const payload = verifyToken(token);
-    if (!payload) {
-      return next(new Error('Invalid or expired token'));
+    // Validate session
+    const result = await validateSession(token);
+    if (!result) {
+      return next(new Error('Invalid or expired session'));
     }
 
-    // Validate player exists and is not expired
-    const player = await validatePlayer(payload.playerId);
-    if (!player) {
-      return next(new Error('Player not found or session expired'));
-    }
-
-    // Attach player data to socket
-    socket.data.playerId = player.id;
-    socket.data.playerName = player.name;
+    // Attach user data to socket
+    socket.data.userId = result.user.id;
+    socket.data.username = result.user.username;
+    socket.data.displayName = result.user.displayName;
+    socket.data.isGuest = result.user.isGuest;
 
     next();
   } catch (error) {

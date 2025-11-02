@@ -19,14 +19,14 @@ const router = Router();
  */
 router.post('/', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const playerId = req.player!.id;
+    const userId = req.user!.id;
 
     // Create game
-    const game = await createGame(playerId);
+    const game = await createGame(userId);
 
     res.status(201).json({
       gameId: game.id,
-      createdBy: playerId,
+      createdBy: userId,
       createdAt: game.createdAt.getTime()
     });
   } catch (error) {

@@ -37,18 +37,18 @@ export async function createGame(creatorId: string): Promise<GameWithPlayers> {
   }
 
   // Verify creator exists and is valid
-  const creator = await prisma.player.findUnique({
+  const creator = await prisma.user.findUnique({
     where: { id: creatorId },
   });
 
   if (!creator) {
-    throw new Error('Creator player not found');
+    throw new Error('Creator user not found');
   }
 
   // Check if creator is already in another active game
   const existingGame = await prisma.gamePlayer.findFirst({
     where: {
-      playerId: creatorId,
+      userId: creatorId,
       game: {
         status: {
           in: [GameStatus.WAITING, GameStatus.IN_PROGRESS],
@@ -58,7 +58,7 @@ export async function createGame(creatorId: string): Promise<GameWithPlayers> {
   });
 
   if (existingGame) {
-    throw new Error('Player is already in an active game');
+    throw new Error('User is already in an active game');
   }
 
   // Create game and add creator as first player
@@ -68,13 +68,24 @@ export async function createGame(creatorId: string): Promise<GameWithPlayers> {
       status: GameStatus.WAITING,
       players: {
         create: {
-          playerId: creatorId,
+          userId: creatorId,
           position: 0,
         },
       },
     },
     include: {
-      players: true,
+      players: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              isGuest: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -96,19 +107,19 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     throw new Error('Game ID and Player ID are required');
   }
 
-  // Verify player exists
-  const player = await prisma.player.findUnique({
+  // Verify user exists
+  const user = await prisma.user.findUnique({
     where: { id: playerId },
   });
 
-  if (!player) {
-    throw new Error('Player not found');
+  if (!user) {
+    throw new Error('User not found');
   }
 
-  // Check if player is already in another active game (different from this one)
+  // Check if user is already in another active game (different from this one)
   const existingGame = await prisma.gamePlayer.findFirst({
     where: {
-      playerId,
+      userId: playerId,
       game: {
         status: {
           in: [GameStatus.WAITING, GameStatus.IN_PROGRESS],
@@ -118,17 +129,26 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
   });
 
   if (existingGame && existingGame.gameId !== gameId) {
-    throw new Error('Player is already in a different active game');
+    throw new Error('User is already in a different active game');
   }
   
-  // If player is already in THIS game, check if game has started
+  // If user is already in THIS game, check if game has started
   if (existingGame && existingGame.gameId === gameId) {
     const game = await prisma.game.findUnique({
       where: { id: gameId },
       include: {
         players: {
           orderBy: { position: 'asc' },
-          include: { player: true },
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                isGuest: true,
+              },
+            },
+          },
         },
       },
     });
@@ -153,7 +173,7 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     // No state yet - check if we should start the game
     if (game.players.length === 4 && game.status === GameStatus.WAITING) {
       // All 4 players present! Initialize game
-      const playerIds = game.players.map((gp) => gp.player.id) as [string, string, string, string];
+      const playerIds = game.players.map((gp) => gp.user!.id) as [string, string, string, string];
       let initialState = initializeGame(playerIds);
       
       // CRITICAL: Set the gameId on the state object
@@ -233,11 +253,11 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
         throw new Error('Game is full');
       }
 
-      // Try to add player (may fail if another player took this position)
+      // Try to add user (may fail if another user took this position)
       await prisma.gamePlayer.create({
         data: {
           gameId,
-          playerId,
+          userId: playerId,
           position: nextPosition,
         },
       });
@@ -262,13 +282,22 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
 
   // If game is now full (4 players), initialize game state
   if (game.players.length + 1 === 4) {
-    // Get all player IDs in position order
+    // Get all user IDs in position order
     const updatedGame = await prisma.game.findUnique({
       where: { id: gameId },
       include: {
         players: {
           orderBy: { position: 'asc' },
-          include: { player: true },
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                isGuest: true,
+              },
+            },
+          },
         },
       },
     });
@@ -281,8 +310,8 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
       throw new Error('Game does not have exactly 4 players');
     }
 
-    // Get player IDs as a tuple
-    const playerIds = updatedGame.players.map((gp) => gp.player.id) as [string, string, string, string];
+    // Get user IDs as a tuple
+    const playerIds = updatedGame.players.map((gp) => gp.user!.id) as [string, string, string, string];
 
     // Initialize game state using pure function from game/state.ts
     let initialState = initializeGame(playerIds);
@@ -291,11 +320,18 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     initialState.gameId = gameId;
     
     // Update player names from database
-    initialState.players = initialState.players.map((p, index) => ({
-      ...p,
-      name: updatedGame.players[index].player.name,
-      foldDecision: p.foldDecision, // Ensure foldDecision is preserved
-    })) as [Player, Player, Player, Player];
+    initialState.players = initialState.players.map((p, index) => {
+      const gamePlayer = updatedGame.players[index];
+      const displayName = gamePlayer.user?.displayName || gamePlayer.guestName || `Player ${index + 1}`;
+      
+      console.log(`[joinGame] Setting player ${index} name: ${displayName} (user: ${gamePlayer.user?.id}, username: ${gamePlayer.user?.username})`);
+      
+      return {
+        ...p,
+        name: displayName,
+        foldDecision: p.foldDecision, // Ensure foldDecision is preserved
+      };
+    }) as [Player, Player, Player, Player];
 
     // Store initial state in memory (DEALING phase)
     // Socket handler will deal cards and transition to BIDDING
@@ -340,10 +376,10 @@ export async function leaveGame(gameId: string, playerId: string): Promise<void>
     throw new Error('Game not found');
   }
 
-  const gamePlayer = game.players.find((gp) => gp.playerId === playerId);
+  const gamePlayer = game.players.find((gp) => gp.userId === playerId);
 
   if (!gamePlayer) {
-    throw new Error('Player is not in this game');
+    throw new Error('User is not in this game');
   }
 
   // Remove player from game
@@ -383,10 +419,24 @@ export async function listAvailableGames(): Promise<GameSummary[]> {
     include: {
       players: {
         include: {
-          player: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              isGuest: true,
+            },
+          },
         },
       },
-      creator: true,
+      creator: {
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          isGuest: true,
+        },
+      },
     },
     orderBy: {
       createdAt: 'desc',
@@ -401,7 +451,7 @@ export async function listAvailableGames(): Promise<GameSummary[]> {
       playerCount: game.players.length,
       maxPlayers: 4,
       status: game.status,
-      creatorName: game.creator.name,
+      creatorName: game.creator.displayName,
     }));
 }
 
@@ -446,6 +496,16 @@ export async function getGame(gameId: string): Promise<GameWithPlayers | null> {
     include: {
       players: {
         orderBy: { position: 'asc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              isGuest: true,
+            },
+          },
+        },
       },
     },
   });

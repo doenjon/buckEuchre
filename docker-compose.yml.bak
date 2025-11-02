@@ -1,0 +1,175 @@
+# ==============================================================================
+# Buck Euchre - Production Docker Compose
+# ==============================================================================
+# 
+# This docker-compose file orchestrates all production services:
+# - PostgreSQL database
+# - Backend API server
+# - Frontend web application
+# - Nginx reverse proxy
+# 
+# ⚠️  SECURITY WARNINGS:
+# - Generate strong passwords for all services
+# - Use secrets management for production (AWS Secrets Manager, etc.)
+# - Never commit .env files to version control
+# - Configure SSL/TLS certificates (not included in this config)
+# 
+# Usage:
+#   docker-compose up -d                # Start all services
+#   docker-compose down                 # Stop all services
+#   docker-compose logs -f              # View logs
+#   docker-compose ps                   # Check status
+# 
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: buckeuchre-postgres
+    restart: unless-stopped
+    
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-buckeuchre}
+      POSTGRES_USER: ${POSTGRES_USER:-buckeuchre}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./backups:/backups
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-buckeuchre}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    
+    networks:
+      - buckeuchre-internal
+      - buckeuchre-web
+    
+    # Expose to host for integration tests
+    ports:
+      - "5432:5432"
+
+  # ----------------------------------------------------------------------------
+  # Backend API Server
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: buckeuchre-backend
+    restart: unless-stopped
+    
+    depends_on:
+      postgres:
+        condition: service_healthy
+    
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      WS_HEARTBEAT_INTERVAL: ${WS_HEARTBEAT_INTERVAL:-30000}
+      WS_GRACE_PERIOD: ${WS_GRACE_PERIOD:-30000}
+    
+    # Run migrations before starting
+    command: >
+      sh -c "npx prisma migrate deploy &&
+             node dist/index.js"
+    
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    
+    networks:
+      - buckeuchre-internal
+      - buckeuchre-web
+    
+    # Expose to host for integration tests
+    # In production, access through nginx only
+    ports:
+      - "3000:3000"
+
+  # ----------------------------------------------------------------------------
+  # Frontend Web Application
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: buckeuchre-frontend
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    
+    networks:
+      - buckeuchre-web
+
+  # ----------------------------------------------------------------------------
+  # Nginx Reverse Proxy
+  # ----------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: buckeuchre-nginx
+    restart: unless-stopped
+    
+    depends_on:
+      - frontend
+      - backend
+    
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    
+    networks:
+      - buckeuchre-web
+
+# ------------------------------------------------------------------------------
+# Volumes
+# ------------------------------------------------------------------------------
+volumes:
+  postgres-data:
+    driver: local
+
+# ------------------------------------------------------------------------------
+# Networks
+# ------------------------------------------------------------------------------
+networks:
+  # Internal network (database, not exposed to internet)
+  buckeuchre-internal:
+    driver: bridge
+    internal: true
+  
+  # Web network (frontend, backend, nginx)
+  buckeuchre-web:
+    driver: bridge

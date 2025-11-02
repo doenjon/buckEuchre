@@ -10,100 +10,233 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Player session (temporary, for reconnection only)
-model Player {
-  id        String   @id @default(uuid())
-  name      String
-  createdAt DateTime @default(now())
-  expiresAt DateTime // Token expiration
-  
+// =============================================================================
+// User Accounts & Authentication
+// =============================================================================
+
+// User model - Persistent user accounts
+model User {
+  id           String  @id @default(uuid())
+  email        String? @unique
+  username     String  @unique
+  passwordHash String? // null for OAuth users and guests
+  displayName  String
+  avatarUrl    String?
+
+  // OAuth fields (for future OAuth integration)
+  oauthProvider String? // 'google', 'apple', 'github', etc.
+  oauthId       String?
+
+  // Account metadata
+  emailVerified Boolean  @default(false)
+  isGuest       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  lastLoginAt   DateTime @default(now())
+
   // Relations
-  gamesCreated Game[] @relation("GameCreator")
-  gamePlayers  GamePlayer[]
-  
+  sessions               Session[]
+  gamePlayers            GamePlayer[]
+  gamesCreated           Game[]           @relation("GameCreator")
+  stats                  UserStats?
+  sentFriendRequests     Friendship[]     @relation("Requester")
+  receivedFriendRequests Friendship[]     @relation("Receiver")
+  sentInvitations        GameInvitation[] @relation("Inviter")
+  receivedInvitations    GameInvitation[] @relation("Invitee")
+
+  @@unique([oauthProvider, oauthId])
+  @@index([email])
+  @@index([username])
   @@index([createdAt])
 }
 
+// Session model - JWT sessions with expiration tracking
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token        String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([token])
+}
+
+// User statistics - Comprehensive game stats
+model UserStats {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Game counts
+  gamesPlayed Int @default(0)
+  gamesWon    Int @default(0)
+  gamesLost   Int @default(0)
+
+  // Bidding stats
+  totalBids      Int @default(0)
+  successfulBids Int @default(0)
+  failedBids     Int @default(0)
+  highestBid     Int @default(0)
+
+  // Trick stats
+  totalTricks Int @default(0)
+  tricksWon   Int @default(0)
+
+  // Points
+  totalPoints  Int @default(0)
+  highestScore Int @default(0)
+
+  // Timestamps
+  updatedAt DateTime @updatedAt
+
+  @@index([gamesWon])
+  @@index([gamesPlayed])
+}
+
+// =============================================================================
+// Social Features
+// =============================================================================
+
+// Friendship model - Friends system
+model Friendship {
+  id          String           @id @default(uuid())
+  requesterId String
+  requester   User             @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    User             @relation("Receiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([requesterId, receiverId])
+  @@index([requesterId, status])
+  @@index([receiverId, status])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+// Game invitation model - Invite friends to games
+model GameInvitation {
+  id        String           @id @default(uuid())
+  gameId    String
+  game      Game             @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  inviterId String
+  inviter   User             @relation("Inviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  inviteeId String
+  invitee   User             @relation("Invitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+  status    InvitationStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+  expiresAt DateTime
+
+  @@unique([gameId, inviteeId])
+  @@index([inviteeId, status])
+  @@index([gameId])
+  @@index([expiresAt])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+// =============================================================================
+// Game Models
+// =============================================================================
+
 // Game record
 model Game {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String     @id @default(uuid())
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
   status    GameStatus @default(WAITING)
-  
+
   // Relations
-  creatorId String
-  creator   Player @relation("GameCreator", fields: [creatorId], references: [id])
-  
-  players   GamePlayer[]
-  gameState GameState?
-  rounds    Round[]
-  
+  creatorId   String
+  creator     User             @relation("GameCreator", fields: [creatorId], references: [id])
+  players     GamePlayer[]
+  gameState   GameState?
+  rounds      Round[]
+  invitations GameInvitation[]
+
   @@index([status, createdAt])
+  @@index([creatorId])
 }
 
 enum GameStatus {
-  WAITING        // Waiting for players
-  IN_PROGRESS    // Game active
-  COMPLETED      // Game finished
-  ABANDONED      // Players left, game inactive
+  WAITING // Waiting for players
+  IN_PROGRESS // Game active
+  COMPLETED // Game finished
+  ABANDONED // Players left, game inactive
 }
 
 // Junction table for players in games
 model GamePlayer {
   id       String @id @default(uuid())
-  position Int    // 0-3
-  
+  position Int // 0-3
+
   // Relations
-  gameId   String
-  game     Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  
-  playerId String
-  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  
+  gameId String
+  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  userId String? // nullable for guest players
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Guest player info (when userId is null)
+  guestName String?
+
   joinedAt DateTime @default(now())
   score    Int      @default(0)
-  
+
   @@unique([gameId, position])
-  @@unique([gameId, playerId])
   @@index([gameId])
+  @@index([userId])
 }
 
 // Persisted game state (for recovery after server restart)
 model GameState {
-  id        String   @id @default(uuid())
-  gameId    String   @unique
-  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(uuid())
+  gameId String @unique
+  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
   // Serialized game state (JSON)
-  state     Json
-  
+  state Json
+
   updatedAt DateTime @updatedAt
-  
+
   @@index([gameId])
 }
 
-// Round history (for statistics, optional for MVP)
+// Round history (for statistics)
 model Round {
-  id        String   @id @default(uuid())
-  gameId    String
-  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  
-  roundNumber       Int
-  dealerPosition    Int
-  bidderPosition    Int
-  bid               Int
-  trumpSuit         String
+  id     String @id @default(uuid())
+  gameId String
+  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  roundNumber        Int
+  dealerPosition     Int
+  bidderPosition     Int
+  bid                Int
+  trumpSuit          String
   bidderMadeContract Boolean
-  
+
   // Scores this round
-  scores    Json  // Record<position, score>
-  
+  scores Json // Record<position, score>
+
   // Tricks data (optional, for replay feature)
-  tricks    Json? // Array<Trick>
-  
+  tricks Json? // Array<Trick>
+
   createdAt DateTime @default(now())
-  
+
   @@unique([gameId, roundNumber])
   @@index([gameId])
 }

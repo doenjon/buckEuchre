@@ -1,5 +1,5 @@
 import { prisma } from '../db/client';
-import { Player } from '@prisma/client';
+import { User } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import { joinGame } from './game.service';
 import { GameState } from '@buck-euchre/shared';
@@ -37,35 +37,31 @@ function getRandomAIName(): string {
 /**
  * Create an AI player
  * 
- * Creates a player record with a special AI prefix in the ID.
- * AI players don't expire like regular players.
+ * Creates a user record with isGuest: true for AI players.
+ * AI players are special guest users with AI- prefix.
  * 
  * @param config - AI player configuration
- * @returns AI player record
+ * @returns AI user record
  */
-export async function createAIPlayer(config?: Partial<AIPlayerConfig>): Promise<Player> {
+export async function createAIPlayer(config?: Partial<AIPlayerConfig>): Promise<User> {
   const name = config?.name || getRandomAIName();
   const difficulty = config?.difficulty || 'medium';
   
-  // Create AI player ID with special prefix
-  const aiId = `ai-${uuidv4()}`;
+  // Create unique username for AI
+  const username = `AI_${name.replace(/\s+/g, '_')}_${Date.now()}`;
   
-  // AI players don't expire (set far future date)
-  const expiresAt = new Date();
-  expiresAt.setFullYear(expiresAt.getFullYear() + 100);
-  
-  // Create AI player in database
-  const player = await prisma.player.create({
+  // Create AI user in database as a guest
+  const aiUser = await prisma.user.create({
     data: {
-      id: aiId,
-      name: name.trim(),
-      expiresAt,
+      username,
+      displayName: name.trim(),
+      isGuest: true,
     },
   });
   
-  console.log(`🤖 Created AI player: ${player.name} (${difficulty})`);
+  console.log(`🤖 Created AI player: ${aiUser.displayName} (${difficulty})`);
   
-  return player;
+  return aiUser;
 }
 
 /**
@@ -86,41 +82,87 @@ export async function addAIToGame(
     throw new Error('Game ID is required');
   }
   
-  // Create AI player
-  const aiPlayer = await createAIPlayer(config);
+  // Create AI user
+  const aiUser = await createAIPlayer(config);
   
   // Add to game using existing joinGame logic
   try {
-    const gameState = await joinGame(gameId, aiPlayer.id);
+    const gameState = await joinGame(gameId, aiUser.id);
     
-    console.log(`🤖 AI player ${aiPlayer.name} joined game ${gameId}`);
+    console.log(`🤖 AI player ${aiUser.displayName} joined game ${gameId}`);
     
     return gameState;
   } catch (error: any) {
-    // If join failed, clean up the AI player
-    await prisma.player.delete({
-      where: { id: aiPlayer.id },
-    }).catch(err => console.error('Failed to clean up AI player:', err));
+    // If join failed, clean up the AI user
+    await prisma.user.delete({
+      where: { id: aiUser.id },
+    }).catch(err => console.error('Failed to clean up AI user:', err));
     
     throw error;
   }
 }
 
 /**
- * Check if a player ID belongs to an AI player
+ * Check if a user ID belongs to an AI player (async - queries database)
  * 
- * @param playerId - Player ID to check
- * @returns True if player is AI, false otherwise
+ * @param userId - User ID to check
+ * @returns True if user is AI, false otherwise
  */
-export function isAIPlayer(playerId: string): boolean {
-  return playerId.startsWith('ai-');
+export async function isAIPlayerAsync(userId: string): Promise<boolean> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { username: true },
+    });
+    
+    return user ? isAIUsername(user.username) : false;
+  } catch (error) {
+    console.error('Error checking if user is AI:', error);
+    return false;
+  }
+}
+
+/**
+ * Check if a player name indicates an AI player (fast - checks name pattern)
+ * AI players have display names like "Bot Alice", "Bot Bob", etc.
+ * 
+ * @param playerName - Player display name from game state
+ * @returns True if player name matches AI pattern, false otherwise
+ */
+export function isAIPlayerByName(playerName: string): boolean {
+  return playerName.startsWith('Bot ');
+}
+
+/**
+ * Check if a user ID belongs to an AI player
+ * This is a synchronous version that requires checking via player name
+ * Use isAIPlayerByName() with player.name from GameState for best performance
+ * 
+ * @param userId - User ID to check (deprecated - use isAIPlayerByName or isAIPlayerAsync)
+ * @returns False (always) - Use async version or name-based check instead
+ * @deprecated Use isAIPlayerAsync() or isAIPlayerByName() instead
+ */
+export function isAIPlayer(userId: string): boolean {
+  // This function is deprecated but kept for backward compatibility
+  // The trigger will use the async version or name-based check
+  return false;
+}
+
+/**
+ * Check if a username belongs to an AI player
+ * 
+ * @param username - Username to check
+ * @returns True if username is AI, false otherwise
+ */
+export function isAIUsername(username: string): boolean {
+  return username.startsWith('AI_');
 }
 
 /**
  * Get all AI players in a game
  * 
  * @param gameId - ID of the game
- * @returns Array of AI player IDs in the game
+ * @returns Array of AI user IDs in the game
  */
 export async function getAIPlayersInGame(gameId: string): Promise<string[]> {
   const game = await prisma.game.findUnique({
@@ -128,7 +170,13 @@ export async function getAIPlayersInGame(gameId: string): Promise<string[]> {
     include: {
       players: {
         include: {
-          player: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+              isGuest: true,
+            },
+          },
         },
       },
     },
@@ -139,32 +187,33 @@ export async function getAIPlayersInGame(gameId: string): Promise<string[]> {
   }
   
   return game.players
-    .filter(gp => isAIPlayer(gp.player.id))
-    .map(gp => gp.player.id);
+    .filter(gp => gp.user && isAIUsername(gp.user.username))
+    .map(gp => gp.user!.id);
 }
 
 /**
- * Clean up AI players that are not in any active games
+ * Clean up AI users that are not in any active games
  * 
- * This should be called periodically to remove unused AI players.
+ * This should be called periodically to remove unused AI users.
  */
 export async function cleanupUnusedAIPlayers(): Promise<number> {
   try {
-    // Find all AI players
-    const allAIPlayers = await prisma.player.findMany({
+    // Find all AI users (usernames starting with AI_)
+    const allAIUsers = await prisma.user.findMany({
       where: {
-        id: {
-          startsWith: 'ai-',
+        username: {
+          startsWith: 'AI_',
         },
+        isGuest: true,
       },
     });
     
-    // Find AI players not in any active games
-    const unusedAIPlayers = await Promise.all(
-      allAIPlayers.map(async (player) => {
+    // Find AI users not in any active games
+    const unusedAIUsers = await Promise.all(
+      allAIUsers.map(async (user) => {
         const activeGames = await prisma.gamePlayer.findFirst({
           where: {
-            playerId: player.id,
+            userId: user.id,
             game: {
               status: {
                 in: ['WAITING', 'IN_PROGRESS'],
@@ -172,14 +221,14 @@ export async function cleanupUnusedAIPlayers(): Promise<number> {
             },
           },
         });
-        return activeGames ? null : player.id;
+        return activeGames ? null : user.id;
       })
     );
     
-    const toDelete = unusedAIPlayers.filter(id => id !== null) as string[];
+    const toDelete = unusedAIUsers.filter(id => id !== null) as string[];
     
     if (toDelete.length > 0) {
-      const result = await prisma.player.deleteMany({
+      const result = await prisma.user.deleteMany({
         where: {
           id: {
             in: toDelete,
@@ -187,13 +236,13 @@ export async function cleanupUnusedAIPlayers(): Promise<number> {
         },
       });
       
-      console.log(`🧹 Cleaned up ${result.count} unused AI player(s)`);
+      console.log(`🧹 Cleaned up ${result.count} unused AI user(s)`);
       return result.count;
     }
     
     return 0;
   } catch (error) {
-    console.error('Error cleaning up AI players:', error);
+    console.error('Error cleaning up AI users:', error);
     return 0;
   }
 }

@@ -6,21 +6,42 @@
 import { useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
-import { joinAsGuest, joinSession } from '@/services/api';
+import { login as loginAPI, register as registerAPI, logout as logoutAPI, joinAsGuest } from '@/services/api';
 
 export function useAuth() {
   const authStore = useAuthStore();
   const { setError, setLoading } = useUIStore();
 
-  const login = useCallback(async (playerName: string) => {
+  const register = useCallback(async (data: {
+    username: string;
+    email?: string;
+    password: string;
+    displayName: string;
+  }) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await joinSession(playerName);
+      const response = await registerAPI(data);
       authStore.login(response);
       return response;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to join session';
+      const message = error instanceof Error ? error.message : 'Failed to register';
+      setError(message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [authStore, setError, setLoading]);
+
+  const login = useCallback(async (emailOrUsername: string, password: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await loginAPI(emailOrUsername, password);
+      authStore.login(response);
+      return response;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to login';
       setError(message);
       throw error;
     } finally {
@@ -44,8 +65,14 @@ export function useAuth() {
     }
   }, [authStore, setError, setLoading]);
 
-  const logout = useCallback(() => {
-    authStore.logout();
+  const logout = useCallback(async () => {
+    try {
+      await logoutAPI();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      authStore.logout();
+    }
   }, [authStore]);
 
   const checkAuth = useCallback(() => {
@@ -62,11 +89,15 @@ export function useAuth() {
   }, [authStore]);
 
   return {
-    playerId: authStore.playerId,
-    playerName: authStore.playerName,
+    userId: authStore.userId,
+    username: authStore.username,
+    displayName: authStore.displayName,
+    email: authStore.email,
+    avatarUrl: authStore.avatarUrl,
     token: authStore.token,
     isAuthenticated: authStore.isAuthenticated,
     isGuest: authStore.isGuest,
+    register,
     login,
     loginAsGuest,
     logout,

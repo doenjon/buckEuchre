@@ -16,8 +16,8 @@ export interface CurrentTrickProps {
 
 export function CurrentTrick({
   trick,
-  players,
-  currentPlayerPosition,
+  players: _players,
+  currentPlayerPosition: _currentPlayerPosition,
   myPosition
 }: CurrentTrickProps) {
   const containerRef = useRef<HTMLDivElement>(null);

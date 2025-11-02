@@ -4,18 +4,23 @@ import jwt from 'jsonwebtoken';
  * JWT Token Payload
  */
 export interface TokenPayload {
-  playerId: string;
-  playerName: string;
+  userId: string;
+  username: string;
+  isGuest: boolean;
+  // Legacy fields for backward compatibility
+  playerId?: string;
+  playerName?: string;
 }
 
 /**
- * Generate a JWT token for a player
+ * Generate a JWT token for a user
  * 
- * @param playerId - Player's unique ID
- * @param playerName - Player's display name
+ * @param userId - User's unique ID
+ * @param username - User's username
+ * @param isGuest - Whether the user is a guest
  * @returns Signed JWT token
  */
-export function generateToken(playerId: string, playerName: string): string {
+export function generateToken(userId: string, username: string, isGuest: boolean = false): string {
   const jwtSecret = process.env.JWT_SECRET;
   const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '24h';
 
@@ -23,13 +28,14 @@ export function generateToken(playerId: string, playerName: string): string {
     throw new Error('JWT_SECRET environment variable is not set');
   }
 
-  if (!playerId || !playerName) {
-    throw new Error('Player ID and name are required to generate token');
+  if (!userId || !username) {
+    throw new Error('User ID and username are required to generate token');
   }
 
   const payload: TokenPayload = {
-    playerId,
-    playerName,
+    userId,
+    username,
+    isGuest,
   };
 
   return jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn } as jwt.SignOptions);

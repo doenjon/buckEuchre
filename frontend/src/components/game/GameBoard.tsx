@@ -59,6 +59,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
     return undefined;
   }, [phase, gameState.gameOver, gameState.updatedAt]);
 
+
   const handleReturnToLobby = () => {
     if (isReturning) {
       return;
@@ -153,7 +154,18 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       break;
     case 'PLAYING':
       activePosition = currentPlayerPosition;
-      isMyTurn = currentPlayerPosition === myPosition;
+      // Ensure both values are numbers for comparison
+      isMyTurn = currentPlayerPosition !== null && 
+                 myPosition !== null && 
+                 Number(currentPlayerPosition) === Number(myPosition);
+      console.log('[GameBoard] PLAYING phase check:', {
+        currentPlayerPosition,
+        myPosition,
+        currentPlayerType: typeof currentPlayerPosition,
+        myPositionType: typeof myPosition,
+        isMyTurn,
+        players: players.map(p => ({ id: p.id, name: p.name, position: p.position, positionType: typeof p.position }))
+      });
       break;
     case 'ROUND_OVER':
       activePosition = myPosition;
@@ -163,6 +175,21 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       activePosition = null;
       isMyTurn = false;
   }
+
+  // Debug logging for card selection
+  useEffect(() => {
+    if (phase === 'PLAYING' && myPlayer) {
+      console.log('[GameBoard] PLAYING phase debug:', {
+        myPosition,
+        currentPlayerPosition,
+        isMyTurn,
+        phase,
+        myPlayerName: myPlayer?.name,
+        currentPlayerName: getPlayerByPosition(currentPlayerPosition)?.name,
+        cardsInHand: myPlayer?.hand?.length || 0
+      });
+    }
+  }, [phase, myPosition, currentPlayerPosition, isMyTurn, myPlayer]);
 
   const completedTrick =
     gameState.tricks.length > 0
@@ -533,12 +560,14 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             }
           >
             {myPlayer.folded !== true ? (
-              <PlayerHand
-                cards={myPlayer.hand}
-                onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
-                disabled={!isMyTurn || phase !== 'PLAYING'}
-                trumpSuit={gameState.trumpSuit}
-              />
+              <>
+                <PlayerHand
+                  cards={myPlayer.hand}
+                  onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
+                  disabled={!isMyTurn || phase !== 'PLAYING'}
+                  trumpSuit={gameState.trumpSuit}
+                />
+              </>
             ) : (
               <div className="text-center">
                 <p className="text-base md:text-lg font-semibold text-white/90">

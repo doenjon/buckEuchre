@@ -62,12 +62,19 @@ export function Card({
   size = 'medium',
   selected = false
 }: CardProps) {
+  const handleFaceDownClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    console.log('[Card] Face-down card clicked:', { disabled, hasOnClick: !!onClick });
+    if (!disabled && onClick) {
+      onClick();
+    }
+  };
+
   if (faceDown) {
     return (
       <div 
         className={`${sizeStyles[size]} bg-blue-900 rounded-lg border-2 border-blue-950 flex items-center justify-center shadow-lg cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105`}
         style={{ backgroundColor: '#1e3a8a', opacity: 1 }}
-        onClick={!disabled ? onClick : undefined}
+        onClick={handleFaceDownClick}
         role="button"
         aria-label="Face down card"
         tabIndex={!disabled && onClick ? 0 : -1}
@@ -89,9 +96,25 @@ export function Card({
       ? 'cursor-not-allowed'
       : 'cursor-default';
   
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    console.log('[Card] Clicked:', {
+      cardId: card.id,
+      disabled,
+      hasOnClick: !!onClick,
+      event: e
+    });
+    if (!disabled && onClick) {
+      if (typeof onClick === 'function') {
+        onClick();
+      }
+    } else {
+      console.warn('[Card] Click ignored - disabled or no onClick:', { disabled, hasOnClick: !!onClick });
+    }
+  };
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       disabled={disabled}
       aria-label={ariaLabel}
       aria-pressed={selected}

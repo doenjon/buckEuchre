@@ -12,23 +12,11 @@ import { Button } from '@/components/ui/button';
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { login, loginAsGuest, isAuthenticated } = useAuth();
-  const { isLoading, error, setError } = useUIStore();
-  const [name, setName] = useState('');
+  const { loginAsGuest, isAuthenticated } = useAuth();
+  const { isLoading, setError } = useUIStore();
 
-  const handleJoin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || name.length < 2 || name.length > 20) {
-      setError('Name must be between 2 and 20 characters');
-      return;
-    }
-    
-    try {
-      await login(name);
-      navigate('/lobby');
-    } catch (err) {
-      console.error('Failed to join:', err);
-    }
+  const handleGetStarted = () => {
+    navigate('/login');
   };
 
   const handleGuestJoin = async () => {
@@ -92,36 +80,18 @@ export function HomePage() {
             <div className="rounded-[32px] border border-white/15 bg-white/10 p-8 shadow-[0_30px_80px_-45px_rgba(16,185,129,0.85)] backdrop-blur">
               <div className="flex flex-col gap-2 text-center">
                 <span className="text-xs uppercase tracking-[0.35em] text-emerald-200/80">Join the table</span>
-                <h2 className="text-2xl font-semibold text-white">Sign in to play</h2>
+                <h2 className="text-2xl font-semibold text-white">Get Started</h2>
               </div>
 
-              <form onSubmit={handleJoin} className="mt-6 space-y-5">
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="name" className="text-xs uppercase tracking-[0.3em] text-emerald-200/70">
-                    Your name
-                  </label>
-                  <input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Choose a display name"
-                    className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-base text-white placeholder:text-emerald-100/40 focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300/50"
-                    minLength={2}
-                    maxLength={20}
-                    required
-                  />
-                  <p className="text-xs text-emerald-100/60">2–20 characters</p>
-                </div>
-
-                {error && (
-                  <div className="rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-                    {error}
-                  </div>
-                )}
-
-                <Button type="submit" disabled={isLoading} variant="primary" size="md" className="w-full justify-center">
-                  {isLoading ? 'Joining...' : 'Join Session'}
+              <div className="mt-6 space-y-4">
+                <Button
+                  type="button"
+                  onClick={handleGetStarted}
+                  variant="primary"
+                  size="md"
+                  className="w-full justify-center"
+                >
+                  Sign In or Register
                 </Button>
 
                 <div className="relative flex items-center justify-center text-xs uppercase tracking-[0.3em] text-emerald-100/50">
@@ -139,10 +109,10 @@ export function HomePage() {
                 >
                   {isLoading ? 'Creating guest…' : 'Continue as Guest'}
                 </Button>
-              </form>
+              </div>
 
               <p className="mt-6 text-center text-xs text-emerald-100/70">
-                Guest sessions last 24 hours and can be claimed with a name anytime.
+                Create an account to save stats, make friends, and compete on leaderboards.
               </p>
             </div>
           </div>

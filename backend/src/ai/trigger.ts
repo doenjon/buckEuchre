@@ -8,7 +8,7 @@
 
 import { Server } from 'socket.io';
 import { GameState } from '@buck-euchre/shared';
-import { isAIPlayer } from '../services/ai-player.service';
+import { isAIPlayerByName, isAIPlayerAsync } from '../services/ai-player.service';
 import { executeAITurn } from './executor';
 
 /**
@@ -83,7 +83,7 @@ function getAIPlayersNeedingFoldDecision(gameState: GameState): string[] {
     }
 
     // Check if this player hasn't decided yet
-    if (player.foldDecision === 'UNDECIDED' && isAIPlayer(player.id)) {
+    if (player.foldDecision === 'UNDECIDED' && isAIPlayerByName(player.name)) {
       aiPlayers.push(player.id);
     }
   }
@@ -135,22 +135,39 @@ export async function checkAndTriggerAI(
     // For other phases, check if current acting player is AI
     const currentPlayerId = getCurrentActingPlayer(gameState);
 
-    console.log(`[AI Trigger] Current acting player: ${currentPlayerId}, isAI: ${currentPlayerId ? isAIPlayer(currentPlayerId) : 'N/A'}`);
-
     if (!currentPlayerId) {
       // No one needs to act right now
       console.log(`[AI Trigger] No current acting player found`);
       return;
     }
 
-    if (!isAIPlayer(currentPlayerId)) {
+    // Find the player in game state to check their name
+    const currentPlayer = gameState.players.find(p => p.id === currentPlayerId);
+    
+    if (!currentPlayer) {
+      console.log(`[AI Trigger] Current player ${currentPlayerId} not found in game state`);
+      return;
+    }
+
+    // Check if AI by name (fast check)
+    let isAI = isAIPlayerByName(currentPlayer.name);
+    
+    // If name doesn't match pattern, check username from database (fallback for old games)
+    if (!isAI) {
+      console.log(`[AI Trigger] Name "${currentPlayer.name}" doesn't match Bot pattern, checking database...`);
+      isAI = await isAIPlayerAsync(currentPlayerId);
+    }
+    
+    console.log(`[AI Trigger] Current acting player: ${currentPlayer.name} (${currentPlayerId}), isAI: ${isAI}`);
+
+    if (!isAI) {
       // Current player is human, don't trigger
-      console.log(`[AI Trigger] Current player ${currentPlayerId} is human, not triggering AI`);
+      console.log(`[AI Trigger] Current player ${currentPlayer.name} is human, not triggering AI`);
       return;
     }
 
     // Current player is AI - trigger after brief delay
-    console.log(`[AI Trigger] AI player ${currentPlayerId} needs to act in phase ${gameState.phase}`);
+    console.log(`[AI Trigger] AI player ${currentPlayer.name} needs to act in phase ${gameState.phase}`);
     
     setTimeout(() => {
       executeAITurn(gameId, currentPlayerId, io).catch(err =>
