@@ -444,9 +444,19 @@ export async function leaveGame(gameId: string, userId: string): Promise<void> {
   }
 
   // Remove player from game
-  await prisma.gamePlayer.delete({
-    where: { id: gamePlayer.id },
-  });
+  // Handle race condition: player might already be deleted
+  try {
+    await prisma.gamePlayer.delete({
+      where: { id: gamePlayer.id },
+    });
+  } catch (error: any) {
+    // P2025 = Record not found (already deleted in concurrent request)
+    if (error.code !== 'P2025') {
+      throw error; // Re-throw if it's a different error
+    }
+    // Otherwise, player already left - this is fine, continue cleanup
+    console.log(`[leaveGame] Player ${userId} already removed from game ${gameId}`);
+  }
 
   // If game was in progress, mark as abandoned
   if (game.status === GameStatus.IN_PROGRESS) {
