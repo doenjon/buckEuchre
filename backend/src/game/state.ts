@@ -374,7 +374,8 @@ export function applyFoldDecision(
       const scoreChanges = calculateRoundScores(
         playersWithAutoTricks,
         winningBidder,
-        state.highestBid
+        state.highestBid,
+        state.isClubsTurnUp
       );
 
       const scoredPlayers = playersWithAutoTricks.map((player, position) => ({
@@ -529,8 +530,9 @@ export function finishRound(state: GameState): GameState {
   // Calculate score changes
   const scoreChanges = calculateRoundScores(
     state.players,
-    state.winningBidderPosition!,
-    state.highestBid!
+    state.winningBidderPosition,
+    state.highestBid!,
+    state.isClubsTurnUp
   );
   
   // Apply score changes

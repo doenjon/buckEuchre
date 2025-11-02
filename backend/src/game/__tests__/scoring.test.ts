@@ -125,6 +125,70 @@ describe('scoring.ts - Scoring Logic', () => {
       const scores = calculateRoundScores(players, 0, 5);
       expect(scores[0]).toBe(-5); // Made contract
     });
+
+    describe('Clubs Turn-Up (No Bidder) Scenario', () => {
+      it('should score all players as non-bidders when clubs is turned up', () => {
+        const players = [
+          createPlayer(0, 2, false), // Would be "bidder" position but clubs turned up
+          createPlayer(1, 2, false),
+          createPlayer(2, 1, false),
+          createPlayer(3, 0, false),
+        ];
+
+        // When isClubsTurnUp is true, player 0 should NOT be treated as bidder
+        const scores = calculateRoundScores(players, 0, 2, true);
+        expect(scores[0]).toBe(-2); // Scored as non-bidder (not euchred)
+        expect(scores[1]).toBe(-2);
+        expect(scores[2]).toBe(-1);
+        expect(scores[3]).toBe(5); // Got set (0 tricks)
+      });
+
+      it('should NOT euchre player with 1 trick when clubs is turned up', () => {
+        const players = [
+          createPlayer(0, 1, false), // Would fail contract if treated as bidder
+          createPlayer(1, 2, false),
+          createPlayer(2, 2, false),
+          createPlayer(3, 0, false),
+        ];
+
+        // This is the bug fix: player 0 gets -1, not +5
+        const scores = calculateRoundScores(players, 0, 2, true);
+        expect(scores[0]).toBe(-1); // Non-bidder scoring (NOT euchred)
+        expect(scores[1]).toBe(-2);
+        expect(scores[2]).toBe(-2);
+        expect(scores[3]).toBe(5);
+      });
+
+      it('should score all players taking tricks as -tricksTaken when clubs turned up', () => {
+        const players = [
+          createPlayer(0, 1, false),
+          createPlayer(1, 1, false),
+          createPlayer(2, 2, false),
+          createPlayer(3, 1, false),
+        ];
+
+        const scores = calculateRoundScores(players, null, 2, true);
+        expect(scores[0]).toBe(-1);
+        expect(scores[1]).toBe(-1);
+        expect(scores[2]).toBe(-2);
+        expect(scores[3]).toBe(-1);
+      });
+
+      it('should still penalize players with 0 tricks when clubs turned up', () => {
+        const players = [
+          createPlayer(0, 3, false),
+          createPlayer(1, 2, false),
+          createPlayer(2, 0, false), // Got set
+          createPlayer(3, 0, false), // Got set
+        ];
+
+        const scores = calculateRoundScores(players, null, 2, true);
+        expect(scores[0]).toBe(-3);
+        expect(scores[1]).toBe(-2);
+        expect(scores[2]).toBe(5); // Got set penalty
+        expect(scores[3]).toBe(5); // Got set penalty
+      });
+    });
   });
 
   describe('checkWinCondition', () => {
