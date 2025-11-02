@@ -25,7 +25,10 @@ export function Scoreboard({
   players,
   currentPlayerPosition,
   phase,
+  trumpSuit,
   winningBidderPosition,
+  winningBid,
+  isClubsTurnUp,
   className,
   variant = 'default'
 }: ScoreboardProps) {
@@ -75,6 +78,40 @@ export function Scoreboard({
           className
         )}
       >
+        {/* Trump and Bid Info */}
+        {(trumpSuit || (winningBidderPosition !== null && winningBid !== null)) && (
+          <div className="mb-2 px-1 pb-2 border-b border-white/10">
+            <div className="flex items-center justify-center gap-2 text-xs text-emerald-200/90">
+              {trumpSuit && (
+                <div className="flex items-center gap-1">
+                  <span className="text-emerald-300 font-semibold">TRUMP:</span>
+                  <span className={`font-bold ${trumpSuit === 'HEARTS' || trumpSuit === 'DIAMONDS' ? 'text-red-400' : 'text-gray-300'}`}>
+                    {trumpSuit === 'SPADES' ? '?' : trumpSuit === 'HEARTS' ? '?' : trumpSuit === 'DIAMONDS' ? '?' : '?'}
+                  </span>
+                  {isClubsTurnUp && (
+                    <span className="ml-1 rounded bg-red-500/20 border border-red-400/50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300 animate-pulse">
+                      Dirty!
+                    </span>
+                  )}
+                </div>
+              )}
+              {winningBidderPosition !== null && winningBid !== null && (
+                <>
+                  {trumpSuit && <span className="text-emerald-200/50">?</span>}
+                  <div className="flex items-center gap-1">
+                    <span className="text-emerald-300 font-semibold">BID:</span>
+                    <span className="text-white font-bold">{winningBid}</span>
+                    <span className="text-emerald-200/70">by</span>
+                    <span className="text-white font-medium">
+                      {players.find(p => p.position === winningBidderPosition)?.name || `P${winningBidderPosition}`}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-4 gap-1.5" role="list" aria-label="Player scores">
           {entries.map(({ player, index, hasFolded }) => (
             <div
