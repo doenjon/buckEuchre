@@ -62,7 +62,7 @@ export function Card({
   size = 'medium',
   selected = false
 }: CardProps) {
-  const handleFaceDownClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleFaceDownClick = () => {
     console.log('[Card] Face-down card clicked:', { disabled, hasOnClick: !!onClick });
     if (!disabled && onClick) {
       onClick();

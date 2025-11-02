@@ -63,7 +63,7 @@ export async function register(data: {
       throw new Error(error.message || 'Failed to register');
     } else {
       // Backend returned HTML (likely a 404 or error page)
-      const text = await response.text();
+      await response.text(); // Consume response body
       throw new Error(`Server error (${response.status}): ${response.statusText}. Check that the backend is running at ${API_URL}`);
     }
   }
@@ -91,7 +91,7 @@ export async function login(emailOrUsername: string, password: string): Promise<
       throw new Error(error.message || 'Failed to login');
     } else {
       // Backend returned HTML (likely a 404 or error page)
-      const text = await response.text();
+      await response.text(); // Consume response body
       throw new Error(`Server error (${response.status}): ${response.statusText}. Check that the backend is running at ${API_URL}`);
     }
   }

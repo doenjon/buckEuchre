@@ -3,7 +3,6 @@
  * @description Home page with authentication and game creation
  */
 
-import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Sparkles, Users, Crown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
