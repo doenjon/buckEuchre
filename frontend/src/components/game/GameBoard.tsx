@@ -258,7 +258,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
 
           {showScoreboard && (
             <div 
-              className="pointer-events-auto fixed inset-x-0 top-16 z-30 flex items-start justify-center px-4 pt-2" 
+              className="pointer-events-auto fixed inset-x-0 top-16 bottom-0 z-30 flex items-start justify-center px-4 pt-2" 
               style={{ opacity: 1, filter: 'none', isolation: 'isolate' }}
               onClick={() => setShowScoreboard(false)}
             >
