@@ -69,7 +69,14 @@ function buildRoundCompletionPayload(
   preScoreState: GameState,
   postScoreState: GameState
 ): RoundCompletionPayload | null {
+  console.log('[STATS BUILD] Called with phases:', {
+    prePhase: preScoreState.phase,
+    postPhase: postScoreState.phase,
+    gameOver: postScoreState.gameOver,
+  });
+
   if (postScoreState.phase !== 'ROUND_OVER' && postScoreState.phase !== 'GAME_OVER') {
+    console.log('[STATS BUILD] Returning null - not in ROUND_OVER or GAME_OVER phase');
     return null;
   }
 
@@ -94,16 +101,28 @@ function buildRoundCompletionPayload(
           ? player.tricksTaken
           : 0;
 
-      const totalTricks = player.folded ? 0 : cardsPlayed || autoWinTricks;
+      // totalTricks represents how many tricks the player participated in (not folded)
+      // In Buck Euchre, each player plays one card per trick they participate in
+      // If player folded before any tricks were played, totalTricks = 0
+      // If all opponents folded and bidder auto-wins, totalTricks = 5 for bidder
+      // Otherwise, totalTricks = number of cards played
+      const totalTricks = player.folded ? 0 : (cardsPlayed || autoWinTricks);
 
       const wasBidder = bidderPosition !== null && player.position === bidderPosition;
       const scoreChange = scoreChanges[index];
+      
+      // In Buck Euchre, lower scores are better (race to 0)
+      // Score changes are NEGATIVE when good (score decreases)
+      // Score changes are POSITIVE when bad (got euchred, score increases)
+      // pointsEarned should include both positive and negative outcomes
+      const pointsEarned = -scoreChange;
+      
       const update: RoundStatsUpdate = {
         userId,
         wasBidder,
         tricksWon: player.tricksTaken,
         totalTricks,
-        pointsEarned: -scoreChange,
+        pointsEarned,
       };
 
       if (wasBidder && typeof highestBid === 'number') {
@@ -116,26 +135,35 @@ function buildRoundCompletionPayload(
     .filter((update): update is RoundStatsUpdate => update !== null);
 
   if (roundUpdates.length === 0) {
+    console.log('[STATS BUILD] Returning null - no round updates');
     return null;
   }
 
+  console.log('[STATS BUILD] Built payload with', roundUpdates.length, 'round updates:', roundUpdates);
   const payload: RoundCompletionPayload = { roundUpdates };
 
-  if (postScoreState.gameOver) {
+  if (postScoreState.phase === 'GAME_OVER' && postScoreState.gameOver) {
     const winnerPosition = postScoreState.winner;
     payload.gameUpdates = postScoreState.players
       .filter((player) => !!player.id)
       .map((player) => ({
-        userId: player.id,
+        userId: player.id!,
         won: winnerPosition !== null && player.position === winnerPosition,
         finalScore: player.score,
       }));
+    console.log('[STATS BUILD] Added game updates:', payload.gameUpdates);
   }
 
+  console.log('[STATS BUILD] Returning payload');
   return payload;
 }
 
 async function persistRoundCompletionStats(payload: RoundCompletionPayload): Promise<void> {
+  console.log('[STATS PERSIST] Called with:', {
+    roundUpdates: payload.roundUpdates.length,
+    gameUpdates: payload.gameUpdates?.length || 0,
+  });
+
   const tasks: Promise<unknown>[] = payload.roundUpdates.map((update) => updateRoundStats(update));
 
   if (payload.gameUpdates) {
@@ -143,15 +171,21 @@ async function persistRoundCompletionStats(payload: RoundCompletionPayload): Pro
   }
 
   if (tasks.length === 0) {
+    console.log('[STATS PERSIST] No tasks to execute');
     return;
   }
 
+  console.log('[STATS PERSIST] Executing', tasks.length, 'tasks');
   const results = await Promise.allSettled(tasks);
+  let successCount = 0;
   for (const result of results) {
     if (result.status === 'rejected') {
-      console.error('[STATS] Failed to persist round/game stats:', result.reason);
+      console.error('[STATS PERSIST] Failed to persist:', result.reason);
+    } else {
+      successCount++;
     }
   }
+  console.log('[STATS PERSIST] Complete:', successCount, 'succeeded,', (tasks.length - successCount), 'failed');
 }
 
 /**

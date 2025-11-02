@@ -28,6 +28,15 @@ export interface GameStatsUpdate {
 export async function updateRoundStats(roundStats: RoundStatsUpdate): Promise<void> {
   const { userId, wasBidder, bidAmount, bidSuccess, tricksWon, totalTricks, pointsEarned } = roundStats;
 
+  console.log('[updateRoundStats] Called for user', userId, 'with stats:', {
+    wasBidder,
+    bidAmount,
+    bidSuccess,
+    tricksWon,
+    totalTricks,
+    pointsEarned,
+  });
+
   try {
     // Get current stats
     const stats = await prisma.userStats.findUnique({
@@ -35,9 +44,16 @@ export async function updateRoundStats(roundStats: RoundStatsUpdate): Promise<vo
     });
 
     if (!stats) {
-      console.error(`Stats not found for user ${userId}`);
+      console.error(`[updateRoundStats] Stats not found for user ${userId}`);
       return;
     }
+
+    console.log('[updateRoundStats] Current stats for user', userId, ':', {
+      gamesPlayed: stats.gamesPlayed,
+      totalTricks: stats.totalTricks,
+      tricksWon: stats.tricksWon,
+      totalPoints: stats.totalPoints,
+    });
 
     // Calculate updates
     const updates: any = {
@@ -62,13 +78,18 @@ export async function updateRoundStats(roundStats: RoundStatsUpdate): Promise<vo
       }
     }
 
+    console.log('[updateRoundStats] Applying updates for user', userId, ':', updates);
+
     // Update stats
     await prisma.userStats.update({
       where: { userId },
       data: updates,
     });
+
+    console.log('[updateRoundStats] Successfully updated stats for user', userId);
   } catch (error) {
-    console.error('Error updating round stats:', error);
+    console.error('[updateRoundStats] Error updating round stats:', error);
+    throw error;
   }
 }
 
@@ -78,6 +99,11 @@ export async function updateRoundStats(roundStats: RoundStatsUpdate): Promise<vo
 export async function updateGameStats(gameStats: GameStatsUpdate): Promise<void> {
   const { userId, won, finalScore } = gameStats;
 
+  console.log('[updateGameStats] Called for user', userId, 'with stats:', {
+    won,
+    finalScore,
+  });
+
   try {
     // Get current stats
     const stats = await prisma.userStats.findUnique({
@@ -85,9 +111,15 @@ export async function updateGameStats(gameStats: GameStatsUpdate): Promise<void>
     });
 
     if (!stats) {
-      console.error(`Stats not found for user ${userId}`);
+      console.error(`[updateGameStats] Stats not found for user ${userId}`);
       return;
     }
+
+    console.log('[updateGameStats] Current stats for user', userId, ':', {
+      gamesPlayed: stats.gamesPlayed,
+      gamesWon: stats.gamesWon,
+      gamesLost: stats.gamesLost,
+    });
 
     // Calculate updates
     const updates: any = {
@@ -105,13 +137,18 @@ export async function updateGameStats(gameStats: GameStatsUpdate): Promise<void>
       updates.highestScore = finalScore;
     }
 
+    console.log('[updateGameStats] Applying updates for user', userId, ':', updates);
+
     // Update stats
     await prisma.userStats.update({
       where: { userId },
       data: updates,
     });
+
+    console.log('[updateGameStats] Successfully updated stats for user', userId);
   } catch (error) {
-    console.error('Error updating game stats:', error);
+    console.error('[updateGameStats] Error updating game stats:', error);
+    throw error;
   }
 }
 

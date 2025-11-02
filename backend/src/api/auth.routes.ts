@@ -214,7 +214,10 @@ router.get('/me', authenticateToken, async (req: Request, res: Response) => {
         createdAt: userWithStats.createdAt,
         lastLoginAt: userWithStats.lastLoginAt,
       },
-      stats: userWithStats.stats,
+      stats: userWithStats.stats ? {
+        ...userWithStats.stats,
+        totalTricksTaken: userWithStats.stats.tricksWon, // Frontend expects this field name
+      } : null,
     });
   } catch (error) {
     console.error('Error getting user profile:', error);
