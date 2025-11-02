@@ -8,12 +8,14 @@ import { useNavigate } from 'react-router-dom';
 import { getUserGames, leaveGame } from '@/services/api';
 import type { GameSummary } from '@buck-euchre/shared';
 import { useUIStore } from '@/stores/uiStore';
+import { useGame } from '@/hooks/useGame';
 import { Users, Clock, Play, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function ActiveGames() {
   const navigate = useNavigate();
   const { setError } = useUIStore();
+  const { leaveGame: socketLeaveGame, clearGame } = useGame();
   const [games, setGames] = useState<GameSummary[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [leavingGameId, setLeavingGameId] = useState<string | null>(null);
@@ -59,8 +61,17 @@ export function ActiveGames() {
 
     try {
       setLeavingGameId(gameId);
+      
+      // 1. Notify the socket to leave the game room
+      socketLeaveGame(gameId);
+      
+      // 2. Clear the client-side game state
+      clearGame();
+      
+      // 3. Call REST API to remove from database
       await leaveGame(gameId);
-      // Refresh the list after leaving
+      
+      // 4. Refresh the list after leaving
       await fetchGames(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to leave game';
