@@ -581,7 +581,7 @@ export function startNextRound(state: GameState): GameState {
     tricksTaken: 0,
     folded: false,
     foldDecision: 'UNDECIDED' as const,
-  })) as [Player, Player, Player, Player];
+  })) as unknown as [Player, Player, Player, Player];
   
   return withVersion(state, {
     phase: 'DEALING',
