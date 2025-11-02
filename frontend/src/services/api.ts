@@ -205,6 +205,38 @@ export async function listGames(): Promise<ListGamesResponse> {
 }
 
 /**
+ * Get user's active games
+ */
+export async function getUserGames(): Promise<ListGamesResponse> {
+  const response = await fetch(`${API_URL}/api/games/my`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to get user games');
+  }
+
+  return response.json();
+}
+
+/**
+ * Leave a game
+ */
+export async function leaveGame(gameId: string): Promise<void> {
+  const response = await fetch(`${API_URL}/api/games/${gameId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to leave game');
+  }
+}
+
+/**
  * Get current state of a specific game
  */
 export async function getGameState(gameId: string): Promise<GameState> {

@@ -494,7 +494,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
               })()}
 
               {/* Desktop: Stadium-shaped poker table - full width with margins for side labels */}
-              <div className="absolute left-16 right-16 top-1/2 -translate-y-1/2 aspect-[1.5/1] flex items-center justify-center">
+              <div className="absolute left-16 right-16 top-1/2 -translate-y-1/2 aspect-[1.4/1] flex items-center justify-center">
                 <CurrentTrick
                   trick={displayTrick}
                   players={players}
@@ -505,7 +505,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             </div>
 
             {/* Mobile: Stadium-shaped poker table - full width, scaled to fit */}
-            <div className="md:hidden w-full h-full max-w-full max-h-full aspect-[2.2/1] flex items-center justify-center" style={{ maxHeight: '100%', maxWidth: '100%' }}>
+            <div className="md:hidden w-full h-full max-w-full max-h-full aspect-[2.05/1] flex items-center justify-center" style={{ maxHeight: '100%', maxWidth: '100%' }}>
               <CurrentTrick
                 trick={displayTrick}
                 players={players}

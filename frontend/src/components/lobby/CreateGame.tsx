@@ -21,7 +21,13 @@ export function CreateGame() {
       const response = await createGame();
       navigate(`/game/${response.gameId}`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create game';
+      let message = err instanceof Error ? err.message : 'Failed to create game';
+      
+      // Improve error message for users already in a game
+      if (message.includes('already in an active game') || message.includes('User is already in an active game')) {
+        message = 'You are already in an active game. Please leave your current game(s) above before creating a new one.';
+      }
+      
       setError(message);
     } finally {
       setLoading(false);

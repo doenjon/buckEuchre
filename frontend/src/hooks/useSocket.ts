@@ -48,7 +48,25 @@ export function useSocket() {
       
       onError: (error) => {
         console.error('Socket error:', error);
-        setError(error.message || 'An error occurred');
+        
+        // Only show blocking errors for join-related failures
+        // Gameplay errors should be notifications, not blocking
+        const blockingErrorCodes = [
+          'JOIN_GAME_FAILED',
+          'AUTHENTICATION_REQUIRED',
+          'GAME_NOT_FOUND',
+          'SEAT_FAILED'
+        ];
+        
+        if (error.code && blockingErrorCodes.includes(error.code)) {
+          // This is a blocking error - show the error modal
+          setError(error.message || 'An error occurred');
+        } else {
+          // This is a gameplay error - just show a notification
+          const message = error.message || 'An error occurred';
+          setNotification(message);
+          setTimeout(() => setNotification(null), 5000);
+        }
       },
       
       onGameStateUpdate: (data) => {

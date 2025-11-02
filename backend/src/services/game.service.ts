@@ -360,9 +360,70 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
  * @param gameId - ID of the game
  * @param playerId - ID of the player leaving
  */
-export async function leaveGame(gameId: string, playerId: string): Promise<void> {
-  if (!gameId || !playerId) {
-    throw new Error('Game ID and Player ID are required');
+/**
+ * Get user's active games
+ * 
+ * Returns all games where the user is a player and the game is still active.
+ * 
+ * @param userId - ID of the user
+ * @returns Array of game summaries with player info
+ */
+export async function getUserActiveGames(userId: string): Promise<GameSummary[]> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
+  const games = await prisma.game.findMany({
+    where: {
+      players: {
+        some: {
+          userId: userId,
+        },
+      },
+      status: {
+        in: [GameStatus.WAITING, GameStatus.IN_PROGRESS],
+      },
+    },
+    include: {
+      players: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              isGuest: true,
+            },
+          },
+        },
+      },
+      creator: {
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          isGuest: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  return games.map((game) => ({
+    gameId: game.id,
+    createdAt: game.createdAt.getTime(),
+    playerCount: game.players.length,
+    maxPlayers: 4,
+    status: game.status,
+    creatorName: game.creator.displayName,
+  }));
+}
+
+export async function leaveGame(gameId: string, userId: string): Promise<void> {
+  if (!gameId || !userId) {
+    throw new Error('Game ID and User ID are required');
   }
 
   const game = await prisma.game.findUnique({
@@ -376,7 +437,7 @@ export async function leaveGame(gameId: string, playerId: string): Promise<void>
     throw new Error('Game not found');
   }
 
-  const gamePlayer = game.players.find((gp) => gp.userId === playerId);
+  const gamePlayer = game.players.find((gp) => gp.userId === userId);
 
   if (!gamePlayer) {
     throw new Error('User is not in this game');
