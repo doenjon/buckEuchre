@@ -100,6 +100,7 @@ export function setupSocketListeners(
     onPlayerReconnected?: (data: any) => void;
     onTrickComplete?: (data: any) => void;
     onRoundComplete?: (data: any) => void;
+    onAllPlayersPassed?: (data: any) => void;
   }
 ): void {
   if (handlers.onConnect) {
@@ -145,6 +146,10 @@ export function setupSocketListeners(
   if (handlers.onRoundComplete) {
     socket.on('ROUND_COMPLETE', handlers.onRoundComplete);
   }
+  
+  if (handlers.onAllPlayersPassed) {
+    socket.on('ALL_PLAYERS_PASSED', handlers.onAllPlayersPassed);
+  }
 }
 
 /**
@@ -162,4 +167,5 @@ export function cleanupSocketListeners(socket: Socket): void {
   socket.off('PLAYER_RECONNECTED');
   socket.off('TRICK_COMPLETE');
   socket.off('ROUND_COMPLETE');
+  socket.off('ALL_PLAYERS_PASSED');
 }

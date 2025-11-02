@@ -410,9 +410,15 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
     // Trigger AI if needed
     checkAndTriggerAI(validated.gameId, newState, io);
     
-    // If all players passed, deal new cards asynchronously
+    // If all players passed, send notification and deal new cards after a delay
     if (newState.phase === 'DEALING') {
-      setImmediate(async () => {
+      // Send notification immediately
+      io.to(`game:${validated.gameId}`).emit('ALL_PLAYERS_PASSED', {
+        message: 'Everyone passed. Dealing new hand...'
+      });
+      
+      // Deal new cards after 2.5 second delay
+      setTimeout(async () => {
         try {
           const dealtState = await executeGameAction(validated.gameId, dealNewRound);
           io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
@@ -426,7 +432,7 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
         } catch (error: any) {
           console.error(`[PLACE_BID] Failed to deal new round:`, error.message);
         }
-      });
+      }, 2500);
     }
   } catch (error: any) {
     console.error('Error in PLACE_BID:', error);
