@@ -16,26 +16,30 @@ export function GameList() {
   const navigate = useNavigate();
   const { setError } = useUIStore();
   const [games, setGames] = useState<GameSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  const fetchGames = async () => {
+  const fetchGames = async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) {
+        setInitialLoading(true);
+      }
       const response = await listGames();
       setGames(response.games);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load games';
       setError(message);
     } finally {
-      setLoading(false);
+      if (isInitial) {
+        setInitialLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchGames();
+    fetchGames(true);
     
     // Auto-refresh game list every 5 seconds
-    const interval = setInterval(fetchGames, 5000);
+    const interval = setInterval(() => fetchGames(false), 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -84,7 +88,7 @@ export function GameList() {
     return date.toLocaleDateString();
   };
 
-  if (loading && games.length === 0) {
+  if (initialLoading && games.length === 0) {
     return (
       <div className="flex items-center justify-center py-14">
         <Loader2 className="h-10 w-10 animate-spin text-emerald-300" />

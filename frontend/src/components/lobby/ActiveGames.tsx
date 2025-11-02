@@ -15,27 +15,31 @@ export function ActiveGames() {
   const navigate = useNavigate();
   const { setError } = useUIStore();
   const [games, setGames] = useState<GameSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [leavingGameId, setLeavingGameId] = useState<string | null>(null);
 
-  const fetchGames = async () => {
+  const fetchGames = async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) {
+        setInitialLoading(true);
+      }
       const response = await getUserGames();
       setGames(response.games || []);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load your games';
       setError(message);
     } finally {
-      setLoading(false);
+      if (isInitial) {
+        setInitialLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchGames();
+    fetchGames(true);
     
     // Auto-refresh every 5 seconds
-    const interval = setInterval(fetchGames, 5000);
+    const interval = setInterval(() => fetchGames(false), 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -57,7 +61,7 @@ export function ActiveGames() {
       setLeavingGameId(gameId);
       await leaveGame(gameId);
       // Refresh the list after leaving
-      await fetchGames();
+      await fetchGames(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to leave game';
       setError(message);
@@ -103,7 +107,7 @@ export function ActiveGames() {
     return date.toLocaleDateString();
   };
 
-  if (loading && games.length === 0) {
+  if (initialLoading && games.length === 0) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-8 w-8 animate-spin text-emerald-300" />
