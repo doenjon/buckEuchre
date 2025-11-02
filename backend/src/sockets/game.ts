@@ -94,16 +94,29 @@ function buildRoundCompletionPayload(
           ? player.tricksTaken
           : 0;
 
-      const totalTricks = player.folded ? 0 : cardsPlayed || autoWinTricks;
+      // totalTricks represents how many tricks the player participated in (not folded)
+      // In Buck Euchre, each player plays one card per trick they participate in
+      // If player folded before any tricks were played, totalTricks = 0
+      // If all opponents folded and bidder auto-wins, totalTricks = 5 for bidder
+      // Otherwise, totalTricks = number of cards played
+      const totalTricks = player.folded ? 0 : (cardsPlayed || autoWinTricks);
 
       const wasBidder = bidderPosition !== null && player.position === bidderPosition;
       const scoreChange = scoreChanges[index];
+      
+      // In Buck Euchre, lower scores are better (race to 0)
+      // pointsEarned represents forward progress (score reduction)
+      // If score went from 25->22, scoreChange = -3, so pointsEarned = 3 (good)
+      // If score went from 25->30, scoreChange = +5, so pointsEarned = 0 (no progress, got set)
+      // We only count positive progress towards winning
+      const pointsEarned = Math.max(0, -scoreChange);
+      
       const update: RoundStatsUpdate = {
         userId,
         wasBidder,
         tricksWon: player.tricksTaken,
         totalTricks,
-        pointsEarned: -scoreChange,
+        pointsEarned,
       };
 
       if (wasBidder && typeof highestBid === 'number') {
@@ -121,12 +134,12 @@ function buildRoundCompletionPayload(
 
   const payload: RoundCompletionPayload = { roundUpdates };
 
-  if (postScoreState.gameOver) {
+  if (postScoreState.phase === 'GAME_OVER' && postScoreState.gameOver) {
     const winnerPosition = postScoreState.winner;
     payload.gameUpdates = postScoreState.players
       .filter((player) => !!player.id)
       .map((player) => ({
-        userId: player.id,
+        userId: player.id!,
         won: winnerPosition !== null && player.position === winnerPosition,
         finalScore: player.score,
       }));
