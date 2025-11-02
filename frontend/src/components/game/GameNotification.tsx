@@ -71,7 +71,7 @@ export function GameNotification() {
 
   return (
     <div
-      className="pointer-events-none absolute left-1/2 bottom-[240px] md:bottom-[280px] z-[100] w-full max-w-[90vw] -translate-x-1/2 px-4"
+      className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-[90vw] px-4"
       style={{ isolation: 'isolate' }}
     >
       <p

@@ -424,7 +424,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
           </div>
 
           {/* Table Area */}
-          <div className="relative flex-1 min-h-0 flex items-center justify-center w-full px-2 md:px-2 lg:px-3 md:min-h-[340px] lg:min-h-[400px]">
+          <div className="relative flex-1 min-h-0 flex items-center justify-center w-full px-2 md:px-2 lg:px-3 md:min-h-[360px] lg:min-h-[420px]">
             {/* Desktop: Labels around table */}
             <div className="hidden md:block relative w-full h-full flex items-center justify-center">
               {/* Left label */}
