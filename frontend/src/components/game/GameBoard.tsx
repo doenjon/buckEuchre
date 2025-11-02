@@ -257,8 +257,16 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
 
 
           {showScoreboard && (
-            <div className="pointer-events-none fixed inset-x-0 top-16 z-30 flex items-start justify-center px-4 pt-2" style={{ opacity: 1, filter: 'none', isolation: 'isolate' }}>
-              <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-slate-950 p-3 text-slate-100 shadow-lg" style={{ opacity: 1, filter: 'none' }}>
+            <div 
+              className="pointer-events-auto fixed inset-x-0 top-16 z-30 flex items-start justify-center px-4 pt-2" 
+              style={{ opacity: 1, filter: 'none', isolation: 'isolate' }}
+              onClick={() => setShowScoreboard(false)}
+            >
+              <div 
+                className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-slate-950 p-3 text-slate-100 shadow-lg" 
+                style={{ opacity: 1, filter: 'none' }}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-base font-semibold text-white">Table Tally</h2>
                   <Button
