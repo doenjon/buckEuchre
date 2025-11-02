@@ -292,6 +292,15 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
           {/* Desktop Info Panel - shows trump, bidder, bid amount, etc. */}
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-slate-100 shadow-lg backdrop-blur">
             <div className="space-y-3">
+              {(() => {
+                console.log('[Desktop Info Panel] Debug:', {
+                  trumpSuit: gameState.trumpSuit,
+                  isClubsTurnUp: gameState.isClubsTurnUp,
+                  phase: gameState.phase,
+                  hasProperty: 'isClubsTurnUp' in gameState
+                });
+                return null;
+              })()}
               {gameState.trumpSuit && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300">TRUMP:</span>
@@ -348,6 +357,15 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
           <div className="md:hidden px-2 pt-10 pb-1.5 flex-shrink-0">
             <div className="w-full rounded-lg px-3 py-2 bg-white/15 border border-white/20 shadow-md backdrop-blur">
               <div className="flex items-center justify-center gap-2 text-xs text-emerald-200/90">
+                {(() => {
+                  console.log('[Mobile Info Bar] Debug:', {
+                    trumpSuit: gameState.trumpSuit,
+                    isClubsTurnUp: gameState.isClubsTurnUp,
+                    phase: gameState.phase,
+                    hasProperty: 'isClubsTurnUp' in gameState
+                  });
+                  return null;
+                })()}
                 {gameState.trumpSuit && (
                   <div className="flex items-center gap-1">
                     <span className="text-emerald-300 font-semibold">TRUMP:</span>
