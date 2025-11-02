@@ -131,6 +131,17 @@ export function useSocket() {
         console.log('Round complete:', data);
         // Could add animation trigger here in Phase 6
       },
+      
+      onAllPlayersPassed: (data) => {
+        console.log('All players passed:', data);
+        // Show notification using the game store notification system
+        const gameStore = useGameStore.getState();
+        gameStore.showNotification('Everyone passed. Dealing new hand...', 'info');
+        // Auto-clear after 2.5 seconds
+        setTimeout(() => {
+          gameStore.clearNotification();
+        }, 2500);
+      },
     });
 
     return () => {
