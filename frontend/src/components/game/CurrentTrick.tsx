@@ -70,10 +70,10 @@ export function CurrentTrick({
 
   // Arrange cards around the center with the local player seated at the bottom
   const cardPositions = [
-    'bottom-10 left-1/2 -translate-x-1/2 sm:bottom-16', // South (you)
-    'left-8 top-1/2 -translate-y-1/2 sm:left-16', // Seat to your left
-    'top-10 left-1/2 -translate-x-1/2 sm:top-16', // Across from you
-    'right-8 top-1/2 -translate-y-1/2 sm:right-16' // Seat to your right
+    'bottom-6 left-1/2 -translate-x-1/2 sm:bottom-10', // South (you)
+    'left-4 top-1/2 -translate-y-1/2 sm:left-8', // Seat to your left
+    'top-6 left-1/2 -translate-x-1/2 sm:top-10', // Across from you
+    'right-4 top-1/2 -translate-y-1/2 sm:right-8' // Seat to your right
   ];
 
 
