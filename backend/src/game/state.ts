@@ -574,8 +574,39 @@ export function startNextRound(state: GameState): GameState {
   // Rotate dealer for next round
   const newDealerPosition = ((state.dealerPosition + 1) % 4) as PlayerPosition;
   
+  // Reset player states for new round
+  const players = state.players.map(p => ({
+    ...p,
+    hand: [],
+    tricksTaken: 0,
+    folded: false,
+    foldDecision: 'UNDECIDED' as const,
+  })) as [Player, Player, Player, Player];
+  
   return withVersion(state, {
     phase: 'DEALING',
     dealerPosition: newDealerPosition,
+    
+    // Clear all round-specific state
+    players,
+    
+    blind: [],
+    turnUpCard: null,
+    isClubsTurnUp: false,
+    
+    bids: [],
+    currentBidder: null,
+    highestBid: null,
+    winningBidderPosition: null,
+    trumpSuit: null,
+    
+    tricks: [],
+    currentTrick: {
+      number: 0,
+      leadPlayerPosition: 0 as PlayerPosition,
+      cards: [],
+      winner: null,
+    },
+    currentPlayerPosition: null,
   });
 }
