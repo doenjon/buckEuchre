@@ -38,6 +38,120 @@ import { getEffectiveSuit } from '../game/deck';
 import { GameState, PlayerPosition, Player, Card } from '../../../shared/src/types/game';
 import { checkAndTriggerAI } from '../ai/trigger';
 import { scheduleAutoStartNextRound, cancelAutoStartNextRound } from '../services/round.service';
+import {
+  updateRoundStats,
+  updateGameStats,
+  RoundStatsUpdate,
+  GameStatsUpdate,
+} from '../services/stats.service';
+
+interface RoundCompletionPayload {
+  roundUpdates: RoundStatsUpdate[];
+  gameUpdates?: GameStatsUpdate[];
+}
+
+function countCardsPlayedByPlayer(state: GameState): Map<PlayerPosition, number> {
+  const counts = new Map<PlayerPosition, number>();
+
+  for (const trick of state.tricks) {
+    for (const played of trick.cards) {
+      counts.set(
+        played.playerPosition,
+        (counts.get(played.playerPosition) || 0) + 1
+      );
+    }
+  }
+
+  return counts;
+}
+
+function buildRoundCompletionPayload(
+  preScoreState: GameState,
+  postScoreState: GameState
+): RoundCompletionPayload | null {
+  if (postScoreState.phase !== 'ROUND_OVER' && postScoreState.phase !== 'GAME_OVER') {
+    return null;
+  }
+
+  const scoreChanges = postScoreState.players.map((player, index) =>
+    player.score - preScoreState.players[index].score
+  );
+
+  const bidderPosition = preScoreState.winningBidderPosition;
+  const highestBid = preScoreState.highestBid;
+  const cardsPlayedLookup = countCardsPlayedByPlayer(postScoreState);
+
+  const roundUpdates: RoundStatsUpdate[] = postScoreState.players
+    .map((player, index) => {
+      const userId = player.id;
+      if (!userId) {
+        return null;
+      }
+
+      const cardsPlayed = cardsPlayedLookup.get(player.position) || 0;
+      const autoWinTricks =
+        cardsPlayed === 0 && postScoreState.tricks.length === 0 && player.tricksTaken > 0
+          ? player.tricksTaken
+          : 0;
+
+      const totalTricks = player.folded ? 0 : cardsPlayed || autoWinTricks;
+
+      const wasBidder = bidderPosition !== null && player.position === bidderPosition;
+      const update: RoundStatsUpdate = {
+        userId,
+        wasBidder,
+        tricksWon: player.tricksTaken,
+        totalTricks,
+        pointsEarned: scoreChanges[index],
+      };
+
+      if (wasBidder && typeof highestBid === 'number') {
+        update.bidAmount = highestBid;
+        update.bidSuccess = player.tricksTaken >= highestBid;
+      }
+
+      return update;
+    })
+    .filter((update): update is RoundStatsUpdate => update !== null);
+
+  if (roundUpdates.length === 0) {
+    return null;
+  }
+
+  const payload: RoundCompletionPayload = { roundUpdates };
+
+  if (postScoreState.gameOver) {
+    const winnerPosition = postScoreState.winner;
+    payload.gameUpdates = postScoreState.players
+      .filter((player) => !!player.id)
+      .map((player) => ({
+        userId: player.id,
+        won: winnerPosition !== null && player.position === winnerPosition,
+        finalScore: player.score,
+      }));
+  }
+
+  return payload;
+}
+
+async function persistRoundCompletionStats(payload: RoundCompletionPayload): Promise<void> {
+  const tasks: Promise<unknown>[] = payload.roundUpdates.map((update) => updateRoundStats(update));
+
+  if (payload.gameUpdates) {
+    tasks.push(...payload.gameUpdates.map((update) => updateGameStats(update)));
+  }
+
+  if (tasks.length === 0) {
+    return;
+  }
+
+  const results = await Promise.allSettled(tasks);
+  for (const result of results) {
+    if (result.status === 'rejected') {
+      console.error('[STATS] Failed to persist round/game stats:', result.reason);
+    }
+  }
+}
 
 /**
  * Register all game event handlers
@@ -362,6 +476,7 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
     }
 
     // Execute action through queue
+    let roundCompletionPayload: RoundCompletionPayload | null = null;
     const newState = await executeGameAction(validated.gameId, async (currentState) => {
       // Find player position
       const player = currentState.players.find((p: Player) => p.id === userId);
@@ -391,7 +506,16 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
       }
 
       // Apply fold decision
-      return applyFoldDecision(currentState, player.position, validated.folded);
+      const nextState = applyFoldDecision(currentState, player.position, validated.folded);
+
+      if (nextState.phase === 'ROUND_OVER' || nextState.phase === 'GAME_OVER') {
+        const statsPayload = buildRoundCompletionPayload(currentState, nextState);
+        if (statsPayload) {
+          roundCompletionPayload = statsPayload;
+        }
+      }
+
+      return nextState;
     });
 
     // Broadcast update
@@ -402,6 +526,10 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
 
     // Trigger AI if needed
     checkAndTriggerAI(validated.gameId, newState, io);
+
+    if (roundCompletionPayload) {
+      void persistRoundCompletionStats(roundCompletionPayload);
+    }
 
     if (newState.phase === 'ROUND_OVER' || newState.phase === 'GAME_OVER') {
       io.to(`game:${validated.gameId}`).emit('ROUND_COMPLETE', {
@@ -449,6 +577,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
     let illegalReason: string | null = null;
     let illegalPlayerId: string | null = null;
     let illegalPlayerPosition: PlayerPosition | null = null;
+    let roundCompletionPayload: RoundCompletionPayload | null = null;
 
     const newState = await executeGameAction(validated.gameId, async (currentState) => {
       console.log(`[PLAY_CARD] Incoming`, {
@@ -530,7 +659,12 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       // Check if applyCardPlay transitioned to ROUND_OVER (5 tricks complete)
       if (nextState.phase === 'ROUND_OVER') {
         // Finish round and calculate scores
+        const stateBeforeScoring = nextState;
         nextState = finishRound(nextState);
+        const statsPayload = buildRoundCompletionPayload(stateBeforeScoring, nextState);
+        if (statsPayload) {
+          roundCompletionPayload = statsPayload;
+        }
         console.log(`[ROUND] Completed. Moving to ${nextState.phase}`, {
           gameOver: nextState.gameOver,
           scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
@@ -559,6 +693,10 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
         reason: illegalReason,
       });
       return;
+    }
+
+    if (roundCompletionPayload) {
+      void persistRoundCompletionStats(roundCompletionPayload);
     }
 
     // Broadcast update
@@ -605,7 +743,7 @@ async function handleStartNextRound(io: Server, socket: Socket, payload: unknown
     // Prevent any pending auto-start from firing
     cancelAutoStartNextRound(validated.gameId);
 
-    // Execute action through queue - transition ROUND_OVER → DEALING
+    // Execute action through queue - transition ROUND_OVER -> DEALING
     let dealingState = await executeGameAction(validated.gameId, (currentState) => {
       // Validate phase
       if (currentState.phase !== 'ROUND_OVER') {
