@@ -61,7 +61,20 @@ export const useGameStore = create<GameStore>()((set, get) => ({
   ...initialState,
 
   setGameState: (gameState) => {
-    set({ gameState, error: null, waitingInfo: null });
+    const currentState = get().gameState;
+    const currentPosition = get().myPosition;
+    
+    // If switching to a different game, reset myPosition to prevent stale data
+    if (currentState && currentState.gameId !== gameState.gameId) {
+      console.log('[GameStore] Switching games, resetting myPosition', {
+        oldGameId: currentState.gameId,
+        newGameId: gameState.gameId,
+        oldPosition: currentPosition
+      });
+      set({ gameState, myPosition: null, error: null, waitingInfo: null });
+    } else {
+      set({ gameState, error: null, waitingInfo: null });
+    }
   },
 
   setMyPosition: (position) => {
