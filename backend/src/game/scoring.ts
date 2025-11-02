@@ -17,20 +17,25 @@ import { Player, PlayerPosition } from '../../../shared/src/types/game';
  * - Non-bidder took 1+ tricks: -tricksTaken
  * - Non-bidder took 0 tricks: +5 (got set)
  * 
+ * Special case - Clubs Turn-Up:
+ * - When clubs is turned up, there is NO bidder (bidding is skipped)
+ * - ALL players are scored as non-bidders
+ * 
  * Lower scores are better (race to 0 or below)
  * 
  * @param players - Array of 4 players
- * @param winningBidderPosition - Position of the player who won bidding
+ * @param winningBidderPosition - Position of the player who won bidding (null for clubs turn-up)
  * @param bid - The bid amount (2-5)
+ * @param isClubsTurnUp - Whether clubs was turned up (no bidder scenario)
  * @returns Record mapping position to score change
  */
 export function calculateRoundScores(
   players: Player[],
-  winningBidderPosition: PlayerPosition,
-  bid: number
+  winningBidderPosition: PlayerPosition | null,
+  bid: number,
+  isClubsTurnUp: boolean = false
 ): Record<number, number> {
   const scores: Record<number, number> = {};
-  const bidderTricks = players[winningBidderPosition].tricksTaken;
 
   for (let i = 0; i < 4; i++) {
     const player = players[i];
@@ -38,8 +43,9 @@ export function calculateRoundScores(
     if (player.folded === true) {
       // Folded players get 0 score change
       scores[i] = 0;
-    } else if (i === winningBidderPosition) {
-      // Bidder scoring
+    } else if (!isClubsTurnUp && i === winningBidderPosition) {
+      // Bidder scoring (only when there was actual bidding)
+      const bidderTricks = player.tricksTaken;
       if (bidderTricks >= bid) {
         // Made contract: subtract tricks actually taken
         scores[i] = -bidderTricks;
@@ -48,7 +54,7 @@ export function calculateRoundScores(
         scores[i] = 5;
       }
     } else {
-      // Non-bidder who stayed in
+      // Non-bidder who stayed in (or clubs turn-up where everyone is scored as non-bidder)
       if (player.tricksTaken >= 1) {
         // Took tricks: score DECREASES (good)
         scores[i] = -player.tricksTaken;
