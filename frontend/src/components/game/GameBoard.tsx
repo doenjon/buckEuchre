@@ -298,6 +298,11 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                   <span className={`text-xl font-bold ${gameState.trumpSuit === 'HEARTS' || gameState.trumpSuit === 'DIAMONDS' ? 'text-red-400' : 'text-gray-300'}`}>
                     {gameState.trumpSuit === 'SPADES' ? '♠' : gameState.trumpSuit === 'HEARTS' ? '♥' : gameState.trumpSuit === 'DIAMONDS' ? '♦' : '♣'}
                   </span>
+                  {gameState.isClubsTurnUp && (
+                    <span className="ml-2 rounded-md bg-red-500/20 border border-red-400/50 px-2 py-1 text-xs font-bold uppercase tracking-wider text-red-300 animate-pulse">
+                      ♣ Dirty Clubs!
+                    </span>
+                  )}
                 </div>
               )}
               {gameState.winningBidderPosition !== null && gameState.highestBid !== null && (
@@ -349,6 +354,11 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                     <span className={`font-bold ${gameState.trumpSuit === 'HEARTS' || gameState.trumpSuit === 'DIAMONDS' ? 'text-red-400' : 'text-gray-300'}`}>
                       {gameState.trumpSuit === 'SPADES' ? '♠' : gameState.trumpSuit === 'HEARTS' ? '♥' : gameState.trumpSuit === 'DIAMONDS' ? '♦' : '♣'}
                     </span>
+                    {gameState.isClubsTurnUp && (
+                      <span className="ml-1 rounded bg-red-500/20 border border-red-400/50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300 animate-pulse">
+                        Dirty!
+                      </span>
+                    )}
                   </div>
                 )}
                 {gameState.winningBidderPosition !== null && gameState.highestBid !== null && (
