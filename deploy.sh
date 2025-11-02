@@ -9,16 +9,17 @@ git fetch --all --prune
 git reset --hard origin/main
 
 echo "[deploy] Building & starting…"
-docker compose build --pull
-docker compose down --remove-orphans || true
-docker compose up -d --remove-orphans
+# Use explicit production compose file (ignore override file for local dev)
+docker compose -f docker-compose.yml build --pull
+docker compose -f docker-compose.yml down --remove-orphans || true
+docker compose -f docker-compose.yml up -d --remove-orphans
 
 echo "[deploy] Waiting for services to be healthy…"
 sleep 10
 max_attempts=60
 attempt=0
 while [ $attempt -lt $max_attempts ]; do
-    if docker compose ps | grep -q "healthy.*backend" && docker compose ps | grep -q "healthy.*postgres"; then
+    if docker compose -f docker-compose.yml ps | grep -q "healthy.*backend" && docker compose -f docker-compose.yml ps | grep -q "healthy.*postgres"; then
         echo "[deploy] Services are healthy!"
         break
     fi

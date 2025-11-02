@@ -60,3 +60,6 @@ prisma/*.db
 
 # OS
 Thumbs.db
+
+# Local development overrides (should not be in production)
+docker-compose.override.yml
