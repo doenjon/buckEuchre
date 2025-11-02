@@ -322,7 +322,7 @@ describe('Scoreboard Component', () => {
       expect(screen.getByText(/Bid 5/i)).toBeInTheDocument();
     });
 
-    it('should accept isClubsTurnUp prop', () => {
+    it('should display dirty clubs label when clubs turn up', () => {
       render(
         <Scoreboard
           players={mockPlayers}
@@ -334,9 +334,7 @@ describe('Scoreboard Component', () => {
         />
       );
 
-      // The scoreboard component receives isClubsTurnUp but doesn't display it
-      // The dirty clubs label is displayed in the GameBoard component
-      expect(screen.getByText(/Table tally/i)).toBeInTheDocument();
+      expect(screen.getByText(/Dirty Clubs/i)).toBeInTheDocument();
     });
 
     it('should not show bidder badge when no bidder', () => {
@@ -349,6 +347,7 @@ describe('Scoreboard Component', () => {
       );
 
       expect(screen.queryByText(/Bid /i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Dirty Clubs/i)).not.toBeInTheDocument();
     });
   });
 

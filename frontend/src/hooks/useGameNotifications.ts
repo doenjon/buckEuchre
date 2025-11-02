@@ -78,7 +78,7 @@ export function useGameNotifications(gameState: GameState | null, myPosition: nu
         (currentPhase === 'BIDDING' || currentPhase === 'TRUMP_REVEAL' || currentPhase === 'PLAYING')) {
       const suitSymbol = '♣';
       // Use direct call for immediate display with high priority
-      showNotification(`Dirty ${suitSymbol} Clubs! ${suitSymbol}`, 'special', false);
+      showNotification(`${suitSymbol} Dirty Clubs! ${suitSymbol}`, 'special', false);
       shownClubsRef.current = true;
       
       // Wait for notification to complete (3 seconds) then clear
