@@ -8,7 +8,6 @@ import { useNavigate } from 'react-router-dom';
 import { getUserGames, leaveGame } from '@/services/api';
 import type { GameSummary } from '@buck-euchre/shared';
 import { useUIStore } from '@/stores/uiStore';
-import { useGameStore } from '@/stores/gameStore';
 import { useGame } from '@/hooks/useGame';
 import { Users, Clock, Play, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
