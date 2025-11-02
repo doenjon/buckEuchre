@@ -97,12 +97,13 @@ function buildRoundCompletionPayload(
       const totalTricks = player.folded ? 0 : cardsPlayed || autoWinTricks;
 
       const wasBidder = bidderPosition !== null && player.position === bidderPosition;
+      const scoreChange = scoreChanges[index];
       const update: RoundStatsUpdate = {
         userId,
         wasBidder,
         tricksWon: player.tricksTaken,
         totalTricks,
-        pointsEarned: scoreChanges[index],
+        pointsEarned: -scoreChange,
       };
 
       if (wasBidder && typeof highestBid === 'number') {
