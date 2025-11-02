@@ -308,7 +308,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                   </span>
                   {gameState.isClubsTurnUp && (
                     <span className="ml-2 rounded-md bg-red-500/20 border border-red-400/50 px-2 py-1 text-xs font-bold uppercase tracking-wider text-red-300 animate-pulse">
-                      ♣ Dirty Clubs!
+                      Dirty ♣ Clubs!
                     </span>
                   )}
                 </div>
@@ -364,7 +364,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                     </span>
                     {gameState.isClubsTurnUp && (
                       <span className="ml-1 rounded bg-red-500/20 border border-red-400/50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300 animate-pulse">
-                        Dirty!
+                        Dirty ♣!
                       </span>
                     )}
                   </div>
