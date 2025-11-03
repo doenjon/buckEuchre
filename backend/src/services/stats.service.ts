@@ -2,9 +2,8 @@
  * Stats service for tracking and retrieving game statistics
  */
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import type { Prisma } from '@prisma/client';
+import { prisma } from '../db/client';
 
 export interface RoundStatsUpdate {
   userId: string;
@@ -44,7 +43,27 @@ export async function updateRoundStats(roundStats: RoundStatsUpdate): Promise<vo
     });
 
     if (!stats) {
-      console.error(`[updateRoundStats] Stats not found for user ${userId}`);
+      console.warn(`[updateRoundStats] Stats not found for user ${userId} - creating new record`);
+
+      const createData: Prisma.UserStatsUncheckedCreateInput = {
+        userId,
+        totalTricks,
+        tricksWon,
+        totalPoints: pointsEarned,
+      };
+
+      if (wasBidder && bidAmount !== undefined && bidSuccess !== undefined) {
+        createData.totalBids = 1;
+        createData.successfulBids = bidSuccess ? 1 : 0;
+        createData.failedBids = bidSuccess ? 0 : 1;
+
+        if (typeof bidAmount === 'number') {
+          createData.highestBid = bidAmount;
+        }
+      }
+
+      await prisma.userStats.create({ data: createData });
+      console.log('[updateRoundStats] Created stats for user', userId);
       return;
     }
 
@@ -111,7 +130,19 @@ export async function updateGameStats(gameStats: GameStatsUpdate): Promise<void>
     });
 
     if (!stats) {
-      console.error(`[updateGameStats] Stats not found for user ${userId}`);
+      console.warn(`[updateGameStats] Stats not found for user ${userId} - creating new record`);
+
+      const createData: Prisma.UserStatsUncheckedCreateInput = {
+        userId,
+        gamesPlayed: 1,
+        gamesWon: won ? 1 : 0,
+        gamesLost: won ? 0 : 1,
+        highestScore: finalScore,
+      };
+
+      await prisma.userStats.create({ data: createData });
+
+      console.log('[updateGameStats] Created stats for user', userId);
       return;
     }
 
