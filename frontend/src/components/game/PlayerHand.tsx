@@ -94,6 +94,7 @@ export function PlayerHand({
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
   const cardPositions = useRef(new Map<string, DOMRect>());
+  const previousCardCount = useRef<number>(cards?.length ?? 0);
 
   const setCardRef = useCallback(
     (cardId: string) => (node: HTMLDivElement | null) => {
@@ -169,6 +170,17 @@ export function PlayerHand({
   }, [cardOrder, cards, cardsById, sortedCardIds]);
 
   useLayoutEffect(() => {
+    const currentCardCount = orderedCards.length;
+    const cardCountChanged = currentCardCount !== previousCardCount.current;
+
+    // Clear positions when card count changes to prevent jittery animations
+    if (cardCountChanged) {
+      cardPositions.current.clear();
+      previousCardCount.current = currentCardCount;
+      return;
+    }
+
+    // Only run FLIP animation when cards are reordered (not added/removed)
     const previousPositions = cardPositions.current;
     const nextPositions = new Map<string, DOMRect>();
 
@@ -342,7 +354,6 @@ export function PlayerHand({
             <div
               key={card.id}
               className={`
-                transition-all duration-300 ease-out
                 hover:z-10 focus-within:z-10
                 ${isTrump ? 'relative' : ''}
               `}
