@@ -78,14 +78,6 @@ export function CurrentTrick({
     'right-4 top-1/2 -translate-y-1/2 sm:right-8' // Seat to your right
   ];
 
-  // Positions for fold/stay indicators - closer to center than cards
-  const indicatorPositions = [
-    'bottom-3 left-1/2 -translate-x-1/2 sm:bottom-5', // South (you)
-    'left-2 top-1/2 -translate-y-1/2 sm:left-4', // Seat to your left
-    'top-3 left-1/2 -translate-x-1/2 sm:top-5', // Across from you
-    'right-2 top-1/2 -translate-y-1/2 sm:right-4' // Seat to your right
-  ];
-
 
   // Determine if we should show "Stay" indicators (only before first card is played)
   const hasCardsPlayed = trick && trick.cards.length > 0;
@@ -114,12 +106,15 @@ export function CurrentTrick({
         if (!showStay && !showFold) return null;
 
         const relativeSeatIndex = ((player.position - myPosition) % 4 + 4) % 4;
-        const positionClass = indicatorPositions[relativeSeatIndex];
+        const positionClass = cardPositions[relativeSeatIndex];
+        // Sequential animation delay based on relative seat position around the table (150ms per player, same as cards)
+        const animationDelay = `${relativeSeatIndex * 200}ms`;
 
         return (
           <div
             key={`indicator-${player.position}`}
-            className={`absolute ${positionClass} z-10 flex items-center justify-center`}
+            className={`absolute ${positionClass} z-10 flex items-center justify-center animate-in bounce-in`}
+            style={{ animationDelay }}
           >
             <div className={`
               px-3 py-1.5 rounded-lg font-semibold text-sm
