@@ -25,6 +25,8 @@ export function useGameNotifications(gameState: GameState | null, myPosition: nu
   const shownLetsPlayRef = useRef(false);
   const notificationQueueRef = useRef<NotificationQueue[]>([]);
   const isProcessingRef = useRef(false);
+  const inactivityTimerRef = useRef<number | null>(null);
+  const previousCurrentPlayerRef = useRef<number | null>(null);
 
   // Process notification queue
   const processQueue = () => {
@@ -57,6 +59,41 @@ export function useGameNotifications(gameState: GameState | null, myPosition: nu
     notificationQueueRef.current.push({ message, type, priority });
     processQueue();
   };
+
+  // Handle inactivity alert during PLAYING phase
+  useEffect(() => {
+    // Clear any existing timer
+    if (inactivityTimerRef.current !== null) {
+      window.clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
+    }
+
+    if (!gameState || myPosition === null) {
+      return;
+    }
+
+    // Check if it's my turn during PLAYING phase
+    const isMyTurn = gameState.phase === 'PLAYING' && 
+                     gameState.currentPlayerPosition === myPosition;
+
+    // Track the current player
+    previousCurrentPlayerRef.current = gameState.currentPlayerPosition;
+
+    if (isMyTurn) {
+      // Start a 5-second timer for inactivity alert
+      inactivityTimerRef.current = window.setTimeout(() => {
+        queueNotification('Your turn!', 'info', 2);
+      }, 5000);
+    }
+
+    // Cleanup function
+    return () => {
+      if (inactivityTimerRef.current !== null) {
+        window.clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
+      }
+    };
+  }, [gameState?.phase, gameState?.currentPlayerPosition, myPosition]);
 
   useEffect(() => {
     if (!gameState || myPosition === null) {

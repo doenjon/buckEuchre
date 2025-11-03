@@ -86,7 +86,7 @@ export function GameNotification({ variant = 'overlay', className }: GameNotific
       <div className={cn('pointer-events-none w-full md:hidden', className)}>
         <p
           className={cn(
-            'text-center text-lg font-bold uppercase tracking-[0.15em] leading-snug',
+            'text-center text-xl font-bold uppercase tracking-[0.15em] leading-snug',
             'text-white md:text-2xl md:tracking-[0.1em]',
             typeStyles[notification.type],
             animationClass,
