@@ -569,8 +569,8 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             })()}
           </div>
 
-          {/* Mobile: Inline notifications between current player label and hand */}
-          <div className="md:hidden px-4 pb-1 flex-shrink-0">
+          {/* Mobile: Inline notifications midway between user name and hand */}
+          <div className="md:hidden px-4 py-3 flex-shrink-0">
             <GameNotification variant="inline" />
           </div>
 
