@@ -94,6 +94,7 @@ export function PlayerHand({
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
   const cardPositions = useRef(new Map<string, DOMRect>());
+  const previousCardCount = useRef<number>(cards?.length ?? 0);
 
   const setCardRef = useCallback(
     (cardId: string) => (node: HTMLDivElement | null) => {
@@ -169,6 +170,17 @@ export function PlayerHand({
   }, [cardOrder, cards, cardsById, sortedCardIds]);
 
   useLayoutEffect(() => {
+    const currentCardCount = orderedCards.length;
+    const cardCountChanged = currentCardCount !== previousCardCount.current;
+
+    // Clear positions when card count changes to prevent jittery animations
+    if (cardCountChanged) {
+      cardPositions.current.clear();
+      previousCardCount.current = currentCardCount;
+      return;
+    }
+
+    // Only run FLIP animation when cards are reordered (not added/removed)
     const previousPositions = cardPositions.current;
     const nextPositions = new Map<string, DOMRect>();
 
@@ -332,14 +344,16 @@ export function PlayerHand({
           const isTrump = trumpSuit && card.suit === trumpSuit;
 
           // Calculate arch effect - center cards higher, edge cards slightly lower
-          const normalizedPosition = (index - (cardCount - 1) / 2) / Math.max((cardCount - 1) / 2, 1);
-          const archOffset = normalizedPosition * normalizedPosition * 4; // 4px max offset
+          // Use same center point as rotation for consistency
+          const centerPosition = (cardCount - 1) / 2;
+          const distanceFromCenter = index - centerPosition;
+          const normalizedDistance = cardCount > 1 ? distanceFromCenter / centerPosition : 0;
+          const archOffset = normalizedDistance * normalizedDistance * 6; // 6px max offset
 
           return (
             <div
               key={card.id}
               className={`
-                transition-all duration-300 ease-out
                 hover:z-10 focus-within:z-10
                 ${isTrump ? 'relative' : ''}
               `}
