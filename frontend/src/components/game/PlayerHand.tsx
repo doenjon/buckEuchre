@@ -415,8 +415,6 @@ export function PlayerHand({
         className="flex items-end justify-center -space-x-2 md:-space-x-3 max-w-full px-2"
       >
         {orderedCards.map((card, index) => {
-          const isTrump = trumpSuit && card.suit === trumpSuit;
-
           // Calculate arch effect - center cards higher, edge cards slightly lower
           // Use same center point as rotation for consistency
           const distanceFromCenter = index - centerPosition;
@@ -429,7 +427,6 @@ export function PlayerHand({
               data-card-id={card.id}
               className={`
                 hover:z-10 focus-within:z-10
-                ${isTrump ? 'relative' : ''}
                 ${touchDraggedCardId === card.id ? 'opacity-50' : ''}
               `}
               ref={setCardRef(card.id)}
@@ -450,13 +447,6 @@ export function PlayerHand({
                 zIndex: index, // Cards to the right appear on top
               }}
             >
-              {isTrump && (
-                <div 
-                  className="absolute -top-1 -right-1 z-20 w-3 h-3 md:w-4 md:h-4 bg-emerald-400 rounded-full border-2 border-white shadow-md"
-                  aria-label="Trump suit"
-                  title="Trump suit"
-                />
-              )}
               <Card
                 card={card}
                 onClick={() => handleCardClick(card)}
