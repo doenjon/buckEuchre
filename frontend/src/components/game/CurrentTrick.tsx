@@ -136,8 +136,14 @@ export function CurrentTrick({
           return null;
         }
 
-        const showStay = player.foldDecision === 'STAY';
-        const showFold = player.foldDecision === 'FOLD';
+        const isFolding = player.foldDecision === 'FOLD';
+        const isStaying = player.foldDecision === 'STAY';
+
+        // During PLAYING phase, only show "Fold" text
+        // During FOLDING_DECISION phase, show both "Stay" and "Fold"
+        if (gameState.phase === 'PLAYING' && isStaying) {
+          return null;
+        }
 
         const relativeSeatIndex = ((player.position - myPosition) % 4 + 4) % 4;
         const positionClass = indicatorPositions[relativeSeatIndex];
@@ -149,11 +155,11 @@ export function CurrentTrick({
           >
             <div className={`
               px-3 py-1.5 rounded-lg font-semibold text-sm
-              ${showFold
+              ${isFolding
                 ? 'bg-slate-600/20 text-slate-400 border border-slate-500/50'
                 : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/50'}
             `}>
-              {showFold ? 'Fold' : 'Stay'}
+              {isFolding ? 'Fold' : 'Stay'}
             </div>
           </div>
         );
