@@ -5,20 +5,8 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useGameStore } from '@/stores/gameStore';
-import { cn } from '@/lib/utils';
 
-interface GameNotificationProps {
-  /**
-   * Controls how the notification is positioned within the layout.
-   * - `overlay` (default) keeps the original centered overlay behaviour for desktop/tablet.
-   * - `inline` renders the notification inline so it can sit within mobile layouts.
-   */
-  variant?: 'overlay' | 'inline';
-  /** Optional extra classes for the outer container */
-  className?: string;
-}
-
-export function GameNotification({ variant = 'overlay', className }: GameNotificationProps) {
+export function GameNotification() {
   const notification = useGameStore((state) => state.currentNotification);
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
@@ -81,42 +69,20 @@ export function GameNotification({ variant = 'overlay', className }: GameNotific
 
   const animationClass = isExiting ? 'animate-notification-exit' : 'animate-notification-enter';
 
-  if (variant === 'inline') {
-    return (
-      <div className={cn('pointer-events-none w-full md:hidden', className)}>
-        <p
-          className={cn(
-            'text-center text-lg font-bold uppercase tracking-[0.15em] leading-snug',
-            'text-white md:text-2xl md:tracking-[0.1em]',
-            typeStyles[notification.type],
-            animationClass,
-            '[text-shadow:_0_0_4px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]'
-          )}
-        >
-          {notification.message}
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div
-      className={cn(
-        'pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-[90vw] px-4',
-        'hidden md:block',
-        className
-      )}
+      className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-[90vw] px-4"
       style={{ isolation: 'isolate' }}
     >
       <p
-        className={cn(
-          'text-center text-2xl font-bold uppercase tracking-[0.1em] leading-tight',
-          'md:text-3xl md:tracking-[0.15em]',
-          'lg:text-4xl lg:tracking-[0.2em]',
-          typeStyles[notification.type],
-          animationClass,
-          '[text-shadow:_0_0_4px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]'
-        )}
+        className={`
+          text-center text-2xl font-bold uppercase tracking-[0.1em] leading-tight
+          md:text-3xl md:tracking-[0.15em]
+          lg:text-4xl lg:tracking-[0.2em]
+          ${typeStyles[notification.type]}
+          ${animationClass}
+          [text-shadow:_0_0_4px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]
+        `}
       >
         {notification.message}
       </p>
