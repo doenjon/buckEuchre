@@ -37,7 +37,7 @@ import { canPlayCard, canPlaceBid, canFold } from '../game/validation';
 import { getEffectiveSuit } from '../game/deck';
 import { GameState, PlayerPosition, Player, Card } from '../../../shared/src/types/game';
 import { checkAndTriggerAI } from '../ai/trigger';
-import { scheduleAutoStartNextRound, cancelAutoStartNextRound } from '../services/round.service';
+import { scheduleAutoStartNextRound, cancelAutoStartNextRound, hasAutoStartTimer } from '../services/round.service';
 import {
   updateRoundStats,
   updateGameStats,
@@ -286,7 +286,9 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
       // Trigger AI if needed (game might be waiting for AI to act)
       checkAndTriggerAI(validated.gameId, gameState, io);
 
-      if (gameState.phase === 'ROUND_OVER' && gameState.gameOver !== true) {
+      // Only schedule auto-start timer if one doesn't already exist
+      // This prevents resetting the timer when players reconnect
+      if (gameState.phase === 'ROUND_OVER' && gameState.gameOver !== true && !hasAutoStartTimer(validated.gameId)) {
         scheduleAutoStartNextRound(
           validated.gameId,
           io,

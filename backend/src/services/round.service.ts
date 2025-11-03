@@ -20,6 +20,13 @@ export function cancelAutoStartNextRound(gameId: string): void {
   }
 }
 
+/**
+ * Check if an auto-start timer exists for a game
+ */
+export function hasAutoStartTimer(gameId: string): boolean {
+  return autoStartTimers.has(gameId);
+}
+
 export function scheduleAutoStartNextRound(
   gameId: string,
   io: Server,
