@@ -126,6 +126,15 @@ body {
     }
   }
 
+  @keyframes notification-blink {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.3;
+    }
+  }
+
   .animate-in {
     animation-fill-mode: both;
   }
@@ -168,6 +177,10 @@ body {
 
   .animate-notification-exit {
     animation: notification-exit 0.5s ease-out forwards;
+  }
+
+  .animate-notification-blink {
+    animation: notification-blink 1.5s ease-in-out infinite;
   }
 }
 
