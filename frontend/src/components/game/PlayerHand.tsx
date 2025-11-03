@@ -194,6 +194,8 @@ export function PlayerHand({
     // Only run FLIP animation when cards are reordered (not added/removed)
     const previousPositions = cardPositions.current;
     const nextPositions = new Map<string, DOMRect>();
+    // Threshold to ignore minor position changes (sub-pixel movements)
+    const POSITION_THRESHOLD = 2;
 
     orderedCards.forEach(card => {
       const element = cardRefs.current.get(card.id);
@@ -214,7 +216,8 @@ export function PlayerHand({
       const deltaX = previousRect.left - newRect.left;
       const deltaY = previousRect.top - newRect.top;
 
-      if (deltaX === 0 && deltaY === 0) {
+      // Ignore sub-pixel and minor position changes to prevent jitter
+      if (Math.abs(deltaX) < POSITION_THRESHOLD && Math.abs(deltaY) < POSITION_THRESHOLD) {
         return;
       }
 
@@ -397,16 +400,18 @@ export function PlayerHand({
 
   // Always fan cards - calculate rotation based on card count
   const cardCount = cards.length;
+  // Use consistent center point for both rotation and arch calculations
+  const centerPosition = (cardCount - 1) / 2;
 
   return (
-    <div 
+    <div
       className="flex items-center justify-center w-full"
       role="group"
       aria-label="Your hand of cards"
       onDrop={handleDropOnContainer}
       onDragOver={handleDragOver}
     >
-      <div 
+      <div
         className="flex items-end justify-center -space-x-2 md:-space-x-3 max-w-full px-2"
       >
         {orderedCards.map((card, index) => {
@@ -414,7 +419,6 @@ export function PlayerHand({
 
           // Calculate arch effect - center cards higher, edge cards slightly lower
           // Use same center point as rotation for consistency
-          const centerPosition = (cardCount - 1) / 2;
           const distanceFromCenter = index - centerPosition;
           const normalizedDistance = cardCount > 1 ? distanceFromCenter / centerPosition : 0;
           const archOffset = normalizedDistance * normalizedDistance * 6; // 6px max offset
@@ -439,7 +443,7 @@ export function PlayerHand({
               onTouchEnd={handleTouchEnd}
               style={{
                 // Slight rotation for fanning effect + subtle arch
-                transform: `rotate(${(index - cardCount / 2) * 2}deg) translateY(${archOffset}px)`,
+                transform: `rotate(${distanceFromCenter * 2}deg) translateY(${archOffset}px)`,
                 animationDelay: `${index * 50}ms`,
                 opacity: 1,
                 touchAction: 'none', // Prevent default touch actions during drag
