@@ -346,8 +346,8 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
 
         {/* Main Game Area */}
         <section className="flex flex-col md:gap-8 lg:gap-12 md:order-2 flex-1 min-h-0 md:h-auto md:overflow-visible relative md:py-6 lg:py-8">
-          {/* Game Notifications */}
-          <GameNotification variant="overlay" />
+          {/* Game Notifications - absolutely positioned, doesn't affect layout */}
+          <GameNotification />
 
 
           {/* Mobile: Top bar with opponents | Desktop: Labels around table */}
@@ -558,8 +558,8 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                     {myPlayer?.name || `P${absolutePosition}`}
                   </div>
                   <div className="w-full max-w-[200px]">
-                    <PlayerStatusIndicators
-                      gameState={gameState}
+                    <PlayerStatusIndicators 
+                      gameState={gameState} 
                       playerPosition={absolutePosition}
                       size="sm"
                     />
@@ -567,11 +567,6 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 </div>
               );
             })()}
-          </div>
-
-          {/* Mobile: Inline notifications between current player label and hand */}
-          <div className="md:hidden px-4 pb-1 flex-shrink-0">
-            <GameNotification variant="inline" />
           </div>
 
           {/* Player Hand Area (Bottom) */}
