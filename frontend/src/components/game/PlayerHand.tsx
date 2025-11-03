@@ -332,8 +332,11 @@ export function PlayerHand({
           const isTrump = trumpSuit && card.suit === trumpSuit;
 
           // Calculate arch effect - center cards higher, edge cards slightly lower
-          const normalizedPosition = (index - (cardCount - 1) / 2) / Math.max((cardCount - 1) / 2, 1);
-          const archOffset = normalizedPosition * normalizedPosition * 4; // 4px max offset
+          // Use same center point as rotation for consistency
+          const centerPosition = (cardCount - 1) / 2;
+          const distanceFromCenter = index - centerPosition;
+          const normalizedDistance = cardCount > 1 ? distanceFromCenter / centerPosition : 0;
+          const archOffset = normalizedDistance * normalizedDistance * 6; // 6px max offset
 
           return (
             <div
