@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import type { Player, Trick } from '@buck-euchre/shared';
+import type { Player, Trick, GameState } from '@buck-euchre/shared';
 import { CurrentTrick } from '../game/CurrentTrick';
 
 const mockPlayers: Player[] = [
@@ -55,6 +55,24 @@ const mockPlayers: Player[] = [
   }
 ];
 
+const mockGameState: GameState = {
+  gameId: 'test-game',
+  phase: 'PLAYING',
+  players: mockPlayers,
+  dealerPosition: 0,
+  currentPlayerPosition: 2,
+  trumpSuit: 'SPADES',
+  highestBid: 3,
+  winningBidderPosition: 0,
+  currentTrick: null,
+  completedTricks: [],
+  roundWinnerId: null,
+  roundWinnerName: null,
+  gameOver: false,
+  isClubsTurnUp: false,
+  updatedAt: Date.now()
+};
+
 describe('CurrentTrick Component', () => {
   it('keeps the local player anchored to the bottom position', () => {
     const trick: Trick = {
@@ -87,6 +105,7 @@ describe('CurrentTrick Component', () => {
         players={mockPlayers}
         currentPlayerPosition={2}
         myPosition={2}
+        gameState={mockGameState}
       />
     );
 
