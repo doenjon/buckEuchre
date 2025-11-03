@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { DragEvent } from 'react';
+import type { DragEvent, TouchEvent } from 'react';
 import type { Card as CardType, Suit } from '@buck-euchre/shared';
 import {
   TRUMP_RANK_VALUES,
@@ -92,9 +92,11 @@ export function PlayerHand({
 
   const [cardOrder, setCardOrder] = useState<string[]>(() => sortedCardIds);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
+  const [touchDraggedCardId, setTouchDraggedCardId] = useState<string | null>(null);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
   const cardPositions = useRef(new Map<string, DOMRect>());
   const previousCardCount = useRef<number>(cards?.length ?? 0);
+  const previousTrumpSuit = useRef<Suit | null>(trumpSuit);
 
   const setCardRef = useCallback(
     (cardId: string) => (node: HTMLDivElement | null) => {
@@ -130,6 +132,15 @@ export function PlayerHand({
       return [...filteredOrder, ...missingCards];
     });
   }, [cards, sortedCardIds]);
+
+  // Auto-sort hand when trump suit changes
+  useEffect(() => {
+    if (trumpSuit !== previousTrumpSuit.current) {
+      previousTrumpSuit.current = trumpSuit;
+      // Reset to sorted order when trump changes
+      setCardOrder(sortedCardIds);
+    }
+  }, [trumpSuit, sortedCardIds]);
 
   const cardsById = useMemo(() => {
     if (!cards) {
@@ -298,6 +309,64 @@ export function PlayerHand({
     setDraggedCardId(null);
   };
 
+  // Touch event handlers for mobile support
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>, cardId: string) => {
+    const touch = event.touches[0];
+    if (!touch) {
+      return;
+    }
+
+    setTouchDraggedCardId(cardId);
+  };
+
+  const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    if (!touchDraggedCardId) {
+      return;
+    }
+
+    const touch = event.touches[0];
+    if (!touch) {
+      return;
+    }
+
+    event.preventDefault(); // Prevent scrolling while dragging
+
+    // Find which card is under the touch point
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!element) {
+      return;
+    }
+
+    // Find the card element (might be nested)
+    const cardElement = element.closest('[data-card-id]');
+    if (!cardElement) {
+      return;
+    }
+
+    const targetCardId = cardElement.getAttribute('data-card-id');
+    if (!targetCardId || targetCardId === touchDraggedCardId) {
+      return;
+    }
+
+    // Reorder the cards
+    setCardOrder(previousOrder => {
+      if (!previousOrder.includes(touchDraggedCardId)) {
+        return previousOrder;
+      }
+
+      const nextOrder = previousOrder.filter(id => id !== touchDraggedCardId);
+      const targetIndex = nextOrder.indexOf(targetCardId);
+
+      const insertionIndex = targetIndex === -1 ? nextOrder.length : targetIndex;
+      nextOrder.splice(insertionIndex, 0, touchDraggedCardId);
+      return [...nextOrder];
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setTouchDraggedCardId(null);
+  };
+
   if (!cards || cards.length === 0) {
     return (
       <div
@@ -353,9 +422,11 @@ export function PlayerHand({
           return (
             <div
               key={card.id}
+              data-card-id={card.id}
               className={`
                 hover:z-10 focus-within:z-10
                 ${isTrump ? 'relative' : ''}
+                ${touchDraggedCardId === card.id ? 'opacity-50' : ''}
               `}
               ref={setCardRef(card.id)}
               draggable={true}
@@ -363,11 +434,15 @@ export function PlayerHand({
               onDragOver={handleDragOver}
               onDrop={event => handleDropOnCard(event, card.id)}
               onDragEnd={handleDragEnd}
+              onTouchStart={event => handleTouchStart(event, card.id)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
               style={{
                 // Slight rotation for fanning effect + subtle arch
                 transform: `rotate(${(index - cardCount / 2) * 2}deg) translateY(${archOffset}px)`,
                 animationDelay: `${index * 50}ms`,
                 opacity: 1,
+                touchAction: 'none', // Prevent default touch actions during drag
               }}
             >
               {isTrump && (
