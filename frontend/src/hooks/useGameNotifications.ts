@@ -78,7 +78,7 @@ export function useGameNotifications(gameState: GameState | null, myPosition: nu
 
     // If it was my turn but no longer is, clear the notification
     const wasMyTurn = previousCurrentPlayerRef.current === myPosition;
-    if (wasMyTurn && !isMyTurn && gameState.phase === 'PLAYING') {
+    if (wasMyTurn && !isMyTurn) {
       clearNotification();
     }
 
