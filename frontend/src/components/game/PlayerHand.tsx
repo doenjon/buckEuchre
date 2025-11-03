@@ -447,6 +447,7 @@ export function PlayerHand({
                 animationDelay: `${index * 50}ms`,
                 opacity: 1,
                 touchAction: 'none', // Prevent default touch actions during drag
+                zIndex: index, // Cards to the right appear on top
               }}
             >
               {isTrump && (
