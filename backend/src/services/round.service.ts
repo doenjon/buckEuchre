@@ -36,14 +36,33 @@ export function scheduleAutoStartNextRound(
 ): void {
   cancelAutoStartNextRound(gameId);
 
+  console.log(`[ROUND] Scheduling auto-start timer for game ${gameId}`, {
+    round: snapshot.round,
+    version: snapshot.version,
+    delayMs
+  });
+
   const timer = setTimeout(async () => {
+    console.log(`[ROUND] Auto-start timer fired for game ${gameId}`, {
+      snapshotRound: snapshot.round,
+      snapshotVersion: snapshot.version
+    });
+
     autoStartTimers.delete(gameId);
 
     try {
       const activeState = getActiveGameState(gameId);
       if (!activeState) {
+        console.log(`[ROUND] Auto-start cancelled: game ${gameId} not found in active games`);
         return;
       }
+
+      console.log(`[ROUND] Current state for game ${gameId}:`, {
+        phase: activeState.phase,
+        round: activeState.round,
+        version: activeState.version,
+        gameOver: activeState.gameOver
+      });
 
       if (
         activeState.phase !== 'ROUND_OVER' ||
@@ -51,6 +70,15 @@ export function scheduleAutoStartNextRound(
         activeState.version !== snapshot.version ||
         activeState.gameOver
       ) {
+        console.log(`[ROUND] Auto-start cancelled: state mismatch for game ${gameId}`, {
+          expectedPhase: 'ROUND_OVER',
+          actualPhase: activeState.phase,
+          expectedRound: snapshot.round,
+          actualRound: activeState.round,
+          expectedVersion: snapshot.version,
+          actualVersion: activeState.version,
+          gameOver: activeState.gameOver
+        });
         return;
       }
 
@@ -60,6 +88,8 @@ export function scheduleAutoStartNextRound(
         return;
       }
 
+      console.log(`[ROUND] Starting next round for game ${gameId}...`);
+
       const roundState = await executeGameAction(gameId, (currentState) => {
         if (
           currentState.phase !== 'ROUND_OVER' ||
@@ -67,6 +97,7 @@ export function scheduleAutoStartNextRound(
           currentState.version !== snapshot.version ||
           currentState.gameOver
         ) {
+          console.log(`[ROUND] State changed during transaction for game ${gameId}, aborting`);
           return currentState;
         }
 
@@ -75,8 +106,14 @@ export function scheduleAutoStartNextRound(
       });
 
       if (roundState.round <= snapshot.round) {
+        console.log(`[ROUND] Round did not advance for game ${gameId}, aborting`, {
+          currentRound: roundState.round,
+          expectedRound: snapshot.round + 1
+        });
         return;
       }
+
+      console.log(`[ROUND] Successfully started round ${roundState.round} for game ${gameId}`);
 
       io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
         gameState: roundState,
@@ -90,4 +127,5 @@ export function scheduleAutoStartNextRound(
   }, delayMs);
 
   autoStartTimers.set(gameId, timer);
+  console.log(`[ROUND] Timer scheduled successfully for game ${gameId}`);
 }

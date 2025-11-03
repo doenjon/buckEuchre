@@ -712,12 +712,6 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
           gameOver: nextState.gameOver,
           scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
         });
-
-        // Emit round complete event
-        io.to(`game:${validated.gameId}`).emit('ROUND_COMPLETE', {
-          roundNumber: nextState.round,
-          scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
-        });
       } else if (cardsInTrick === activePlayers.length) {
         // Trick complete but round continues - emit trick complete for animation
         io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
@@ -754,17 +748,29 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       cardsInTrick: newState.currentTrick.cards.length,
       tricksCompleted: newState.tricks.length,
     });
-    
+
     // Trigger AI if needed
     checkAndTriggerAI(validated.gameId, newState, io);
 
-    if (newState.phase === 'ROUND_OVER' && !newState.gameOver) {
-      scheduleAutoStartNextRound(
-        validated.gameId,
-        io,
-        { round: newState.round, version: newState.version },
-        checkAndTriggerAI
-      );
+    // Handle round completion
+    if (newState.phase === 'ROUND_OVER' || newState.phase === 'GAME_OVER') {
+      io.to(`game:${validated.gameId}`).emit('ROUND_COMPLETE', {
+        roundNumber: newState.round,
+        scores: newState.players.map(p => ({ name: p.name, score: p.score }))
+      });
+
+      if (!newState.gameOver) {
+        console.log(`[ROUND] Scheduling auto-start timer for game ${validated.gameId}`, {
+          round: newState.round,
+          version: newState.version
+        });
+        scheduleAutoStartNextRound(
+          validated.gameId,
+          io,
+          { round: newState.round, version: newState.version },
+          checkAndTriggerAI
+        );
+      }
     }
   } catch (error: any) {
     console.error('Error in PLAY_CARD:', error);
