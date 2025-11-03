@@ -573,7 +573,8 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 : 'relative flex-1 min-h-0 flex items-center justify-center px-4 md:px-6 lg:px-8 py-2 md:py-6 lg:py-8 md:min-h-[200px] lg:min-h-[240px]'
             }
           >
-            {/* Game Notifications - positioned in the space above player hand */}
+            {/* Game Notifications - absolutely positioned in space above player hand.
+                 Absolute positioning removes it from layout flow, preventing shifts when appearing/disappearing */}
             <GameNotification />
 
             {myPlayer.folded !== true ? (
