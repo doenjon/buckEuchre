@@ -73,8 +73,14 @@ export function useGameNotifications(gameState: GameState | null, myPosition: nu
     }
 
     // Check if it's my turn during PLAYING phase
-    const isMyTurn = gameState.phase === 'PLAYING' && 
+    const isMyTurn = gameState.phase === 'PLAYING' &&
                      gameState.currentPlayerPosition === myPosition;
+
+    // If it was my turn but no longer is, clear the notification
+    const wasMyTurn = previousCurrentPlayerRef.current === myPosition;
+    if (wasMyTurn && !isMyTurn && gameState.phase === 'PLAYING') {
+      clearNotification();
+    }
 
     // Track the current player
     previousCurrentPlayerRef.current = gameState.currentPlayerPosition;
@@ -82,7 +88,8 @@ export function useGameNotifications(gameState: GameState | null, myPosition: nu
     if (isMyTurn) {
       // Start a 5-second timer for inactivity alert
       inactivityTimerRef.current = window.setTimeout(() => {
-        queueNotification('Your turn!', 'info', 2);
+        // Show persistent blinking notification
+        showNotification('Your turn!', 'info', { persistent: true, blink: true });
       }, 5000);
     }
 
@@ -93,7 +100,7 @@ export function useGameNotifications(gameState: GameState | null, myPosition: nu
         inactivityTimerRef.current = null;
       }
     };
-  }, [gameState?.phase, gameState?.currentPlayerPosition, myPosition]);
+  }, [gameState?.phase, gameState?.currentPlayerPosition, myPosition, showNotification, clearNotification]);
 
   useEffect(() => {
     if (!gameState || myPosition === null) {
@@ -115,7 +122,7 @@ export function useGameNotifications(gameState: GameState | null, myPosition: nu
         (currentPhase === 'BIDDING' || currentPhase === 'TRUMP_REVEAL' || currentPhase === 'PLAYING')) {
       const suitSymbol = '♣';
       // Use direct call for immediate display with high priority
-      showNotification(`${suitSymbol} Dirty Clubs! ${suitSymbol}`, 'special', false);
+      showNotification(`${suitSymbol} Dirty Clubs! ${suitSymbol}`, 'special', { isGameStart: false });
       shownClubsRef.current = true;
       
       // Wait for notification to complete (3 seconds) then clear
@@ -138,7 +145,7 @@ export function useGameNotifications(gameState: GameState | null, myPosition: nu
         (currentPhase === 'BIDDING' || currentPhase === 'TRUMP_REVEAL')) {
       // Show notification with game start flag to disable bidding
       // Use direct call to bypass queue for immediate display
-      showNotification("Let's play!", 'special', true);
+      showNotification("Let's play!", 'special', { isGameStart: true });
       shownLetsPlayRef.current = true;
       
       // Wait for notification to complete (3 seconds) then clear

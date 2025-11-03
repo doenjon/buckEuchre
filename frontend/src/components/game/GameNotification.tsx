@@ -20,22 +20,26 @@ export function GameNotification() {
       isVisibleRef.current = true;
       isExitingRef.current = false;
 
-      // Start exit animation after 2 seconds
-      const exitTimer = setTimeout(() => {
-        setIsExiting(true);
-        isExitingRef.current = true;
-      }, 2000);
+      // Only auto-dismiss if not persistent
+      if (!notification.persistent) {
+        // Start exit animation after 2 seconds
+        const exitTimer = setTimeout(() => {
+          setIsExiting(true);
+          isExitingRef.current = true;
+        }, 2000);
 
-      // Remove notification after exit animation completes (smooth fade - 0.5s animation)
-      const clearTimer = setTimeout(() => {
-        setIsVisible(false);
-        isVisibleRef.current = false;
-      }, 3000); // 2000ms delay + 500ms exit animation + 500ms buffer
+        // Remove notification after exit animation completes (smooth fade - 0.5s animation)
+        const clearTimer = setTimeout(() => {
+          setIsVisible(false);
+          isVisibleRef.current = false;
+        }, 3000); // 2000ms delay + 500ms exit animation + 500ms buffer
 
-      return () => {
-        clearTimeout(exitTimer);
-        clearTimeout(clearTimer);
-      };
+        return () => {
+          clearTimeout(exitTimer);
+          clearTimeout(clearTimer);
+        };
+      }
+      // Persistent notifications stay visible until cleared externally
     } else {
       // When notification is cleared externally, smoothly fade out if still visible
       if (isVisibleRef.current && !isExitingRef.current) {
@@ -67,7 +71,11 @@ export function GameNotification() {
     special: 'text-amber-200 drop-shadow-[0_0_8px_rgba(0,0,0,0.9),0_0_16px_rgba(251,191,36,0.9),0_0_24px_rgba(251,191,36,0.6)]',
   };
 
-  const animationClass = isExiting ? 'animate-notification-exit' : 'animate-notification-enter';
+  const animationClass = isExiting
+    ? 'animate-notification-exit'
+    : notification.blink
+      ? 'animate-notification-enter animate-notification-blink'
+      : 'animate-notification-enter';
 
   return (
     <div

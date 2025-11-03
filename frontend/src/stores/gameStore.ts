@@ -16,6 +16,8 @@ export interface WaitingInfo {
 export interface GameNotification {
   message: string;
   type: 'success' | 'info' | 'warning' | 'special';
+  persistent?: boolean; // If true, notification stays until manually cleared
+  blink?: boolean; // If true, notification will blink
 }
 
 export interface GameStoreState {
@@ -33,7 +35,7 @@ export interface GameStoreActions {
   setError: (error: string | null) => void;
   clearGame: () => void;
   setWaitingInfo: (info: WaitingInfo | null) => void;
-  showNotification: (message: string, type: GameNotification['type'], isGameStart?: boolean) => void;
+  showNotification: (message: string, type: GameNotification['type'], options?: { isGameStart?: boolean; persistent?: boolean; blink?: boolean }) => void;
   clearNotification: () => void;
 
   // Computed getters (selectors)
@@ -93,9 +95,10 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     set({ waitingInfo: info });
   },
 
-  showNotification: (message, type, isGameStart = false) => {
-    set({ 
-      currentNotification: { message, type },
+  showNotification: (message: string, type: GameNotification['type'], options: { isGameStart?: boolean; persistent?: boolean; blink?: boolean } = {}) => {
+    const { isGameStart = false, persistent = false, blink = false } = options;
+    set({
+      currentNotification: { message, type, persistent, blink },
       isGameStartNotification: isGameStart,
     });
   },
