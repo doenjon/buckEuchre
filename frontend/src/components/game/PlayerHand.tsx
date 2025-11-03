@@ -330,7 +330,11 @@ export function PlayerHand({
       >
         {orderedCards.map((card, index) => {
           const isTrump = trumpSuit && card.suit === trumpSuit;
-          
+
+          // Calculate arch effect - center cards higher, edge cards slightly lower
+          const normalizedPosition = (index - (cardCount - 1) / 2) / Math.max((cardCount - 1) / 2, 1);
+          const archOffset = normalizedPosition * normalizedPosition * 4; // 4px max offset
+
           return (
             <div
               key={card.id}
@@ -346,8 +350,8 @@ export function PlayerHand({
               onDrop={event => handleDropOnCard(event, card.id)}
               onDragEnd={handleDragEnd}
               style={{
-                // Slight rotation for fanning effect
-                transform: `rotate(${(index - cardCount / 2) * 2}deg)`,
+                // Slight rotation for fanning effect + subtle arch
+                transform: `rotate(${(index - cardCount / 2) * 2}deg) translateY(${archOffset}px)`,
                 animationDelay: `${index * 50}ms`,
                 opacity: 1,
               }}
