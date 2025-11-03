@@ -350,16 +350,16 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
 
           {/* Mobile: Info Bar - floating just above player names */}
           <div className="md:hidden px-2 pt-10 pb-1.5 flex-shrink-0">
-            <div className="w-full rounded-lg px-3 py-2 bg-white/15 border border-white/20 shadow-md backdrop-blur">
-              <div className="flex items-center justify-center gap-2 text-sm text-emerald-200/90">
+            <div className="w-full rounded-lg px-3 py-1.5 bg-white/15 border border-white/20 shadow-md backdrop-blur">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-200/90">
                 {gameState.trumpSuit && (
                   <div className="flex items-center gap-1">
                     <span className="text-emerald-300 font-semibold">TRUMP:</span>
-                    <span className={`font-bold text-lg ${gameState.trumpSuit === 'HEARTS' || gameState.trumpSuit === 'DIAMONDS' ? 'text-red-400' : 'text-gray-300'}`}>
+                    <span className={`font-bold text-base ${gameState.trumpSuit === 'HEARTS' || gameState.trumpSuit === 'DIAMONDS' ? 'text-red-400' : 'text-gray-300'}`}>
                       {gameState.trumpSuit === 'SPADES' ? '♠' : gameState.trumpSuit === 'HEARTS' ? '♥' : gameState.trumpSuit === 'DIAMONDS' ? '♦' : '♣'}
                     </span>
                     {gameState.isClubsTurnUp && (
-                      <span className="ml-1 rounded bg-red-500/20 border border-red-400/50 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-red-300 animate-pulse">
+                      <span className="ml-0.5 rounded bg-red-500/20 border border-red-400/50 px-1 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300 animate-pulse">
                         Dirty Clubs!
                       </span>
                     )}
@@ -370,9 +370,9 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                     {gameState.trumpSuit && <span className="text-emerald-200/50">•</span>}
                     <div className="flex items-center gap-1">
                       <span className="text-emerald-300 font-semibold">BID:</span>
-                      <span className="text-white font-bold text-base">{gameState.highestBid}</span>
-                      <span className="text-emerald-200/70">by</span>
-                      <span className="text-white font-medium text-base">
+                      <span className="text-white font-bold text-sm">{gameState.highestBid}</span>
+                      <span className="text-emerald-200/70 text-[11px]">by</span>
+                      <span className="text-white font-medium text-sm">
                         {players.find(p => p.position === gameState.winningBidderPosition)?.name || `P${gameState.winningBidderPosition}`}
                       </span>
                     </div>
@@ -383,7 +383,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                     {(gameState.trumpSuit || (gameState.winningBidderPosition !== null && gameState.highestBid !== null)) && <span className="text-emerald-200/50">•</span>}
                     <div className="flex items-center gap-1">
                       <span className="text-emerald-300 font-semibold">PHASE:</span>
-                      <span className="text-white font-medium text-base">Bidding</span>
+                      <span className="text-white font-medium text-sm">Bidding</span>
                     </div>
                   </>
                 )}
