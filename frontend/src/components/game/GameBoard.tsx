@@ -346,10 +346,6 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
 
         {/* Main Game Area */}
         <section className="flex flex-col md:gap-8 lg:gap-12 md:order-2 flex-1 min-h-0 md:h-auto md:overflow-visible relative md:py-6 lg:py-8">
-          {/* Game Notifications - absolutely positioned, doesn't affect layout */}
-          <GameNotification />
-
-
           {/* Mobile: Top bar with opponents | Desktop: Labels around table */}
 
           {/* Mobile: Info Bar - floating just above player names */}
@@ -577,6 +573,10 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 : 'relative flex-1 min-h-0 flex items-center justify-center px-4 md:px-6 lg:px-8 py-2 md:py-6 lg:py-8 md:min-h-[200px] lg:min-h-[240px]'
             }
           >
+            {/* Game Notifications - absolutely positioned in space above player hand.
+                 Absolute positioning removes it from layout flow, preventing shifts when appearing/disappearing */}
+            <GameNotification />
+
             {myPlayer.folded !== true ? (
               <>
                 <PlayerHand
