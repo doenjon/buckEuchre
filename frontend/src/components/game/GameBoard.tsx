@@ -514,6 +514,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                   players={players}
                   currentPlayerPosition={trickHighlightPosition}
                   myPosition={myPosition}
+                  gameState={gameState}
                 />
               </div>
             </div>
@@ -525,6 +526,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 players={players}
                 currentPlayerPosition={trickHighlightPosition}
                 myPosition={myPosition}
+                gameState={gameState}
               />
             </div>
 

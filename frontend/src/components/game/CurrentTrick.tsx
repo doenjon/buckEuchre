@@ -4,7 +4,7 @@
  */
 
 import { useRef, useLayoutEffect, useState } from 'react';
-import type { Trick, Player } from '@buck-euchre/shared';
+import type { Trick, Player, GameState } from '@buck-euchre/shared';
 import { Card } from './Card';
 
 export interface CurrentTrickProps {
@@ -12,13 +12,15 @@ export interface CurrentTrickProps {
   players: Player[];
   currentPlayerPosition: number;
   myPosition: number;
+  gameState: GameState;
 }
 
 export function CurrentTrick({
   trick,
   players: _players,
   currentPlayerPosition: _currentPlayerPosition,
-  myPosition
+  myPosition,
+  gameState
 }: CurrentTrickProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [borderRadius, setBorderRadius] = useState<string>('9999px');
@@ -77,6 +79,9 @@ export function CurrentTrick({
   ];
 
 
+  // Determine if we should show "Stay" indicators (only before first card is played)
+  const hasCardsPlayed = trick && trick.cards.length > 0;
+
   return (
     <div
       ref={containerRef}
@@ -88,12 +93,44 @@ export function CurrentTrick({
       {/* Glow effect in center */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-[40%] w-[40%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-900/60 blur-3xl" />
 
+      {/* Fold/Stay indicators for each player position */}
+      {gameState.players.map((player) => {
+        // Skip if this player already has a card in the current trick
+        const hasPlayedCard = trick?.cards.some(c => c.playerPosition === player.position);
+        if (hasPlayedCard) return null;
+
+        // Check fold decision
+        const showStay = player.foldDecision === 'STAY' && !hasCardsPlayed;
+        const showFold = player.foldDecision === 'FOLD';
+
+        if (!showStay && !showFold) return null;
+
+        const relativeSeatIndex = ((player.position - myPosition) % 4 + 4) % 4;
+        const positionClass = cardPositions[relativeSeatIndex];
+
+        return (
+          <div
+            key={`indicator-${player.position}`}
+            className={`absolute ${positionClass} z-10 flex items-center justify-center`}
+          >
+            <div className={`
+              px-3 py-1.5 rounded-lg font-semibold text-sm
+              ${showFold
+                ? 'bg-red-500/20 text-red-300 border border-red-400/50'
+                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/50'}
+            `}>
+              {showFold ? 'Fold' : 'Stay'}
+            </div>
+          </div>
+        );
+      })}
+
       {trick.cards.map((playedCard, index) => {
         const relativeSeatIndex =
           ((playedCard.playerPosition - myPosition) % 4 + 4) % 4;
         const positionClass = cardPositions[relativeSeatIndex];
         const isWinner = trick.winner === playedCard.playerPosition;
-        
+
         return (
           <div
             key={playedCard.playerPosition}
