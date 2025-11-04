@@ -29,28 +29,49 @@ export function CurrentTrick({
 
   // Handle delayed display of fold/stay indicators
   useEffect(() => {
-    // Reset visible indicators when trick changes or phase changes
+    console.log('[CurrentTrick] useEffect triggered', {
+      phase: gameState.phase,
+      players: gameState.players.map(p => ({
+        position: p.position,
+        name: p.name,
+        foldDecision: p.foldDecision
+      }))
+    });
+
+    // Reset visible indicators when not in folding or playing phase
     if (gameState.phase !== 'FOLDING_DECISION' && gameState.phase !== 'PLAYING') {
+      console.log('[CurrentTrick] Not in FOLDING_DECISION or PLAYING phase, clearing indicators');
       setVisibleIndicators(new Set());
       return;
     }
 
     const timers: ReturnType<typeof setTimeout>[] = [];
+    let delayCount = 0;
 
     // For each player who has made a decision, show their indicator after 300ms delay
-    gameState.players.forEach((player, index) => {
+    gameState.players.forEach((player) => {
       if (player.foldDecision !== 'UNDECIDED') {
+        const delay = delayCount * 300;
+        console.log(`[CurrentTrick] Setting timer for player ${player.position} (${player.name}): ${player.foldDecision} with delay ${delay}ms`);
+
         const timer = setTimeout(() => {
-          setVisibleIndicators(prev => new Set([...prev, player.position]));
-        }, index * 300); // 300ms delay between each player
+          console.log(`[CurrentTrick] Showing indicator for player ${player.position}: ${player.foldDecision}`);
+          setVisibleIndicators(prev => {
+            const newSet = new Set([...prev, player.position]);
+            console.log('[CurrentTrick] Updated visibleIndicators:', Array.from(newSet));
+            return newSet;
+          });
+        }, delay);
         timers.push(timer);
+        delayCount++;
       }
     });
 
     return () => {
+      console.log('[CurrentTrick] Cleaning up timers');
       timers.forEach(timer => clearTimeout(timer));
     };
-  }, [gameState.players, gameState.phase]);
+  }, [gameState.players.map(p => `${p.position}:${p.foldDecision}`).join(','), gameState.phase]);
 
   useLayoutEffect(() => {
     const updateBorderRadius = () => {
@@ -128,10 +149,19 @@ export function CurrentTrick({
       {gameState.players.map((player) => {
         // Skip if this player already has a card in the current trick
         const hasPlayedCard = trick?.cards.some(c => c.playerPosition === player.position);
-        if (hasPlayedCard) return null;
+        if (hasPlayedCard) {
+          console.log(`[CurrentTrick] Player ${player.position} has played card, skipping indicator`);
+          return null;
+        }
 
         // Only show if player has made a decision AND it's in the visible set
-        if (player.foldDecision === 'UNDECIDED' || !visibleIndicators.has(player.position)) {
+        if (player.foldDecision === 'UNDECIDED') {
+          console.log(`[CurrentTrick] Player ${player.position} is UNDECIDED, skipping`);
+          return null;
+        }
+
+        if (!visibleIndicators.has(player.position)) {
+          console.log(`[CurrentTrick] Player ${player.position} not in visibleIndicators yet, skipping`);
           return null;
         }
 
@@ -141,11 +171,14 @@ export function CurrentTrick({
         // During PLAYING phase, only show "Fold" text
         // During FOLDING_DECISION phase, show both "Stay" and "Fold"
         if (gameState.phase === 'PLAYING' && isStaying) {
+          console.log(`[CurrentTrick] PLAYING phase and player ${player.position} is STAYING, hiding`);
           return null;
         }
 
         const relativeSeatIndex = ((player.position - myPosition) % 4 + 4) % 4;
         const positionClass = indicatorPositions[relativeSeatIndex];
+
+        console.log(`[CurrentTrick] RENDERING indicator for player ${player.position}: ${isFolding ? 'Fold' : 'Stay'} at position ${positionClass}`);
 
         return (
           <div
