@@ -3,7 +3,7 @@
  * @description Display cards played in current trick
  */
 
-import { useRef, useLayoutEffect, useState } from 'react';
+import { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import type { Trick, Player, GameState } from '@buck-euchre/shared';
 import { Card } from './Card';
 
@@ -24,6 +24,34 @@ export function CurrentTrick({
 }: CurrentTrickProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [borderRadius, setBorderRadius] = useState<string>('9999px');
+  // Track which players' fold/stay indicators should be visible (after delay)
+  const [visibleIndicators, setVisibleIndicators] = useState<Set<number>>(new Set());
+
+  // Handle delayed display of fold/stay indicators
+  useEffect(() => {
+    // Reset visible indicators when trick changes or phase changes
+    if (gameState.phase !== 'FOLDING_DECISION' && gameState.phase !== 'PLAYING') {
+      setVisibleIndicators(new Set());
+      return;
+    }
+
+    const timers: NodeJS.Timeout[] = [];
+    const newVisible = new Set<number>();
+
+    // For each player who has made a decision, show their indicator after 300ms delay
+    gameState.players.forEach((player, index) => {
+      if (player.foldDecision !== 'UNDECIDED') {
+        const timer = setTimeout(() => {
+          setVisibleIndicators(prev => new Set([...prev, player.position]));
+        }, index * 300); // 300ms delay between each player
+        timers.push(timer);
+      }
+    });
+
+    return () => {
+      timers.forEach(timer => clearTimeout(timer));
+    };
+  }, [gameState.players, gameState.phase]);
 
   useLayoutEffect(() => {
     const updateBorderRadius = () => {
@@ -44,7 +72,7 @@ export function CurrentTrick({
 
     const resizeObserver = new ResizeObserver(updateBorderRadius);
     const currentRef = containerRef.current;
-    
+
     if (currentRef) {
       resizeObserver.observe(currentRef);
       setTimeout(updateBorderRadius, 0);
@@ -78,9 +106,13 @@ export function CurrentTrick({
     'right-4 top-1/2 -translate-y-1/2 sm:right-8' // Seat to your right
   ];
 
-
-  // Determine if we should show "Stay" indicators (only before first card is played)
-  const hasCardsPlayed = trick && trick.cards.length > 0;
+  // Positions for fold/stay indicators - closer to center than cards
+  const indicatorPositions = [
+    'bottom-2 left-1/2 -translate-x-1/2 sm:bottom-4', // South (you) - much closer to center
+    'left-2 top-1/2 -translate-y-1/2 sm:left-3', // Seat to your left - much closer to center
+    'top-2 left-1/2 -translate-x-1/2 sm:top-4', // Across from you - much closer to center
+    'right-2 top-1/2 -translate-y-1/2 sm:right-3' // Seat to your right - much closer to center
+  ];
 
   return (
     <div
@@ -99,30 +131,35 @@ export function CurrentTrick({
         const hasPlayedCard = trick?.cards.some(c => c.playerPosition === player.position);
         if (hasPlayedCard) return null;
 
-        // Check fold decision
-        const showStay = player.foldDecision === 'STAY' && !hasCardsPlayed;
-        const showFold = player.foldDecision === 'FOLD';
+        // Only show if player has made a decision AND it's in the visible set
+        if (player.foldDecision === 'UNDECIDED' || !visibleIndicators.has(player.position)) {
+          return null;
+        }
 
-        if (!showStay && !showFold) return null;
+        const isFolding = player.foldDecision === 'FOLD';
+        const isStaying = player.foldDecision === 'STAY';
+
+        // During PLAYING phase, only show "Fold" text
+        // During FOLDING_DECISION phase, show both "Stay" and "Fold"
+        if (gameState.phase === 'PLAYING' && isStaying) {
+          return null;
+        }
 
         const relativeSeatIndex = ((player.position - myPosition) % 4 + 4) % 4;
-        const positionClass = cardPositions[relativeSeatIndex];
-        // Sequential animation delay based on relative seat position around the table (150ms per player, same as cards)
-        const animationDelay = `${relativeSeatIndex * 200}ms`;
+        const positionClass = indicatorPositions[relativeSeatIndex];
 
         return (
           <div
             key={`indicator-${player.position}`}
             className={`absolute ${positionClass} z-10 flex items-center justify-center animate-in bounce-in`}
-            style={{ animationDelay }}
           >
             <div className={`
               px-3 py-1.5 rounded-lg font-semibold text-sm
-              ${showFold
+              ${isFolding
                 ? 'bg-slate-600/20 text-slate-400 border border-slate-500/50'
                 : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/50'}
             `}>
-              {showFold ? 'Fold' : 'Stay'}
+              {isFolding ? 'Fold' : 'Stay'}
             </div>
           </div>
         );
