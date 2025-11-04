@@ -35,8 +35,7 @@ export function CurrentTrick({
       return;
     }
 
-    const timers: NodeJS.Timeout[] = [];
-    const newVisible = new Set<number>();
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
     // For each player who has made a decision, show their indicator after 300ms delay
     gameState.players.forEach((player, index) => {
