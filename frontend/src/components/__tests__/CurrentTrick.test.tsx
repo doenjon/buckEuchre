@@ -8,7 +8,7 @@ import { render, screen } from '@testing-library/react';
 import type { Player, Trick, GameState } from '@buck-euchre/shared';
 import { CurrentTrick } from '../game/CurrentTrick';
 
-const mockPlayers: Player[] = [
+const mockPlayers: [Player, Player, Player, Player] = [
   {
     id: 'player-1',
     name: 'Alice',
@@ -55,22 +55,35 @@ const mockPlayers: Player[] = [
   }
 ];
 
+const mockTrick: Trick = {
+  number: 1,
+  leadPlayerPosition: 0,
+  winner: null,
+  cards: []
+};
+
 const mockGameState: GameState = {
   gameId: 'test-game',
   phase: 'PLAYING',
+  version: 1,
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
   players: mockPlayers,
+  round: 1,
   dealerPosition: 0,
-  currentPlayerPosition: 2,
-  trumpSuit: 'SPADES',
+  blind: [],
+  turnUpCard: null,
+  isClubsTurnUp: false,
+  bids: [],
+  currentBidder: null,
   highestBid: 3,
   winningBidderPosition: 0,
-  currentTrick: null,
-  completedTricks: [],
-  roundWinnerId: null,
-  roundWinnerName: null,
-  gameOver: false,
-  isClubsTurnUp: false,
-  updatedAt: Date.now()
+  trumpSuit: 'SPADES',
+  tricks: [],
+  currentTrick: mockTrick,
+  currentPlayerPosition: 2,
+  winner: null,
+  gameOver: false
 };
 
 describe('CurrentTrick Component', () => {
