@@ -15,11 +15,12 @@ import {
   applyCardPlay,
   finishRound,
 } from '../game/state';
-import { decideBid, decideTrump, decideFold, decideCardToPlay } from './decision-engine';
 import { Server } from 'socket.io';
 import { canFold, canPlaceBid, canPlayCard } from '../game/validation';
 import { checkAndTriggerAI } from './trigger';
 import { scheduleAutoStartNextRound } from '../services/round.service';
+import { aiProviderCache } from './provider-cache';
+import type { AIProvider } from './types';
 
 /**
  * Delay for a specified amount of time
@@ -49,6 +50,21 @@ function getThinkingDelay(): number {
 function findPlayerPosition(gameState: GameState, playerId: string): PlayerPosition | null {
   const player = gameState.players.find((p: any) => p.id === playerId);
   return player ? player.position : null;
+}
+
+/**
+ * Get AI provider for a player
+ *
+ * Uses cached provider if available, otherwise creates a new one.
+ * Defaults to 'medium' difficulty for now.
+ *
+ * @param playerId - Player ID
+ * @returns AI provider instance
+ */
+async function getAIProvider(playerId: string): Promise<AIProvider> {
+  // TODO: Get difficulty from player settings/database
+  // For now, default to 'medium'
+  return await aiProviderCache.getProvider(playerId, 'medium');
 }
 
 /**
@@ -171,7 +187,14 @@ async function executeAIBid(
       return currentState;
     }
 
-    const bid = decideBid(player.hand, currentState.turnUpCard, currentState.highestBid);
+    // Get AI provider and make decision
+    const aiProvider = await getAIProvider(aiPlayerId);
+    const bid = await aiProvider.decideBid(
+      player.hand,
+      currentState.turnUpCard,
+      currentState.highestBid,
+      currentState
+    );
 
     const validation = canPlaceBid(
       bid,
@@ -246,7 +269,13 @@ async function executeAIDeclareTrump(
       return currentState;
     }
 
-    const trumpSuit = decideTrump(player.hand, currentState.turnUpCard);
+    // Get AI provider and make decision
+    const aiProvider = await getAIProvider(aiPlayerId);
+    const trumpSuit = await aiProvider.decideTrump(
+      player.hand,
+      currentState.turnUpCard,
+      currentState
+    );
 
     console.log(`[AI] ${player.name} declares trump: ${trumpSuit}`);
 
@@ -312,7 +341,14 @@ async function executeAIFoldDecision(
       return currentState;
     }
 
-    const shouldFold = decideFold(player.hand, currentState.trumpSuit, currentState.isClubsTurnUp);
+    // Get AI provider and make decision
+    const aiProvider = await getAIProvider(aiPlayerId);
+    const shouldFold = await aiProvider.decideFold(
+      player.hand,
+      currentState.trumpSuit,
+      currentState.isClubsTurnUp,
+      currentState
+    );
 
     const validation = canFold(
       currentState.isClubsTurnUp,
@@ -396,7 +432,9 @@ async function executeAICardPlay(
       return currentState;
     }
 
-    const card = decideCardToPlay(currentState, player.position);
+    // Get AI provider and make decision
+    const aiProvider = await getAIProvider(aiPlayerId);
+    const card = await aiProvider.decideCardToPlay(currentState, player.position);
 
     const validation = canPlayCard(
       card,

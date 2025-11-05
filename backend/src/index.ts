@@ -8,6 +8,7 @@ import { createAppServer } from './server';
 import { connectDatabase, disconnectDatabase } from './db/client';
 import { loadActiveGamesFromDatabase, persistAllActiveGames } from './services/state.service';
 import { validateEnv } from './config/env';
+import { setupAIProviders } from './ai';
 
 // Load environment variables
 dotenv.config();
@@ -23,6 +24,11 @@ async function main(): Promise<void> {
   console.log('Connecting to database...');
   await connectDatabase();
   console.log('✓ Database connected\n');
+
+  // Setup AI providers
+  console.log('Setting up AI providers...');
+  setupAIProviders();
+  console.log('✓ AI providers registered\n');
 
   // Load active games from database into memory
   console.log('Loading active games from database...');
