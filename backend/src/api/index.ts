@@ -6,6 +6,7 @@ import friendsRoutes from './friends.routes';
 import invitationsRoutes from './invitations.routes';
 import leaderboardRoutes from './leaderboard.routes';
 import testRoutes from './test.routes';
+import aiRoutes from './ai.routes';
 
 const router = Router();
 
@@ -18,6 +19,7 @@ router.use('/api/games', gameRoutes);
 router.use('/api/friends', friendsRoutes);
 router.use('/api', invitationsRoutes); // Handles /api/invitations and /api/games/:gameId/invite
 router.use('/api/leaderboard', leaderboardRoutes);
+router.use('/api/ai', aiRoutes);
 
 const enableTestRoutes = process.env.ENABLE_TEST_CONTROLS !== 'false';
 
