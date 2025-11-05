@@ -7,8 +7,8 @@
  */
 
 export * from './rule-based';
+export * from './ismcts';
 
 // Future providers will be exported here:
 // export * from './pimc';
-// export * from './ismcts';
 // export * from './neural';

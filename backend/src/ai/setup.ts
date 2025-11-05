@@ -8,6 +8,7 @@
 
 import { aiRegistry } from './registry';
 import { RuleBasedAIMetadata } from './providers/rule-based';
+import { ISMCTSAIMetadata } from './providers/ismcts';
 
 /**
  * Register all available AI providers
@@ -17,16 +18,18 @@ import { RuleBasedAIMetadata } from './providers/rule-based';
 export function setupAIProviders(): void {
   console.log('[AI] Setting up AI providers...');
 
-  // Register rule-based AI (baseline)
+  // Register rule-based AI (baseline, easy-medium difficulty)
   aiRegistry.register(RuleBasedAIMetadata);
+
+  // Register ISMCTS AI (medium-expert difficulty)
+  aiRegistry.register(ISMCTSAIMetadata);
 
   // TODO: Register additional providers as they're implemented
   // aiRegistry.register(PIMCAIMetadata);
-  // aiRegistry.register(ISMCTSAIMetadata);
   // aiRegistry.register(NeuralAIMetadata);
 
-  // Set default provider
-  aiRegistry.setDefault('rule-based');
+  // Set default provider to ISMCTS (stronger AI)
+  aiRegistry.setDefault('ismcts');
 
   // Log stats
   const stats = aiRegistry.getStats();
@@ -46,21 +49,16 @@ export function setupAIProviders(): void {
  * @returns Provider ID to use
  */
 export function getProviderForDifficulty(difficulty: string): string | undefined {
-  // For now, use rule-based for all difficulties
-  // Later, you can customize this:
-  //
-  // switch (difficulty) {
-  //   case 'easy':
-  //     return 'rule-based';
-  //   case 'medium':
-  //     return 'pimc';
-  //   case 'hard':
-  //     return 'ismcts';
-  //   case 'expert':
-  //     return 'neural';
-  //   default:
-  //     return undefined;
-  // }
-
-  return 'rule-based';
+  switch (difficulty) {
+    case 'easy':
+      return 'rule-based'; // Fast, simple heuristics
+    case 'medium':
+      return 'ismcts'; // 500 simulations
+    case 'hard':
+      return 'ismcts'; // 2000 simulations
+    case 'expert':
+      return 'ismcts'; // 5000 simulations
+    default:
+      return 'ismcts'; // Default to ISMCTS
+  }
 }
