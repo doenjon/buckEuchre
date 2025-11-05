@@ -25,7 +25,7 @@ import {
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
   const { token } = useAuthStore();
-  const { setGameState, setError, setWaitingInfo } = useGameStore();
+  const { setGameState, setError, setWaitingInfo, setAIAnalysis } = useGameStore();
   const { setConnected, setNotification } = useUIStore();
 
   // Initialize socket connection
@@ -142,13 +142,22 @@ export function useSocket() {
           gameStore.clearNotification();
         }, 2500);
       },
+
+      onAIAnalysisUpdate: (data) => {
+        console.log('AI Analysis update:', data);
+        // Only store analysis if it's for the current player
+        const gameStore = useGameStore.getState();
+        if (data.playerPosition === gameStore.myPosition) {
+          setAIAnalysis(data.cards);
+        }
+      },
     });
 
     return () => {
       cleanupSocketListeners(socket);
       socket.disconnect();
     };
-  }, [token, setGameState, setError, setConnected, setNotification, setWaitingInfo]);
+  }, [token, setGameState, setError, setConnected, setNotification, setWaitingInfo, setAIAnalysis]);
 
   // Socket event emitters wrapped in callbacks
   const joinGame = useCallback((gameId: string) => {
