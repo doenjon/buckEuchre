@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import type { GameState, Card, Player } from '@buck-euchre/shared';
+import type { GameState, Card, Player, CardAnalysis } from '@buck-euchre/shared';
 
 export interface WaitingInfo {
   gameId: string;
@@ -27,6 +27,7 @@ export interface GameStoreState {
   waitingInfo: WaitingInfo | null;
   currentNotification: GameNotification | null;
   isGameStartNotification: boolean; // Track if "Let's play!" is showing
+  aiAnalysis: CardAnalysis[] | null; // AI analysis for current hand
 }
 
 export interface GameStoreActions {
@@ -37,12 +38,14 @@ export interface GameStoreActions {
   setWaitingInfo: (info: WaitingInfo | null) => void;
   showNotification: (message: string, type: GameNotification['type'], options?: { isGameStart?: boolean; persistent?: boolean; blink?: boolean }) => void;
   clearNotification: () => void;
+  setAIAnalysis: (analysis: CardAnalysis[] | null) => void;
 
   // Computed getters (selectors)
   getMyPlayer: () => Player | null;
   isMyTurn: () => boolean;
   getPlayableCards: () => Card[];
   getCurrentPlayer: () => Player | null;
+  getCardAnalysis: (cardId: string) => CardAnalysis | null;
 }
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -54,6 +57,7 @@ const initialState: GameStoreState = {
   waitingInfo: null,
   currentNotification: null,
   isGameStartNotification: false,
+  aiAnalysis: null,
 };
 
 /**
@@ -104,10 +108,14 @@ export const useGameStore = create<GameStore>()((set, get) => ({
   },
 
   clearNotification: () => {
-    set({ 
+    set({
       currentNotification: null,
       isGameStartNotification: false,
     });
+  },
+
+  setAIAnalysis: (analysis) => {
+    set({ aiAnalysis: analysis });
   },
 
   // Computed getters
@@ -164,10 +172,10 @@ export const useGameStore = create<GameStore>()((set, get) => ({
   getCurrentPlayer: () => {
     const { gameState } = get();
     if (!gameState) return null;
-    
+
     const phase = gameState.phase;
     let currentPosition: number | null = null;
-    
+
     if (phase === 'BIDDING') {
       currentPosition = gameState.currentBidder;
     } else if (phase === 'DECLARING_TRUMP') {
@@ -185,8 +193,14 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     } else if (phase === 'PLAYING') {
       currentPosition = gameState.currentPlayerPosition;
     }
-    
+
     if (currentPosition === null) return null;
     return gameState.players.find(player => player.position === currentPosition) || null;
+  },
+
+  getCardAnalysis: (cardId: string) => {
+    const { aiAnalysis } = get();
+    if (!aiAnalysis) return null;
+    return aiAnalysis.find(a => a.cardId === cardId) || null;
   },
 }));

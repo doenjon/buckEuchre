@@ -101,6 +101,7 @@ export function setupSocketListeners(
     onTrickComplete?: (data: any) => void;
     onRoundComplete?: (data: any) => void;
     onAllPlayersPassed?: (data: any) => void;
+    onAIAnalysisUpdate?: (data: any) => void;
   }
 ): void {
   if (handlers.onConnect) {
@@ -150,6 +151,10 @@ export function setupSocketListeners(
   if (handlers.onAllPlayersPassed) {
     socket.on('ALL_PLAYERS_PASSED', handlers.onAllPlayersPassed);
   }
+
+  if (handlers.onAIAnalysisUpdate) {
+    socket.on('AI_ANALYSIS_UPDATE', handlers.onAIAnalysisUpdate);
+  }
 }
 
 /**
@@ -168,4 +173,5 @@ export function cleanupSocketListeners(socket: Socket): void {
   socket.off('TRICK_COMPLETE');
   socket.off('ROUND_COMPLETE');
   socket.off('ALL_PLAYERS_PASSED');
+  socket.off('AI_ANALYSIS_UPDATE');
 }

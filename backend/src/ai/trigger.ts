@@ -7,9 +7,10 @@
  */
 
 import { Server } from 'socket.io';
-import { GameState } from '@buck-euchre/shared';
+import { GameState, AIAnalysisEvent } from '@buck-euchre/shared';
 import { isAIPlayerByName, isAIPlayerAsync } from '../services/ai-player.service';
 import { executeAITurn } from './executor';
+import { analyzeHand, getBestCard } from './analysis.service';
 
 /**
  * Get the current player who needs to act
@@ -161,8 +162,9 @@ export async function checkAndTriggerAI(
     console.log(`[AI Trigger] Current acting player: ${currentPlayer.name} (${currentPlayerId}), isAI: ${isAI}`);
 
     if (!isAI) {
-      // Current player is human, don't trigger
-      console.log(`[AI Trigger] Current player ${currentPlayer.name} is human, not triggering AI`);
+      // Current player is human, send AI analysis
+      console.log(`[AI Trigger] Current player ${currentPlayer.name} is human, sending AI analysis`);
+      await sendAIAnalysis(gameId, gameState, currentPlayer.position, io);
       return;
     }
 
@@ -180,12 +182,66 @@ export async function checkAndTriggerAI(
 }
 
 /**
+ * Send AI analysis to human player
+ *
+ * Analyzes the player's hand and sends statistics about each card
+ * to help them make decisions.
+ *
+ * @param gameId - ID of the game
+ * @param gameState - Current game state
+ * @param playerPosition - Position of the human player
+ * @param io - Socket.io server for broadcasting
+ */
+async function sendAIAnalysis(
+  gameId: string,
+  gameState: GameState,
+  playerPosition: number,
+  io: Server
+): Promise<void> {
+  try {
+    // Only send analysis during PLAYING phase
+    if (gameState.phase !== 'PLAYING') {
+      return;
+    }
+
+    console.log(`[AI Analysis] Analyzing hand for player at position ${playerPosition}`);
+
+    // Run analysis
+    const analyses = await analyzeHand(gameState, playerPosition as any, {
+      simulations: 500, // Moderate quality for real-time
+      verbose: false,
+    });
+
+    if (analyses.length === 0) {
+      console.log(`[AI Analysis] No analysis available for player ${playerPosition}`);
+      return;
+    }
+
+    const bestCardId = getBestCard(analyses);
+
+    const analysisEvent: AIAnalysisEvent = {
+      playerPosition: playerPosition as any,
+      cards: analyses,
+      totalSimulations: 500,
+      bestCardId: bestCardId || '',
+    };
+
+    // Broadcast to the game room
+    io.to(`game:${gameId}`).emit('AI_ANALYSIS_UPDATE', analysisEvent);
+
+    console.log(`[AI Analysis] Sent analysis for ${analyses.length} cards to game ${gameId}`);
+  } catch (error: any) {
+    console.error(`[AI Analysis] Error sending analysis:`, error.message || error);
+  }
+}
+
+/**
  * Setup AI triggers for game state updates
- * 
+ *
  * This should be called once during server initialization.
  * It doesn't actually hook into events, but provides the function
  * that should be called after every state update.
- * 
+ *
  * @param io - Socket.io server
  * @returns Function to call after state updates
  */

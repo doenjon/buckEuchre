@@ -5,13 +5,14 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent, TouchEvent } from 'react';
-import type { Card as CardType, Suit } from '@buck-euchre/shared';
+import type { Card as CardType, Suit, CardAnalysis } from '@buck-euchre/shared';
 import {
   TRUMP_RANK_VALUES,
   NON_TRUMP_RANK_VALUES,
   getEffectiveSuit,
 } from '@buck-euchre/shared';
 import { Card } from './Card';
+import { useGameStore } from '@/stores/gameStore';
 
 export interface PlayerHandProps {
   cards: CardType[];
@@ -80,6 +81,7 @@ export function PlayerHand({
   selectedCardId = null,
   trumpSuit = null
 }: PlayerHandProps) {
+  const { aiAnalysis, getCardAnalysis } = useGameStore();
   const sortedCardIds = useMemo(() => {
     if (!cards || cards.length === 0) {
       return [] as string[];
@@ -421,12 +423,15 @@ export function PlayerHand({
           const normalizedDistance = cardCount > 1 ? distanceFromCenter / centerPosition : 0;
           const archOffset = normalizedDistance * normalizedDistance * 6; // 6px max offset
 
+          const analysis = getCardAnalysis(card.id);
+          const showAnalysis = !disabled && aiAnalysis && analysis;
+
           return (
             <div
               key={card.id}
               data-card-id={card.id}
               className={`
-                hover:z-10 focus-within:z-10
+                hover:z-10 focus-within:z-10 relative
                 ${touchDraggedCardId === card.id ? 'opacity-50' : ''}
               `}
               ref={setCardRef(card.id)}
@@ -454,6 +459,33 @@ export function PlayerHand({
                 selected={selectedCardId === card.id}
                 size="large"
               />
+              {showAnalysis && (
+                <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent rounded-t-lg p-1 pointer-events-none">
+                  <div className="flex items-center justify-between text-[10px] font-semibold">
+                    <div className="flex items-center gap-1">
+                      {analysis.rank === 1 && (
+                        <span className="text-yellow-400" title="Best card">⭐</span>
+                      )}
+                      <span
+                        className={`${
+                          analysis.winProbability > 0.6 ? 'text-green-400' :
+                          analysis.winProbability > 0.4 ? 'text-yellow-400' :
+                          'text-red-400'
+                        }`}
+                        title="Win probability"
+                      >
+                        {(analysis.winProbability * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <span
+                      className="text-blue-300"
+                      title={`Expected tricks: ${analysis.expectedTricks.toFixed(1)}`}
+                    >
+                      {analysis.expectedTricks.toFixed(1)}🃏
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

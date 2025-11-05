@@ -202,6 +202,28 @@ export interface ReconnectedEvent {
 }
 
 /**
+ * AI analysis for a single card
+ */
+export interface CardAnalysis {
+  cardId: string;
+  winProbability: number;  // 0-1 probability of winning the game if this card is played
+  expectedTricks: number;  // Expected number of tricks if this card is played
+  confidence: number;  // 0-1 confidence in the analysis
+  visits: number;  // Number of MCTS simulations that explored this card
+  rank: number;  // Rank among all cards (1 = best)
+}
+
+/**
+ * AI analysis update event (sent when it's a human player's turn)
+ */
+export interface AIAnalysisEvent {
+  playerPosition: PlayerPosition;
+  cards: CardAnalysis[];
+  totalSimulations: number;
+  bestCardId: string;
+}
+
+/**
  * Error event
  */
 export interface ErrorEvent {
@@ -236,6 +258,7 @@ export const SERVER_EVENTS = {
   PLAYER_DISCONNECTED: 'PLAYER_DISCONNECTED',
   PLAYER_RECONNECTED: 'PLAYER_RECONNECTED',
   RECONNECTED: 'RECONNECTED',
+  AI_ANALYSIS_UPDATE: 'AI_ANALYSIS_UPDATE',
   ERROR: 'ERROR'
 } as const;
 
