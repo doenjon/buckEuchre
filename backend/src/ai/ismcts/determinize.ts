@@ -64,18 +64,23 @@ export function extractObservations(
 
   // Track played cards from completed tricks
   for (const trick of gameState.tricks) {
+    // Get the led suit from the first card in the trick
+    const ledSuit = trick.cards.length > 0 && gameState.trumpSuit
+      ? getEffectiveSuit(trick.cards[0].card, gameState.trumpSuit)
+      : null;
+
     for (const playedCard of trick.cards) {
       observations.playedCards.add(playedCard.card.id);
 
       // Check for void reveals
-      if (gameState.trumpSuit && trick.ledSuit) {
+      if (gameState.trumpSuit && ledSuit) {
         const effectiveSuit = getEffectiveSuit(playedCard.card, gameState.trumpSuit);
 
         // If player didn't follow led suit, they're void in it
-        if (effectiveSuit !== trick.ledSuit && effectiveSuit !== gameState.trumpSuit) {
+        if (effectiveSuit !== ledSuit && effectiveSuit !== gameState.trumpSuit) {
           const playerVoids = observations.playerVoids.get(playedCard.playerPosition);
           if (playerVoids) {
-            playerVoids.add(trick.ledSuit);
+            playerVoids.add(ledSuit as Suit);
           }
         }
       }
@@ -84,17 +89,22 @@ export function extractObservations(
 
   // Track cards from current trick
   if (gameState.currentTrick && gameState.currentTrick.cards.length > 0) {
+    // Get the led suit from the first card in the current trick
+    const currentLedSuit = gameState.trumpSuit
+      ? getEffectiveSuit(gameState.currentTrick.cards[0].card, gameState.trumpSuit)
+      : null;
+
     for (const playedCard of gameState.currentTrick.cards) {
       observations.playedCards.add(playedCard.card.id);
 
       // Check for void reveals in current trick
-      if (gameState.trumpSuit && gameState.currentTrick.ledSuit) {
+      if (gameState.trumpSuit && currentLedSuit) {
         const effectiveSuit = getEffectiveSuit(playedCard.card, gameState.trumpSuit);
 
-        if (effectiveSuit !== gameState.currentTrick.ledSuit && effectiveSuit !== gameState.trumpSuit) {
+        if (effectiveSuit !== currentLedSuit && effectiveSuit !== gameState.trumpSuit) {
           const playerVoids = observations.playerVoids.get(playedCard.playerPosition);
           if (playerVoids) {
-            playerVoids.add(gameState.currentTrick.ledSuit);
+            playerVoids.add(currentLedSuit as Suit);
           }
         }
       }
