@@ -149,26 +149,30 @@ function fastCardPlay(gameState: GameState, playerPosition: PlayerPosition): Car
 }
 
 /**
- * Run a fast rollout from current game state to end
+ * Run a fast rollout from current game state to end of current hand
  *
- * Uses simple heuristics to play out the game quickly.
+ * Uses simple heuristics to play out the CURRENT HAND only (not the whole game).
  * Returns the score change from the perspective of the given player.
  *
  * @param state - Current game state (will be cloned)
  * @param playerPosition - Player whose perspective to evaluate from
- * @returns Score change (negative is better in Buck Euchre)
+ * @returns Score change for this hand only (range: -5 to +5)
  */
 export function rollout(state: GameState, playerPosition: PlayerPosition): number {
   // Clone state to avoid mutations
   let currentState = JSON.parse(JSON.stringify(state)) as GameState;
 
   const initialScore = currentState.players[playerPosition].score;
+  const initialRound = currentState.round;
 
-  // Play until game over
+  // Play until current hand is complete (ROUND_OVER or round number changes)
   let iterations = 0;
-  const maxIterations = 1000; // Safety limit
+  const maxIterations = 200; // Much lower since we're only playing one hand
 
-  while (!currentState.gameOver && iterations < maxIterations) {
+  while (currentState.phase !== 'ROUND_OVER' &&
+         currentState.phase !== 'GAME_OVER' &&
+         currentState.round === initialRound &&
+         iterations < maxIterations) {
     iterations++;
 
     switch (currentState.phase) {
@@ -293,11 +297,6 @@ export function rollout(state: GameState, playerPosition: PlayerPosition): numbe
         break;
       }
 
-      case 'ROUND_OVER': {
-        currentState = finishRound(currentState);
-        break;
-      }
-
       default:
         // Shouldn't reach here
         console.warn(`[Rollout] Unknown phase: ${currentState.phase}`);
@@ -305,11 +304,16 @@ export function rollout(state: GameState, playerPosition: PlayerPosition): numbe
     }
   }
 
-  if (iterations >= maxIterations) {
-    console.warn('[Rollout] Hit max iterations');
+  // If we exited because we reached ROUND_OVER, finish the round to get final scores
+  if (currentState.phase === 'ROUND_OVER') {
+    currentState = finishRound(currentState);
   }
 
-  // Calculate score change
+  if (iterations >= maxIterations) {
+    console.warn(`[Rollout] Hit max iterations (${maxIterations})`);
+  }
+
+  // Calculate score change for this hand only
   const finalScore = currentState.players[playerPosition].score;
   const scoreChange = finalScore - initialScore;
 
@@ -317,23 +321,23 @@ export function rollout(state: GameState, playerPosition: PlayerPosition): numbe
 }
 
 /**
- * Evaluate a terminal state
+ * Evaluate a terminal state (end of current hand)
  *
  * Converts score change to a normalized value (0-1 range).
  *
- * @param scoreChange - Change in score from rollout (can be multiple rounds to game over)
+ * @param scoreChange - Change in score from rollout of current hand only
  * @returns Normalized value (higher is better)
  */
 export function evaluateTerminalState(scoreChange: number): number {
-  // In Buck Euchre, lower score is better
-  // Rollouts play to game over (score reaches ~15), so score changes can be large
-  // Typical range: -20 to +20 (though usually tighter)
-  // Per round: -5 to +5, but rollouts can span multiple rounds
-  // Normalize to 0-1 where 1 is best (most negative score)
+  // In Buck Euchre, lower score is better (race to 0)
+  // Score change per hand ranges from -5 to +5:
+  //   Best:  -5 (took all 5 tricks)
+  //   Worst: +5 (failed contract or took 0 tricks)
+  // Normalize to 0-1 where 1 is best (most negative score change)
 
   // Invert and normalize
-  const value = -scoreChange; // More negative score = higher value
-  const normalized = (value + 20) / 40; // Map [-20, 20] to [0, 1]
+  const value = -scoreChange; // More negative score change = higher value
+  const normalized = (value + 5) / 10; // Map [-5, 5] to [0, 1]
 
   return Math.max(0, Math.min(1, normalized)); // Clamp to [0, 1]
 }
