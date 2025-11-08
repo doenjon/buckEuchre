@@ -11,7 +11,7 @@ import { createAIPlayer } from '../services/ai-player.service';
 import { createGame } from '../services/game.service';
 import { joinGame } from '../services/game.service';
 import { initializeGame, dealNewRound, applyBid, applyTrumpDeclaration, applyFoldDecision, applyCardPlay, finishRound, startNextRound } from '../game/state';
-import { getOrCreateProvider } from '../ai/provider-cache';
+import { aiProviderCache } from '../ai/provider-cache';
 import type { ArenaConfig } from './types';
 import type { AIConfig } from '../ai/types';
 
@@ -86,10 +86,7 @@ async function runAITurn(gameState: GameState, playerId: string): Promise<GameSt
   const position = player.position;
 
   // Get AI provider for this player
-  const provider = await getOrCreateProvider(playerId, {
-    difficulty: 'medium', // Will be overridden by actual config
-    params: {},
-  } as AIConfig);
+  const provider = await aiProviderCache.getProvider(playerId, 'medium');
 
   let updatedState = gameState;
 
@@ -99,7 +96,7 @@ async function runAITurn(gameState: GameState, playerId: string): Promise<GameSt
         const bid = await provider.decideBid(
           player.hand,
           gameState.turnUpCard!,
-          gameState.currentBid,
+          gameState.highestBid,
           gameState
         );
         updatedState = applyBid(gameState, position, bid);
@@ -120,7 +117,7 @@ async function runAITurn(gameState: GameState, playerId: string): Promise<GameSt
         const shouldFold = await provider.decideFold(
           player.hand,
           gameState.trumpSuit!,
-          gameState.isClubsRound,
+          gameState.isClubsTurnUp,
           gameState
         );
         updatedState = applyFoldDecision(gameState, position, shouldFold);
@@ -262,7 +259,7 @@ export async function runHeadlessGame(configs: ArenaConfig[]): Promise<HeadlessG
     return {
       gameId,
       participants,
-      roundsPlayed: gameState.roundNumber,
+      roundsPlayed: gameState.round,
       duration,
     };
   } catch (error: any) {

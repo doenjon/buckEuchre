@@ -10,6 +10,7 @@
 
 import { prisma } from '../db/client';
 import type { ArenaConfig, ArenaMatch, MatchResult, ArenaStats, MatchLauncherOptions } from './types';
+import type { AIDifficulty } from '../ai/types';
 import { ARENA_CONFIGS, DEFAULT_ELO_RATING } from './configs';
 import { calculateEloUpdates, findSimilarRatings } from './elo.service';
 import { runHeadlessGame } from './game-runner.service';
@@ -59,6 +60,7 @@ export async function getAllConfigs(): Promise<ArenaConfig[]> {
 
   return configs.map((c) => ({
     ...c,
+    difficulty: c.difficulty as AIDifficulty,
     params: c.paramsJson as Record<string, any> | undefined,
   }));
 }
@@ -75,6 +77,7 @@ export async function getConfigById(id: string): Promise<ArenaConfig | null> {
 
   return {
     ...config,
+    difficulty: config.difficulty as AIDifficulty,
     params: config.paramsJson as Record<string, any> | undefined,
   };
 }
