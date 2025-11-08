@@ -7,8 +7,7 @@
  * and run MCTS on each sampled "world".
  */
 
-import { GameState, Card, Suit, PlayerPosition } from '@buck-euchre/shared';
-import { FULL_DECK } from '@buck-euchre/shared/constants/cards';
+import { GameState, Card, Suit, PlayerPosition, FULL_DECK } from '@buck-euchre/shared';
 import { getEffectiveSuit } from '../../game/deck';
 
 /**
