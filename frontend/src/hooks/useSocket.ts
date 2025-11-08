@@ -40,15 +40,25 @@ export function useSocket() {
         console.log('Socket connected');
         setConnected(true);
       },
-      
+
       onDisconnect: () => {
         console.log('Socket disconnected');
         setConnected(false);
       },
-      
+
+      onConnectError: (error) => {
+        console.warn('WebSocket connection failed:', error.message || error);
+        setConnected(false);
+
+        // Show a notification for connection errors
+        const message = error.message || 'Failed to connect to game server';
+        setNotification(`Connection error: ${message}`);
+        setTimeout(() => setNotification(null), 5000);
+      },
+
       onError: (error) => {
         console.error('Socket error:', error);
-        
+
         // Only show blocking errors for join-related failures
         // Gameplay errors should be notifications, not blocking
         const blockingErrorCodes = [
@@ -57,7 +67,7 @@ export function useSocket() {
           'GAME_NOT_FOUND',
           'SEAT_FAILED'
         ];
-        
+
         if (error.code && blockingErrorCodes.includes(error.code)) {
           // This is a blocking error - show the error modal
           setError(error.message || 'An error occurred');

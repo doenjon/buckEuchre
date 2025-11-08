@@ -94,6 +94,7 @@ export function setupSocketListeners(
     onConnect?: () => void;
     onDisconnect?: () => void;
     onError?: (error: any) => void;
+    onConnectError?: (error: any) => void;
     onGameStateUpdate?: (data: any) => void;
     onGameWaiting?: (data: any) => void;
     onReconnected?: (data: any) => void;
@@ -109,13 +110,17 @@ export function setupSocketListeners(
   if (handlers.onConnect) {
     socket.on('connect', handlers.onConnect);
   }
-  
+
   if (handlers.onDisconnect) {
     socket.on('disconnect', handlers.onDisconnect);
   }
-  
+
   if (handlers.onError) {
     socket.on('ERROR', handlers.onError);
+  }
+
+  if (handlers.onConnectError) {
+    socket.on('connect_error', handlers.onConnectError);
   }
   
   if (handlers.onGameStateUpdate) {
@@ -166,6 +171,7 @@ export function cleanupSocketListeners(socket: Socket): void {
   socket.off('connect');
   socket.off('disconnect');
   socket.off('ERROR');
+  socket.off('connect_error');
   socket.off('GAME_STATE_UPDATE');
   socket.off('GAME_WAITING');
   socket.off('RECONNECTED');
