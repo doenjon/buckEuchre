@@ -112,7 +112,7 @@ export async function analyzeHand(
         continue;
       }
 
-      // Calculate metrics
+      // Calculate metrics - use raw MCTS values
       const winProbability = stats.avgValue; // avgValue is already 0-1
       const confidence = Math.min(stats.visits / 100, 1); // Confidence based on visit count
 

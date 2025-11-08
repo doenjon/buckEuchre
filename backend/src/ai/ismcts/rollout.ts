@@ -255,8 +255,41 @@ export function rollout(state: GameState, playerPosition: PlayerPosition): numbe
           return 0;
         }
 
-        const card = fastCardPlay(currentState, player.position);
-        currentState = applyCardPlay(currentState, player.position, card.id);
+        // Get legal cards from current state
+        const legalCards = player.hand.filter(
+          c => canPlayCard(c, player.hand, currentState.currentTrick, currentState.trumpSuit!, player.folded === true).valid
+        );
+
+        if (legalCards.length === 0) {
+          // No legal cards - this shouldn't happen, but return early
+          console.warn('[Rollout] No legal cards available');
+          return 0;
+        }
+
+        // Use fastCardPlay to select which card, but get the actual card object from legalCards
+        const selectedCard = fastCardPlay(currentState, player.position);
+        // Find the card by ID in legalCards to ensure we have the correct reference from current state
+        const cardToPlay = legalCards.find(c => c.id === selectedCard.id);
+        
+        if (!cardToPlay) {
+          // Selected card not in legal cards - use first legal card as fallback
+          console.warn(`[Rollout] Selected card ${selectedCard.id} not in legal cards, using fallback`);
+          const fallbackCard = legalCards[0];
+          try {
+            currentState = applyCardPlay(currentState, player.position, fallbackCard.id);
+          } catch (error: any) {
+            console.warn(`[Rollout] Error playing fallback card: ${error.message || error}`);
+            return 0;
+          }
+        } else {
+          try {
+            currentState = applyCardPlay(currentState, player.position, cardToPlay.id);
+          } catch (error: any) {
+            // Error playing card - return early with neutral score
+            console.warn(`[Rollout] Error playing card: ${error.message || error}`);
+            return 0;
+          }
+        }
         break;
       }
 

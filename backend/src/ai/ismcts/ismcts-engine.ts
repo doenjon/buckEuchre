@@ -290,11 +290,34 @@ export class ISMCTSEngine {
   } {
     // Run normal search
     const legalActions = getLegalActions(gameState, playerPosition);
+    if (legalActions.length === 0) {
+      throw new Error('[ISMCTS] No legal actions available for analysis');
+    }
+
     const root = new MCTSNode(null, null, legalActions);
+    let successfulSimulations = 0;
+    let failedSimulations = 0;
 
     for (let i = 0; i < this.config.simulations; i++) {
-      const determinizedState = determinize(gameState, playerPosition);
-      this.runSimulation(root, determinizedState, playerPosition);
+      try {
+        const determinizedState = determinize(gameState, playerPosition);
+        this.runSimulation(root, determinizedState, playerPosition);
+        successfulSimulations++;
+      } catch (error: any) {
+        // Log but continue - individual simulation failures shouldn't break analysis
+        failedSimulations++;
+        if (this.config.verbose && failedSimulations <= 5) {
+          console.warn(`[ISMCTS] Simulation ${i} failed:`, error.message || error);
+        }
+        // Continue with next simulation
+      }
+    }
+
+    // If too many simulations failed, we might not have enough data
+    if (successfulSimulations < this.config.simulations * 0.5) {
+      console.warn(
+        `[ISMCTS] Only ${successfulSimulations}/${this.config.simulations} simulations succeeded. Analysis may be unreliable.`
+      );
     }
 
     const bestChild = root.getMostVisitedChild();

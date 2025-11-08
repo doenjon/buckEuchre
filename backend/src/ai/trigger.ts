@@ -13,6 +13,13 @@ import { executeAITurn } from './executor';
 import { analyzeHand, getBestCard } from './analysis.service';
 
 /**
+ * Track last analysis sent to prevent duplicate sends
+ * Key: `${gameId}:${playerPosition}:${currentPlayerPosition}:${trickNumber}`
+ */
+const lastAnalysisKey = new Map<string, number>();
+const ANALYSIS_COOLDOWN_MS = 2000; // Don't send analysis again within 2 seconds
+
+/**
  * Get the current player who needs to act
  * 
  * @param gameState - Current game state
@@ -204,6 +211,26 @@ async function sendAIAnalysis(
       return;
     }
 
+    // Create a unique key for this analysis request
+    // Include game ID, player position, current player position, and trick number
+    const currentPlayerPos = gameState.currentPlayerPosition ?? -1;
+    const trickNumber = gameState.tricks.length;
+    const analysisKey = `${gameId}:${playerPosition}:${currentPlayerPos}:${trickNumber}`;
+    
+    // Check if we've already sent analysis for this exact situation recently
+    const lastSent = lastAnalysisKey.get(analysisKey);
+    const now = Date.now();
+    
+    if (lastSent && (now - lastSent) < ANALYSIS_COOLDOWN_MS) {
+      // Already sent analysis recently for this turn - skip
+      return;
+    }
+
+    // Only send if it's actually this player's turn
+    if (currentPlayerPos !== playerPosition) {
+      return;
+    }
+
     console.log(`[AI Analysis] Analyzing hand for player at position ${playerPosition}`);
 
     // Run analysis
@@ -215,6 +242,17 @@ async function sendAIAnalysis(
     if (analyses.length === 0) {
       console.log(`[AI Analysis] No analysis available for player ${playerPosition}`);
       return;
+    }
+
+    // Mark that we've sent analysis for this key
+    lastAnalysisKey.set(analysisKey, now);
+    
+    // Clean up old entries (keep only last 100)
+    if (lastAnalysisKey.size > 100) {
+      const entries = Array.from(lastAnalysisKey.entries());
+      entries.sort((a, b) => b[1] - a[1]); // Sort by timestamp descending
+      lastAnalysisKey.clear();
+      entries.slice(0, 50).forEach(([key, time]) => lastAnalysisKey.set(key, time));
     }
 
     const bestCardId = getBestCard(analyses);
