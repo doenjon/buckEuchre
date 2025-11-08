@@ -43,6 +43,19 @@ export function LobbyPage() {
                 <h2 className="text-sm uppercase tracking-[0.35em] text-emerald-200/80 mb-6">Your games</h2>
                 <ActiveGames />
               </div>
+
+              <div className="rounded-[28px] border border-white/15 bg-white/10 p-6 backdrop-blur">
+                <h2 className="text-sm uppercase tracking-[0.35em] text-emerald-200/80 mb-4">AI Arena</h2>
+                <p className="text-sm text-emerald-100/70 mb-4">
+                  Watch AI players battle it out in automated matches with ELO rankings.
+                </p>
+                <button
+                  onClick={() => navigate('/arena')}
+                  className="w-full rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-100 transition-colors hover:border-emerald-500/50 hover:bg-emerald-500/20"
+                >
+                  Enter AI Arena
+                </button>
+              </div>
             </aside>
 
             <section className="rounded-[28px] border border-white/15 bg-white/10 p-6 backdrop-blur">
