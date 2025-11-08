@@ -11,6 +11,7 @@ import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import FriendsPage from './pages/FriendsPage';
 import LeaderboardPage from './pages/LeaderboardPage';
+import { ArenaPage } from './pages/ArenaPage';
 import { ConsoleLogger } from './components/ConsoleLogger';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/friends" element={<FriendsPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/arena" element={<ArenaPage />} />
         <Route path="/game/:gameId" element={<GamePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
