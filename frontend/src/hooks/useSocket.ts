@@ -48,7 +48,7 @@ export function useSocket() {
         setConnected(true);
       },
 
-      onDisconnect: (reason) => {
+      onDisconnect: (reason: string) => {
         console.log('[useSocket] Socket disconnected:', {
           reason,
           willReconnect: socket.active,
