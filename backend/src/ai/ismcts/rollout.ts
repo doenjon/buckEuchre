@@ -321,17 +321,19 @@ export function rollout(state: GameState, playerPosition: PlayerPosition): numbe
  *
  * Converts score change to a normalized value (0-1 range).
  *
- * @param scoreChange - Change in score
+ * @param scoreChange - Change in score for a single round
  * @returns Normalized value (higher is better)
  */
 export function evaluateTerminalState(scoreChange: number): number {
   // In Buck Euchre, lower score is better
-  // Score typically ranges from -15 to +15
+  // Score change per round typically ranges from -5 to +5:
+  //   Best: -5 (took all 5 tricks)
+  //   Worst: +5 (failed contract or got set)
   // Normalize to 0-1 where 1 is best (most negative score)
 
   // Invert and normalize
   const value = -scoreChange; // More negative score = higher value
-  const normalized = (value + 15) / 30; // Map [-15, 15] to [0, 1]
+  const normalized = (value + 5) / 10; // Map [-5, 5] to [0, 1]
 
   return Math.max(0, Math.min(1, normalized)); // Clamp to [0, 1]
 }

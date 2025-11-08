@@ -460,18 +460,18 @@ export function PlayerHand({
                 size="large"
               />
               {showAnalysis && (
-                <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent rounded-t-lg p-1 pointer-events-none">
-                  <div className="flex flex-col gap-0.5 text-[9px] font-semibold">
+                <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/95 to-black/30 rounded-t-lg p-1.5 pointer-events-none shadow-lg">
+                  <div className="flex flex-col gap-1 text-[10px] font-bold">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
                         {analysis.rank === 1 && (
-                          <span className="text-yellow-400" title="Best card">⭐</span>
+                          <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best card">⭐</span>
                         )}
                         <span
-                          className={`${
-                            analysis.winProbability > 0.6 ? 'text-green-400' :
-                            analysis.winProbability > 0.4 ? 'text-yellow-400' :
-                            'text-red-400'
+                          className={`drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] ${
+                            analysis.winProbability > 0.6 ? 'text-green-300' :
+                            analysis.winProbability > 0.4 ? 'text-yellow-300' :
+                            'text-red-300'
                           }`}
                           title="Expected value (avgValue)"
                         >
@@ -479,17 +479,17 @@ export function PlayerHand({
                         </span>
                       </div>
                       <span
-                        className="text-blue-300"
+                        className="text-cyan-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
                         title={`Expected tricks: ${analysis.expectedTricks.toFixed(1)}`}
                       >
                         {analysis.expectedTricks.toFixed(1)}🃏
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-[8px] opacity-75">
-                      <span className="text-cyan-300" title="MCTS visits (exploration count)">
+                    <div className="flex items-center justify-between text-[9px] opacity-90">
+                      <span className="text-cyan-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="MCTS visits (exploration count)">
                         {analysis.visits} visits
                       </span>
-                      <span className="text-purple-300" title="Confidence">
+                      <span className="text-purple-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Confidence">
                         {(analysis.confidence * 100).toFixed(0)}% conf
                       </span>
                     </div>
