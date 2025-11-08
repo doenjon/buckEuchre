@@ -226,7 +226,7 @@ export async function analyzeBids(
 
     // Convert to BidAnalysis array
     const analyses: BidAnalysis[] = [];
-    const possibleBids: BidAmount[] = [0, 3, 4, 5];
+    const possibleBids: BidAmount[] = ['PASS', 3, 4, 5];
 
     for (const bidAmount of possibleBids) {
       const stats = bidStats.get(bidAmount);
@@ -303,8 +303,8 @@ export async function analyzeFoldDecision(
 ): Promise<FoldAnalysis[]> {
   const mergedConfig = { ...DEFAULT_CONFIG, ...config };
 
-  // Only analyze during FOLD_DECISION phase
-  if (gameState.phase !== 'FOLD_DECISION') {
+  // Only analyze during FOLDING_DECISION phase
+  if (gameState.phase !== 'FOLDING_DECISION') {
     return [];
   }
 
