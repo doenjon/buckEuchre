@@ -36,7 +36,7 @@ export async function initializeArenaConfigs(): Promise<void> {
           name: config.name,
           provider: config.provider,
           difficulty: config.difficulty,
-          paramsJson: config.params || null,
+          paramsJson: config.params || undefined,
           eloRating: DEFAULT_ELO_RATING,
           gamesPlayed: 0,
         },

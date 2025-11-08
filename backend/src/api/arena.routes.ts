@@ -10,7 +10,7 @@
 
 import express from 'express';
 import { getAllConfigs, getArenaStats, getRecentMatches, runMatches } from '../arena/arena.service';
-import { authenticate } from '../middleware/auth';
+import { authenticateToken } from '../auth/middleware';
 
 const router = express.Router();
 
@@ -18,7 +18,7 @@ const router = express.Router();
  * GET /api/arena/configs
  * Get all AI configurations with ELO ratings
  */
-router.get('/configs', authenticate, async (req, res) => {
+router.get('/configs', authenticateToken, async (req, res) => {
   try {
     const configs = await getAllConfigs();
     res.json(configs);
@@ -32,7 +32,7 @@ router.get('/configs', authenticate, async (req, res) => {
  * GET /api/arena/stats
  * Get statistics for all configs (ELO, win rate, avg score, etc.)
  */
-router.get('/stats', authenticate, async (req, res) => {
+router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const stats = await getArenaStats();
     res.json(stats);
@@ -49,7 +49,7 @@ router.get('/stats', authenticate, async (req, res) => {
  * Query params:
  * - limit: Number of matches to return (default: 20)
  */
-router.get('/matches', authenticate, async (req, res) => {
+router.get('/matches', authenticateToken, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 20;
     const matches = await getRecentMatches(limit);
@@ -69,7 +69,7 @@ router.get('/matches', authenticate, async (req, res) => {
  * - numGames: number
  * - configIds: string[] (required for manual mode, exactly 4 IDs)
  */
-router.post('/run', authenticate, async (req, res) => {
+router.post('/run', authenticateToken, async (req, res) => {
   try {
     const { mode, numGames, configIds } = req.body;
 
