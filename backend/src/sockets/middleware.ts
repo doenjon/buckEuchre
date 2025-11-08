@@ -26,13 +26,21 @@ export async function authenticateSocket(
 
     // Attach user data to socket
     socket.data.userId = result.user.id;
+    socket.data.playerId = result.user.id; // For backwards compatibility with connection handler
     socket.data.username = result.user.username;
     socket.data.displayName = result.user.displayName;
+    socket.data.playerName = result.user.displayName; // For backwards compatibility
     socket.data.isGuest = result.user.isGuest;
+
+    console.log('[Socket Auth] ✓ Authenticated:', {
+      playerId: result.user.id,
+      username: result.user.username,
+      displayName: result.user.displayName,
+    });
 
     next();
   } catch (error) {
-    console.error('Socket authentication error:', error);
+    console.error('[Socket Auth] ✗ Authentication failed:', error);
     next(new Error('Authentication failed'));
   }
 }
