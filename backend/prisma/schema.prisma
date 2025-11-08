@@ -240,3 +240,62 @@ model Round {
   @@unique([gameId, roundNumber])
   @@index([gameId])
 }
+
+// =============================================================================
+// AI Arena Models
+// =============================================================================
+
+// AI configuration for arena battles
+model ArenaConfig {
+  id          String   @id // e.g., 'rule-easy', 'ismcts-medium'
+  name        String   // Display name
+  provider    String   // 'rule-based', 'ismcts'
+  difficulty  String   // 'easy', 'medium', 'hard', 'expert'
+  paramsJson  Json?    // Custom parameters
+  eloRating   Float    @default(1500.0) // ELO rating
+  gamesPlayed Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  participants ArenaParticipant[]
+
+  @@index([eloRating])
+  @@index([gamesPlayed])
+}
+
+// Arena match record
+model ArenaMatch {
+  id           String             @id @default(uuid())
+  status       ArenaMatchStatus   @default(IN_PROGRESS)
+  createdAt    DateTime           @default(now())
+  completedAt  DateTime?
+  participants ArenaParticipant[]
+
+  @@index([status, createdAt])
+}
+
+enum ArenaMatchStatus {
+  IN_PROGRESS
+  COMPLETED
+  ERROR
+}
+
+// Participant in an arena match
+model ArenaParticipant {
+  id       String @id @default(uuid())
+  matchId  String
+  match    ArenaMatch  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  configId String
+  config   ArenaConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  position     Int   // 0-3
+  finalScore   Int   // Final score at end of match
+  eloRatingBefore Float // ELO before match
+  eloRatingAfter  Float // ELO after match
+  eloChange    Float // Change in ELO
+
+  @@unique([matchId, position])
+  @@index([matchId])
+  @@index([configId])
+}

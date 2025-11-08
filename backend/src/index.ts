@@ -9,6 +9,7 @@ import { connectDatabase, disconnectDatabase } from './db/client';
 import { loadActiveGamesFromDatabase, persistAllActiveGames } from './services/state.service';
 import { validateEnv } from './config/env';
 import { setupAIProviders } from './ai';
+import { initializeArenaConfigs } from './arena/arena.service';
 
 // Load environment variables
 dotenv.config();
@@ -29,6 +30,11 @@ async function main(): Promise<void> {
   console.log('Setting up AI providers...');
   setupAIProviders();
   console.log('✓ AI providers registered\n');
+
+  // Initialize arena configs
+  console.log('Initializing AI arena configs...');
+  await initializeArenaConfigs();
+  console.log('✓ Arena configs initialized\n');
 
   // Load active games from database into memory
   console.log('Loading active games from database...');
