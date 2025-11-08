@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import type { GameState, Card, Player, CardAnalysis } from '@buck-euchre/shared';
+import type { GameState, Card, Player, CardAnalysis, BidAnalysis, FoldAnalysis, BidAmount } from '@buck-euchre/shared';
 
 export interface WaitingInfo {
   gameId: string;
@@ -28,6 +28,8 @@ export interface GameStoreState {
   currentNotification: GameNotification | null;
   isGameStartNotification: boolean; // Track if "Let's play!" is showing
   aiAnalysis: CardAnalysis[] | null; // AI analysis for current hand
+  bidAnalysis: BidAnalysis[] | null; // AI analysis for bidding
+  foldAnalysis: FoldAnalysis[] | null; // AI analysis for fold decisions
 }
 
 export interface GameStoreActions {
@@ -39,6 +41,8 @@ export interface GameStoreActions {
   showNotification: (message: string, type: GameNotification['type'], options?: { isGameStart?: boolean; persistent?: boolean; blink?: boolean }) => void;
   clearNotification: () => void;
   setAIAnalysis: (analysis: CardAnalysis[] | null) => void;
+  setBidAnalysis: (analysis: BidAnalysis[] | null) => void;
+  setFoldAnalysis: (analysis: FoldAnalysis[] | null) => void;
 
   // Computed getters (selectors)
   getMyPlayer: () => Player | null;
@@ -46,6 +50,8 @@ export interface GameStoreActions {
   getPlayableCards: () => Card[];
   getCurrentPlayer: () => Player | null;
   getCardAnalysis: (cardId: string) => CardAnalysis | null;
+  getBidAnalysis: (bidAmount: BidAmount) => BidAnalysis | null;
+  getFoldAnalysis: (fold: boolean) => FoldAnalysis | null;
 }
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -58,6 +64,8 @@ const initialState: GameStoreState = {
   currentNotification: null,
   isGameStartNotification: false,
   aiAnalysis: null,
+  bidAnalysis: null,
+  foldAnalysis: null,
 };
 
 /**
@@ -116,6 +124,14 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
   setAIAnalysis: (analysis) => {
     set({ aiAnalysis: analysis });
+  },
+
+  setBidAnalysis: (analysis) => {
+    set({ bidAnalysis: analysis });
+  },
+
+  setFoldAnalysis: (analysis) => {
+    set({ foldAnalysis: analysis });
   },
 
   // Computed getters
@@ -202,5 +218,17 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     const { aiAnalysis } = get();
     if (!aiAnalysis) return null;
     return aiAnalysis.find(a => a.cardId === cardId) || null;
+  },
+
+  getBidAnalysis: (bidAmount: BidAmount) => {
+    const { bidAnalysis } = get();
+    if (!bidAnalysis) return null;
+    return bidAnalysis.find(a => a.bidAmount === bidAmount) || null;
+  },
+
+  getFoldAnalysis: (fold: boolean) => {
+    const { foldAnalysis } = get();
+    if (!foldAnalysis) return null;
+    return foldAnalysis.find(a => a.fold === fold) || null;
   },
 }));

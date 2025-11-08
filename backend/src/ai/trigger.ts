@@ -10,7 +10,7 @@ import { Server } from 'socket.io';
 import { GameState, AIAnalysisEvent } from '@buck-euchre/shared';
 import { isAIPlayerByName, isAIPlayerAsync } from '../services/ai-player.service';
 import { executeAITurn } from './executor';
-import { analyzeHand, getBestCard } from './analysis.service';
+import { analyzeHand, getBestCard, analyzeBids, getBestBid, analyzeFoldDecision, getBestFoldDecision } from './analysis.service';
 
 /**
  * Track last analysis sent to prevent duplicate sends
@@ -191,7 +191,7 @@ export async function checkAndTriggerAI(
 /**
  * Send AI analysis to human player
  *
- * Analyzes the player's hand and sends statistics about each card
+ * Analyzes the player's options (cards, bids, or fold decision) and sends statistics
  * to help them make decisions.
  *
  * @param gameId - ID of the game
@@ -206,32 +206,42 @@ async function sendAIAnalysis(
   io: Server
 ): Promise<void> {
   try {
-    // Only send analysis during PLAYING phase
-    if (gameState.phase !== 'PLAYING') {
+    // Only analyze during specific phases
+    if (gameState.phase !== 'PLAYING' && gameState.phase !== 'BIDDING' && gameState.phase !== 'FOLDING_DECISION') {
       return;
     }
 
     // Create a unique key for this analysis request
-    // Include game ID, player position, current player position, and trick number
-    const currentPlayerPos = gameState.currentPlayerPosition ?? -1;
+    const currentPlayerPos = gameState.currentPlayerPosition ?? gameState.currentBidder ?? -1;
     const trickNumber = gameState.tricks.length;
-    const analysisKey = `${gameId}:${playerPosition}:${currentPlayerPos}:${trickNumber}`;
-    
+    const analysisKey = `${gameId}:${playerPosition}:${currentPlayerPos}:${trickNumber}:${gameState.phase}`;
+
     // Check if we've already sent analysis for this exact situation recently
     const lastSent = lastAnalysisKey.get(analysisKey);
     const now = Date.now();
-    
+
     if (lastSent && (now - lastSent) < ANALYSIS_COOLDOWN_MS) {
       // Already sent analysis recently for this turn - skip
       return;
     }
 
-    // Only send if it's actually this player's turn
-    if (currentPlayerPos !== playerPosition) {
+    // Check if it's actually this player's turn based on phase
+    let isPlayersTurn = false;
+    if (gameState.phase === 'PLAYING') {
+      isPlayersTurn = currentPlayerPos === playerPosition;
+    } else if (gameState.phase === 'BIDDING') {
+      isPlayersTurn = gameState.currentBidder === playerPosition;
+    } else if (gameState.phase === 'FOLDING_DECISION') {
+      // In folding phase, check if this player needs to make a decision
+      const player = gameState.players[playerPosition];
+      isPlayersTurn = player.foldDecision === 'UNDECIDED' && playerPosition !== gameState.winningBidderPosition;
+    }
+
+    if (!isPlayersTurn) {
       return;
     }
 
-    console.log(`[AI Analysis] Analyzing hand for player at position ${playerPosition}`);
+    console.log(`[AI Analysis] Analyzing for player at position ${playerPosition} in phase ${gameState.phase}`);
 
     // Run analysis with high quality (2000 simulations)
     const analysisConfig = {
@@ -239,10 +249,67 @@ async function sendAIAnalysis(
       verbose: false,
     };
 
-    const analyses = await analyzeHand(gameState, playerPosition as any, analysisConfig);
+    let analysisEvent: AIAnalysisEvent;
 
-    if (analyses.length === 0) {
-      console.log(`[AI Analysis] No analysis available for player ${playerPosition}`);
+    // Analyze based on game phase
+    if (gameState.phase === 'PLAYING') {
+      const analyses = await analyzeHand(gameState, playerPosition as any, analysisConfig);
+
+      if (analyses.length === 0) {
+        console.log(`[AI Analysis] No card analysis available for player ${playerPosition}`);
+        return;
+      }
+
+      const bestCardId = getBestCard(analyses);
+
+      analysisEvent = {
+        playerPosition: playerPosition as any,
+        analysisType: 'card',
+        cards: analyses,
+        totalSimulations: analysisConfig.simulations,
+        bestCardId: bestCardId || '',
+      };
+
+      console.log(`[AI Analysis] Sent card analysis for ${analyses.length} cards to game ${gameId}`);
+    } else if (gameState.phase === 'BIDDING') {
+      const analyses = await analyzeBids(gameState, playerPosition as any, analysisConfig);
+
+      if (analyses.length === 0) {
+        console.log(`[AI Analysis] No bid analysis available for player ${playerPosition}`);
+        return;
+      }
+
+      const bestBid = getBestBid(analyses);
+
+      analysisEvent = {
+        playerPosition: playerPosition as any,
+        analysisType: 'bid',
+        bids: analyses,
+        totalSimulations: analysisConfig.simulations,
+        bestBid: bestBid ?? undefined,
+      };
+
+      console.log(`[AI Analysis] Sent bid analysis for ${analyses.length} bids to game ${gameId}`);
+    } else if (gameState.phase === 'FOLDING_DECISION') {
+      const analyses = await analyzeFoldDecision(gameState, playerPosition as any, analysisConfig);
+
+      if (analyses.length === 0) {
+        console.log(`[AI Analysis] No fold analysis available for player ${playerPosition}`);
+        return;
+      }
+
+      const bestFold = getBestFoldDecision(analyses);
+
+      analysisEvent = {
+        playerPosition: playerPosition as any,
+        analysisType: 'fold',
+        foldOptions: analyses,
+        totalSimulations: analysisConfig.simulations,
+        bestFoldDecision: bestFold ?? undefined,
+      };
+
+      console.log(`[AI Analysis] Sent fold analysis for ${analyses.length} options to game ${gameId}`);
+    } else {
       return;
     }
 
@@ -257,19 +324,8 @@ async function sendAIAnalysis(
       entries.slice(0, 50).forEach(([key, time]) => lastAnalysisKey.set(key, time));
     }
 
-    const bestCardId = getBestCard(analyses);
-
-    const analysisEvent: AIAnalysisEvent = {
-      playerPosition: playerPosition as any,
-      cards: analyses,
-      totalSimulations: analysisConfig.simulations,
-      bestCardId: bestCardId || '',
-    };
-
     // Broadcast to the game room
     io.to(`game:${gameId}`).emit('AI_ANALYSIS_UPDATE', analysisEvent);
-
-    console.log(`[AI Analysis] Sent analysis for ${analyses.length} cards to game ${gameId}`);
   } catch (error: any) {
     console.error(`[AI Analysis] Error sending analysis:`, error.message || error);
   }
