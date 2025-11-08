@@ -187,45 +187,53 @@ export class ISMCTSEngine {
 
   /**
    * Run one MCTS simulation
+   *
+   * For ISMCTS with imperfect information, we only build a tree for the root
+   * player's immediate actions. Building a deeper tree would include opponent
+   * moves, which are invalid across different determinizations (opponent hands
+   * change with each sample).
    */
   private runSimulation(
     root: MCTSNode,
     gameState: GameState,
     playerPosition: PlayerPosition
   ): void {
-    // SELECTION: Walk down tree using UCB1
     let node = root;
     let state = gameState;
 
-    while (!this.isTerminal(state) && node.isFullyExpanded() && !node.isLeaf()) {
-      const selectedChild = node.selectBestChild();
-      if (!selectedChild || !selectedChild.action) break;
+    // FLAT MONTE CARLO: Only expand at root level
+    // Don't build a deep tree because opponent moves are different in each determinization
 
-      node = selectedChild;
-      state = applyAction(state, selectedChild.action, this.getCurrentPlayer(state));
-    }
-
-    // EXPANSION: Add a new child if not fully expanded
+    // EXPANSION: Try an unexplored action at root
     if (!this.isTerminal(state) && !node.isFullyExpanded()) {
       const untriedAction = node.getUntriedAction();
       if (untriedAction) {
-        state = applyAction(state, untriedAction, this.getCurrentPlayer(state));
-        const newLegalActions = getLegalActions(state, this.getCurrentPlayer(state));
-        node = node.expand(untriedAction, newLegalActions);
+        // Apply the action
+        const currentPlayer = this.getCurrentPlayer(state);
+        state = applyAction(state, untriedAction, currentPlayer);
+        // Create leaf child node (no further expansion)
+        node = node.expand(untriedAction, []);
+      }
+    }
+    // SELECTION: If all actions tried at root, pick one via UCB1
+    else if (!this.isTerminal(state) && node.isFullyExpanded() && !node.isLeaf()) {
+      const selectedChild = node.selectBestChild();
+      if (selectedChild && selectedChild.action) {
+        node = selectedChild;
+        const currentPlayer = this.getCurrentPlayer(state);
+        state = applyAction(state, selectedChild.action, currentPlayer);
       }
     }
 
-    // SIMULATION: Play out to end
+    // SIMULATION: Play out rest of hand using rollout
     let value: number;
     if (this.isTerminal(state)) {
-      // Already at terminal state
       value = this.evaluateState(state, playerPosition);
     } else {
-      // Run rollout
       value = simulate(state, playerPosition);
     }
 
-    // BACKPROPAGATION: Update statistics
+    // BACKPROPAGATION: Update statistics up to root
     node.backpropagate(value);
   }
 
