@@ -112,14 +112,25 @@ export async function analyzeHand(
         continue;
       }
 
-      // Calculate metrics - use raw MCTS values
-      const winProbability = stats.avgValue; // avgValue is already 0-1
-      const confidence = Math.min(stats.visits / 100, 1); // Confidence based on visit count
+      // Calculate metrics from MCTS values
+      // avgValue is normalized score change where:
+      //   1.0 = best outcome (-5 score: took all 5 tricks)
+      //   0.5 = neutral outcome (0 score change)
+      //   0.0 = worst outcome (+5 score: got set/failed)
+      // We call this "winProbability" for display, but it's really "expected value"
+      const winProbability = stats.avgValue;
 
-      // Estimate expected tricks based on win probability
-      // This is a rough heuristic: higher win prob = more tricks
+      // Confidence increases with more visits
+      const confidence = Math.min(stats.visits / 200, 1);
+
+      // Estimate expected score change for this hand
+      // Map winProbability [0,1] back to score change [-5, +5]
+      const expectedScoreChange = -(winProbability * 10 - 5); // Reverse the normalization
+
+      // Convert score change to estimated tricks
+      // Rough heuristic: -1 score ≈ 1 trick (though not always true due to euchre rules)
       const remainingTricks = 5 - gameState.tricks.length;
-      const expectedTricks = winProbability * remainingTricks;
+      const expectedTricks = Math.max(0, Math.min(remainingTricks, -expectedScoreChange));
 
       analyses.push({
         cardId: card.id,

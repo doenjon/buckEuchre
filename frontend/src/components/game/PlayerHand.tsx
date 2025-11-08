@@ -468,28 +468,24 @@ export function PlayerHand({
                           <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best card">⭐</span>
                         )}
                         <span
-                          className={`drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] ${
-                            analysis.winProbability > 0.6 ? 'text-green-300' :
-                            analysis.winProbability > 0.4 ? 'text-yellow-300' :
-                            'text-red-300'
-                          }`}
+                          className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
                           title="Expected value (avgValue)"
                         >
                           {(analysis.winProbability * 100).toFixed(0)}%
                         </span>
                       </div>
                       <span
-                        className="text-cyan-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+                        className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
                         title={`Expected tricks: ${analysis.expectedTricks.toFixed(1)}`}
                       >
                         {analysis.expectedTricks.toFixed(1)}🃏
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-[9px] opacity-90">
-                      <span className="text-cyan-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="MCTS visits (exploration count)">
+                      <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="MCTS visits (exploration count)">
                         {analysis.visits} visits
                       </span>
-                      <span className="text-purple-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Confidence">
+                      <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Confidence">
                         {(analysis.confidence * 100).toFixed(0)}% conf
                       </span>
                     </div>

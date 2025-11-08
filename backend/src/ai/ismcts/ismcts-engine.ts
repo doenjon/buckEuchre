@@ -230,10 +230,11 @@ export class ISMCTSEngine {
   }
 
   /**
-   * Check if state is terminal
+   * Check if state is terminal (hand is complete)
    */
   private isTerminal(state: GameState): boolean {
-    return state.gameOver;
+    // A hand is complete when we reach ROUND_OVER or GAME_OVER
+    return state.phase === 'ROUND_OVER' || state.phase === 'GAME_OVER';
   }
 
   /**
@@ -266,15 +267,18 @@ export class ISMCTSEngine {
   }
 
   /**
-   * Evaluate a terminal state
+   * Evaluate a terminal state (when hand is already complete)
+   *
+   * This is called when we reach a terminal state during tree expansion,
+   * before running a rollout. Since we only simulate one hand at a time,
+   * we need to evaluate based on the score change for that hand.
    */
   private evaluateState(state: GameState, playerPosition: PlayerPosition): number {
-    // In terminal state, use actual score
-    // Lower score is better, so invert
-    const score = state.players[playerPosition].score;
-
-    // Normalize (scores typically 0-15)
-    return (15 - score) / 15;
+    // If we're at ROUND_OVER, we need to finish the round to get final scores
+    // Note: The state passed in might not have scores calculated yet
+    // For now, just use the simulate() function which handles this correctly
+    // This should rarely be called since we usually run rollouts instead
+    return simulate(state, playerPosition);
   }
 
   /**
