@@ -11,10 +11,12 @@ import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import FriendsPage from './pages/FriendsPage';
 import LeaderboardPage from './pages/LeaderboardPage';
+import { ConsoleLogger } from './components/ConsoleLogger';
 
 function App() {
   return (
     <BrowserRouter>
+      <ConsoleLogger />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
