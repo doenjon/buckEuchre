@@ -25,7 +25,7 @@ import {
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
   const { token } = useAuthStore();
-  const { setGameState, setError, setWaitingInfo, setAIAnalysis } = useGameStore();
+  const { setGameState, setError, setWaitingInfo, setAIAnalysis, setBidAnalysis, setFoldAnalysis } = useGameStore();
   const { setConnected, setNotification } = useUIStore();
 
   // Initialize socket connection
@@ -172,7 +172,20 @@ export function useSocket() {
         // Only store analysis if it's for the current player
         const gameStore = useGameStore.getState();
         if (data.playerPosition === gameStore.myPosition) {
-          setAIAnalysis(data.cards);
+          // Handle different analysis types
+          if (data.analysisType === 'card' && data.cards) {
+            setAIAnalysis(data.cards);
+            setBidAnalysis(null);
+            setFoldAnalysis(null);
+          } else if (data.analysisType === 'bid' && data.bids) {
+            setBidAnalysis(data.bids);
+            setAIAnalysis(null);
+            setFoldAnalysis(null);
+          } else if (data.analysisType === 'fold' && data.foldOptions) {
+            setFoldAnalysis(data.foldOptions);
+            setAIAnalysis(null);
+            setBidAnalysis(null);
+          }
         }
       },
     });

@@ -214,13 +214,42 @@ export interface CardAnalysis {
 }
 
 /**
+ * AI analysis for a bid decision
+ */
+export interface BidAnalysis {
+  bidAmount: BidAmount;
+  winProbability: number;  // 0-1 probability of winning the game with this bid
+  expectedScore: number;  // Expected score change if making this bid
+  confidence: number;  // 0-1 confidence in the analysis
+  visits: number;  // Number of MCTS simulations that explored this bid
+  rank: number;  // Rank among all bid options (1 = best)
+}
+
+/**
+ * AI analysis for a fold decision
+ */
+export interface FoldAnalysis {
+  fold: boolean;  // true for fold, false for stay
+  winProbability: number;  // 0-1 probability of winning the game with this choice
+  expectedScore: number;  // Expected score change with this choice
+  confidence: number;  // 0-1 confidence in the analysis
+  visits: number;  // Number of MCTS simulations that explored this choice
+  isBest: boolean;  // Whether this is the recommended action
+}
+
+/**
  * AI analysis update event (sent when it's a human player's turn)
  */
 export interface AIAnalysisEvent {
   playerPosition: PlayerPosition;
-  cards: CardAnalysis[];
+  analysisType: 'card' | 'bid' | 'fold';
+  cards?: CardAnalysis[];  // For card play decisions
+  bids?: BidAnalysis[];  // For bidding decisions
+  foldOptions?: FoldAnalysis[];  // For fold decisions (fold vs stay)
   totalSimulations: number;
-  bestCardId: string;
+  bestCardId?: string;  // For card play
+  bestBid?: BidAmount;  // For bidding
+  bestFoldDecision?: boolean;  // For fold decisions
 }
 
 /**

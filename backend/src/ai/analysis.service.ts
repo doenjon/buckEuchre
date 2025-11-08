@@ -6,10 +6,10 @@
  * statistics like win probability and expected tricks for each card.
  */
 
-import { GameState, PlayerPosition, Card } from '@buck-euchre/shared';
+import { GameState, PlayerPosition, Card, BidAmount } from '@buck-euchre/shared';
 import { ISMCTSEngine } from './ismcts/ismcts-engine';
 import { Action, serializeAction } from './ismcts/mcts-node';
-import { CardAnalysis } from '@buck-euchre/shared';
+import { CardAnalysis, BidAnalysis, FoldAnalysis } from '@buck-euchre/shared';
 
 /**
  * Configuration for AI analysis
@@ -169,4 +169,240 @@ export function getBestCard(analyses: CardAnalysis[]): string | null {
   // Return the card with rank 1 (best)
   const best = analyses.find(a => a.rank === 1);
   return best ? best.cardId : analyses[0].cardId;
+}
+
+/**
+ * Analyze bidding options using ISMCTS
+ *
+ * @param gameState - Current game state
+ * @param playerPosition - Position of player to analyze for
+ * @param config - Analysis configuration
+ * @returns Array of bid analyses with statistics
+ */
+export async function analyzeBids(
+  gameState: GameState,
+  playerPosition: PlayerPosition,
+  config: AnalysisConfig = {}
+): Promise<BidAnalysis[]> {
+  const mergedConfig = { ...DEFAULT_CONFIG, ...config };
+
+  // Only analyze during BIDDING phase
+  if (gameState.phase !== 'BIDDING') {
+    return [];
+  }
+
+  const player = gameState.players[playerPosition];
+
+  // Only analyze if it's the player's turn
+  if (gameState.currentPlayerPosition !== playerPosition) {
+    return [];
+  }
+
+  try {
+    // Create ISMCTS engine
+    const engine = new ISMCTSEngine({
+      simulations: mergedConfig.simulations,
+      verbose: mergedConfig.verbose,
+    });
+
+    // Run analysis
+    const { bestAction, statistics, totalSimulations } = engine.searchWithAnalysis(
+      gameState,
+      playerPosition
+    );
+
+    // Extract bid actions from statistics
+    const bidStats = new Map<BidAmount, { visits: number; avgValue: number }>();
+
+    for (const [key, stat] of Array.from(statistics)) {
+      // Only include BID actions
+      if (stat.action.type === 'BID') {
+        bidStats.set(stat.action.amount, {
+          visits: stat.visits,
+          avgValue: stat.avgValue,
+        });
+      }
+    }
+
+    // Convert to BidAnalysis array
+    const analyses: BidAnalysis[] = [];
+    const possibleBids: BidAmount[] = [0, 3, 4, 5];
+
+    for (const bidAmount of possibleBids) {
+      const stats = bidStats.get(bidAmount);
+
+      if (!stats) {
+        // Bid wasn't explored (might be invalid or rarely chosen)
+        analyses.push({
+          bidAmount,
+          winProbability: 0,
+          expectedScore: 0,
+          confidence: 0,
+          visits: 0,
+          rank: possibleBids.length,
+        });
+        continue;
+      }
+
+      // Calculate metrics from MCTS values
+      const winProbability = stats.avgValue;
+      const confidence = Math.min(stats.visits / 200, 1);
+      const expectedScore = -(winProbability * 10 - 5);
+
+      analyses.push({
+        bidAmount,
+        winProbability,
+        expectedScore,
+        confidence,
+        visits: stats.visits,
+        rank: 0, // Will be set after sorting
+      });
+    }
+
+    // Sort by win probability (descending) and assign ranks
+    analyses.sort((a, b) => b.winProbability - a.winProbability);
+    analyses.forEach((analysis, index) => {
+      analysis.rank = index + 1;
+    });
+
+    return analyses;
+  } catch (error) {
+    console.error('[AI Analysis] Error analyzing bids:', error);
+    return [];
+  }
+}
+
+/**
+ * Get the best bid recommendation from analysis
+ *
+ * @param analyses - Array of bid analyses
+ * @returns Best bid amount, or null if no analysis available
+ */
+export function getBestBid(analyses: BidAnalysis[]): BidAmount | null {
+  if (analyses.length === 0) {
+    return null;
+  }
+
+  // Return the bid with rank 1 (best)
+  const best = analyses.find(a => a.rank === 1);
+  return best ? best.bidAmount : analyses[0].bidAmount;
+}
+
+/**
+ * Analyze fold decision using ISMCTS
+ *
+ * @param gameState - Current game state
+ * @param playerPosition - Position of player to analyze for
+ * @param config - Analysis configuration
+ * @returns Array of fold analyses (fold vs stay)
+ */
+export async function analyzeFoldDecision(
+  gameState: GameState,
+  playerPosition: PlayerPosition,
+  config: AnalysisConfig = {}
+): Promise<FoldAnalysis[]> {
+  const mergedConfig = { ...DEFAULT_CONFIG, ...config };
+
+  // Only analyze during FOLD_DECISION phase
+  if (gameState.phase !== 'FOLD_DECISION') {
+    return [];
+  }
+
+  const player = gameState.players[playerPosition];
+
+  // Only analyze if it's the player's turn
+  if (gameState.currentPlayerPosition !== playerPosition) {
+    return [];
+  }
+
+  try {
+    // Create ISMCTS engine
+    const engine = new ISMCTSEngine({
+      simulations: mergedConfig.simulations,
+      verbose: mergedConfig.verbose,
+    });
+
+    // Run analysis
+    const { bestAction, statistics, totalSimulations } = engine.searchWithAnalysis(
+      gameState,
+      playerPosition
+    );
+
+    // Extract fold actions from statistics
+    const foldStats = new Map<boolean, { visits: number; avgValue: number }>();
+
+    for (const [key, stat] of Array.from(statistics)) {
+      // Only include FOLD actions
+      if (stat.action.type === 'FOLD') {
+        foldStats.set(stat.action.fold, {
+          visits: stat.visits,
+          avgValue: stat.avgValue,
+        });
+      }
+    }
+
+    // Convert to FoldAnalysis array
+    const analyses: FoldAnalysis[] = [];
+    const foldOptions = [false, true]; // Stay, then Fold
+
+    for (const foldOption of foldOptions) {
+      const stats = foldStats.get(foldOption);
+
+      if (!stats) {
+        // Option wasn't explored
+        analyses.push({
+          fold: foldOption,
+          winProbability: 0,
+          expectedScore: 0,
+          confidence: 0,
+          visits: 0,
+          isBest: false,
+        });
+        continue;
+      }
+
+      // Calculate metrics from MCTS values
+      const winProbability = stats.avgValue;
+      const confidence = Math.min(stats.visits / 200, 1);
+      const expectedScore = -(winProbability * 10 - 5);
+
+      analyses.push({
+        fold: foldOption,
+        winProbability,
+        expectedScore,
+        confidence,
+        visits: stats.visits,
+        isBest: false, // Will be set after finding the best
+      });
+    }
+
+    // Find the best option
+    if (analyses.length > 0) {
+      const best = analyses.reduce((prev, curr) =>
+        curr.winProbability > prev.winProbability ? curr : prev
+      );
+      best.isBest = true;
+    }
+
+    return analyses;
+  } catch (error) {
+    console.error('[AI Analysis] Error analyzing fold decision:', error);
+    return [];
+  }
+}
+
+/**
+ * Get the best fold recommendation from analysis
+ *
+ * @param analyses - Array of fold analyses
+ * @returns Best fold decision (true to fold, false to stay), or null if no analysis available
+ */
+export function getBestFoldDecision(analyses: FoldAnalysis[]): boolean | null {
+  if (analyses.length === 0) {
+    return null;
+  }
+
+  // Return the decision with isBest = true
+  const best = analyses.find(a => a.isBest);
+  return best !== undefined ? best.fold : null;
 }
