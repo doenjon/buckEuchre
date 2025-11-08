@@ -115,7 +115,7 @@ export function setupSocketListeners(
   socket: Socket,
   handlers: {
     onConnect?: () => void;
-    onDisconnect?: () => void;
+    onDisconnect?: (reason: string) => void;
     onError?: (error: any) => void;
     onConnectError?: (error: any) => void;
     onGameStateUpdate?: (data: any) => void;
