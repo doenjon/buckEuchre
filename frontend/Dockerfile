@@ -1,12 +1,16 @@
 # ==============================================================================
 # Buck Euchre Frontend - Production Dockerfile
 # ==============================================================================
-# 
-# Multi-stage build:
+#
+# Multi-stage build with BuildKit optimizations:
 # 1. Build React app with Vite
 # 2. Serve with nginx
-# 
+#
+# Build with: DOCKER_BUILDKIT=1 docker build -f frontend/Dockerfile .
+#
 # ==============================================================================
+
+# syntax=docker/dockerfile:1.4
 
 # ------------------------------------------------------------------------------
 # Stage 1: Build shared package
@@ -14,10 +18,19 @@
 FROM node:20-alpine AS shared-builder
 
 WORKDIR /shared
+
+# Copy only package files first for better caching
 COPY shared/package*.json ./
+
+# Install dependencies with cache mount for npm
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit
+
+# Copy source and build
 COPY shared/tsconfig.json ./
 COPY shared/src ./src
-RUN npm ci && npm run build
+
+RUN npm run build
 
 # ------------------------------------------------------------------------------
 # Stage 2: Build frontend
@@ -30,15 +43,20 @@ COPY --from=shared-builder /shared /shared
 
 # Build frontend
 WORKDIR /app
+
+# Copy only package files first for better caching
 COPY frontend/package*.json ./
+
+# Install dependencies with cache mount
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit
+
+# Copy configuration files
 COPY frontend/tsconfig.json ./
 COPY frontend/tsconfig.node.json ./
 COPY frontend/vite.config.ts ./
 COPY frontend/postcss.config.js ./
 COPY frontend/tailwind.config.js ./
-
-# Install dependencies
-RUN npm ci
 
 # Copy source code
 COPY frontend/index.html ./

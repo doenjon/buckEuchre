@@ -65,6 +65,10 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+      cache_from:
+        - buckeuchre-backend:latest
     container_name: buckeuchre-backend
     restart: unless-stopped
     
@@ -111,6 +115,10 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+      cache_from:
+        - buckeuchre-frontend:latest
     container_name: buckeuchre-frontend
     restart: unless-stopped
     

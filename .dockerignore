@@ -1,11 +1,20 @@
+# ==============================================================================
+# Docker Build Context Ignore File
+# ==============================================================================
+# Optimized to minimize build context size and improve build performance
+# ==============================================================================
+
 # Git
 .git/
 .gitignore
 .gitattributes
+.github/
 
-# Documentation
+# Documentation (exclude from build)
 *.md
 !README.md
+docs/
+LICENSE
 
 # Development files
 .env
@@ -14,40 +23,89 @@
 *.swp
 *.swo
 *~
+.editorconfig
+.eslintrc*
+.prettierrc*
 
-# Dependencies
+# Dependencies (will be installed during build)
 node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Build outputs
+# Build outputs (will be generated during build)
 dist/
 build/
+.next/
+out/
 
 # Testing
 coverage/
+.nyc_output/
 **/__tests__/
+**/__mocks__/
 **/*.test.ts
 **/*.test.tsx
+**/*.test.js
+**/*.test.jsx
 **/*.spec.ts
+**/*.spec.tsx
+**/*.spec.js
+**/*.spec.jsx
 
 # IDE
 .vscode/
 .idea/
+*.sublime-*
+*.iml
 
 # Logs
 logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Temporary files
 .cache/
 .temp/
 *.tmp
+.DS_Store
+Thumbs.db
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Docker
+# Docker (don't include other docker files in build context)
 docker-compose*.yml
 !docker-compose.yml
-Dockerfile
+**/Dockerfile
 .dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Development databases and data
+*.sqlite
+*.sqlite3
+*.db
+backups/
+
+# Python (if any)
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Misc
+.turbo/
+.vercel/
+*.local

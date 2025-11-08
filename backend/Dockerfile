@@ -1,10 +1,14 @@
 # ==============================================================================
 # Buck Euchre Backend - Production Dockerfile
 # ==============================================================================
-# 
-# Multi-stage build for optimized production image
-# 
+#
+# Multi-stage build for optimized production image with BuildKit optimizations
+#
+# Build with: DOCKER_BUILDKIT=1 docker build -f backend/Dockerfile .
+#
 # ==============================================================================
+
+# syntax=docker/dockerfile:1.4
 
 # ------------------------------------------------------------------------------
 # Stage 1: Build shared package
@@ -12,10 +16,19 @@
 FROM node:20-alpine AS shared-builder
 
 WORKDIR /shared
+
+# Copy only package files first for better caching
 COPY shared/package*.json ./
+
+# Install dependencies with cache mount for npm
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit
+
+# Copy source and build
 COPY shared/tsconfig.json ./
 COPY shared/src ./src
-RUN npm ci && npm run build
+
+RUN npm run build
 
 # ------------------------------------------------------------------------------
 # Stage 2: Build backend
@@ -28,18 +41,22 @@ COPY --from=shared-builder /shared /shared
 
 # Build backend
 WORKDIR /app
+
+# Copy only package files first for better caching
 COPY backend/package*.json ./
+
+# Install dependencies with cache mount
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit
+
+# Copy configuration and source
 COPY backend/tsconfig.json ./
-
-# Install dependencies (including devDependencies for building)
-RUN npm ci
-
-# Copy source code
-COPY backend/src ./src
 COPY backend/prisma ./prisma
+COPY backend/src ./src
 
-# Generate Prisma Client
-RUN npx prisma generate
+# Generate Prisma Client with cache
+RUN --mount=type=cache,target=/root/.npm \
+    npx prisma generate
 
 # Build TypeScript
 RUN npm run build
@@ -68,12 +85,14 @@ COPY backend/package*.json ./
 # Copy Prisma schema first
 COPY --chown=nodejs:nodejs backend/prisma ./prisma
 
-# Install production dependencies only
-RUN npm ci --only=production && \
+# Install production dependencies with cache mount
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production --prefer-offline --no-audit && \
     npm cache clean --force
 
 # Generate Prisma Client for production
-RUN npx prisma generate
+RUN --mount=type=cache,target=/root/.npm \
+    npx prisma generate
 
 # Copy built application from builder
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
