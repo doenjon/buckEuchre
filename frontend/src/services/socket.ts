@@ -21,9 +21,32 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:3000';
  * Create a new socket connection with authentication
  */
 export function createSocketConnection(token: string): Socket {
+  console.log('[Socket] Creating connection:', {
+    url: WS_URL,
+    hasToken: !!token,
+    tokenLength: token?.length || 0,
+  });
+
   const socket = io(WS_URL, {
     auth: { token },
     transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: 5,
+  });
+
+  // Log connection attempts
+  socket.io.on('error', (error) => {
+    console.error('[Socket.io] Engine error:', error);
+  });
+
+  socket.io.on('reconnect_attempt', (attempt) => {
+    console.log(`[Socket.io] Reconnection attempt ${attempt}`);
+  });
+
+  socket.io.on('reconnect_failed', () => {
+    console.error('[Socket.io] Reconnection failed after all attempts');
   });
 
   return socket;

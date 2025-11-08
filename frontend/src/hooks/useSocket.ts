@@ -30,24 +30,38 @@ export function useSocket() {
 
   // Initialize socket connection
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      console.log('[useSocket] No token available, skipping connection');
+      return;
+    }
 
+    console.log('[useSocket] Initializing socket connection');
     const socket = createSocketConnection(token);
     socketRef.current = socket;
 
     setupSocketListeners(socket, {
       onConnect: () => {
-        console.log('Socket connected');
+        console.log('[useSocket] ✓ Socket connected successfully', {
+          id: socket.id,
+          connected: socket.connected,
+        });
         setConnected(true);
       },
 
-      onDisconnect: () => {
-        console.log('Socket disconnected');
+      onDisconnect: (reason) => {
+        console.log('[useSocket] Socket disconnected:', {
+          reason,
+          willReconnect: socket.active,
+        });
         setConnected(false);
       },
 
       onConnectError: (error) => {
-        console.warn('WebSocket connection failed:', error.message || error);
+        console.warn('[useSocket] WebSocket connection failed:', {
+          message: error.message || error,
+          type: error.type,
+          description: error.description,
+        });
         setConnected(false);
 
         // Show a notification for connection errors
@@ -164,6 +178,7 @@ export function useSocket() {
     });
 
     return () => {
+      console.log('[useSocket] Cleaning up socket connection');
       cleanupSocketListeners(socket);
       socket.disconnect();
     };
