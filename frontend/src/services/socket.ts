@@ -13,9 +13,10 @@ import type {
   StartNextRoundPayload
 } from '@buck-euchre/shared';
 
-// WebSocket URL - defaults to localhost:3000 for local dev
-// In production, this should be set via VITE_WS_URL env var
-const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:3000';
+// WebSocket URL - defaults to same origin as the page
+// For local dev outside Docker, set VITE_WS_URL=http://localhost:3000
+// For production, this will use the same origin (empty string = relative URL)
+const WS_URL = import.meta.env.VITE_WS_URL || '';
 
 /**
  * Create a new socket connection with authentication
