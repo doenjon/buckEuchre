@@ -109,7 +109,7 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
             Pass
           </Button>
           {(() => {
-            const passAnalysis = getBidAnalysis(0);
+            const passAnalysis = getBidAnalysis('PASS');
             return passAnalysis && !isDisabled ? (
               <div className="absolute -top-16 left-0 right-0 bg-gradient-to-b from-black/95 to-black/30 rounded-lg p-2 pointer-events-none shadow-lg">
                 <div className="flex flex-col gap-1 text-[10px] font-bold">
