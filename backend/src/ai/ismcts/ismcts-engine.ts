@@ -310,11 +310,20 @@ export class ISMCTSEngine {
       } catch (error: any) {
         // Log but continue - individual simulation failures shouldn't break analysis
         failedSimulations++;
-        if (this.config.verbose && failedSimulations <= 5) {
-          console.warn(`[ISMCTS] Simulation ${i} failed:`, error.message || error);
+        if (failedSimulations <= 10) {
+          console.error(`[ISMCTS] Simulation ${i} failed:`, error.message || error, error.stack);
         }
         // Continue with next simulation
       }
+    }
+
+    // Always log simulation results
+    console.log(`[ISMCTS] Simulations: ${successfulSimulations} succeeded, ${failedSimulations} failed out of ${this.config.simulations}`);
+    console.log(`[ISMCTS] Root visits: ${root.visits}, Children: ${root.children.size}`);
+
+    const childStats = root.getChildStatistics();
+    for (const [key, stat] of childStats) {
+      console.log(`[ISMCTS] Child ${key}: visits=${stat.visits}, avgValue=${stat.avgValue.toFixed(3)}`);
     }
 
     // If too many simulations failed, we might not have enough data

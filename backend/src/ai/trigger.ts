@@ -233,11 +233,13 @@ async function sendAIAnalysis(
 
     console.log(`[AI Analysis] Analyzing hand for player at position ${playerPosition}`);
 
-    // Run analysis
-    const analyses = await analyzeHand(gameState, playerPosition as any, {
-      simulations: 500, // Moderate quality for real-time
+    // Run analysis with high quality (2000 simulations)
+    const analysisConfig = {
+      simulations: 2000,
       verbose: false,
-    });
+    };
+
+    const analyses = await analyzeHand(gameState, playerPosition as any, analysisConfig);
 
     if (analyses.length === 0) {
       console.log(`[AI Analysis] No analysis available for player ${playerPosition}`);
@@ -246,7 +248,7 @@ async function sendAIAnalysis(
 
     // Mark that we've sent analysis for this key
     lastAnalysisKey.set(analysisKey, now);
-    
+
     // Clean up old entries (keep only last 100)
     if (lastAnalysisKey.size > 100) {
       const entries = Array.from(lastAnalysisKey.entries());
@@ -260,7 +262,7 @@ async function sendAIAnalysis(
     const analysisEvent: AIAnalysisEvent = {
       playerPosition: playerPosition as any,
       cards: analyses,
-      totalSimulations: 500,
+      totalSimulations: analysisConfig.simulations,
       bestCardId: bestCardId || '',
     };
 
