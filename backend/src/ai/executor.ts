@@ -34,10 +34,17 @@ function delay(ms: number): Promise<void> {
 /**
  * Get a random thinking delay (500-2000ms)
  *
+ * @param phase - Optional game phase for phase-specific delays
  * @returns Delay in milliseconds
  */
-function getThinkingDelay(): number {
-  return 500 + Math.random() * 1500;
+function getThinkingDelay(phase?: string): number {
+  // Fold decisions should be quick - players know their hand
+  if (phase === 'FOLDING_DECISION') {
+    return 200 + Math.random() * 300; // 200-500ms
+  }
+
+  // Other actions use normal thinking time
+  return 500 + Math.random() * 1500; // 500-2000ms
 }
 
 /**
@@ -97,8 +104,8 @@ export async function executeAITurn(
 
     console.log(`[AI] ${initialPlayer.name} is thinking (phase: ${initialPhase})...`);
 
-    // Simulate thinking time
-    const thinkingTime = getThinkingDelay();
+    // Simulate thinking time (shorter for fold decisions)
+    const thinkingTime = getThinkingDelay(initialPhase);
     await delay(thinkingTime);
 
     const state = getActiveGameState(gameId);
