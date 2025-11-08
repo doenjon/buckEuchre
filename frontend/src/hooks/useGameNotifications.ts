@@ -16,17 +16,33 @@ interface NotificationQueue {
 export function useGameNotifications(gameState: GameState | null, myPosition: number | null) {
   const showNotification = useGameStore((state) => state.showNotification);
   const clearNotification = useGameStore((state) => state.clearNotification);
-  
+
   const previousPhaseRef = useRef<GamePhase | null>(null);
   const previousTrumpSuitRef = useRef<GameState['trumpSuit']>(null);
   const previousWinnerRef = useRef<GameState['winner']>(null);
   const previousRoundRef = useRef<number>(0);
-  const shownClubsRef = useRef(false);
-  const shownLetsPlayRef = useRef(false);
   const notificationQueueRef = useRef<NotificationQueue[]>([]);
   const isProcessingRef = useRef(false);
   const inactivityTimerRef = useRef<number | null>(null);
   const previousCurrentPlayerRef = useRef<number | null>(null);
+
+  // Helper to check if we've shown a notification for a specific game/round
+  // Use sessionStorage to persist across component remounts (e.g., during reconnections)
+  const hasShownNotification = (key: string): boolean => {
+    try {
+      return sessionStorage.getItem(key) === 'true';
+    } catch {
+      return false;
+    }
+  };
+
+  const markNotificationShown = (key: string): void => {
+    try {
+      sessionStorage.setItem(key, 'true');
+    } catch {
+      // Ignore storage errors
+    }
+  };
 
   // Process notification queue
   const processQueue = () => {
@@ -110,51 +126,63 @@ export function useGameNotifications(gameState: GameState | null, myPosition: nu
     const previousPhase = previousPhaseRef.current;
     const currentPhase = gameState.phase;
 
-    // Reset clubs notification flag when new round starts
+    // Reset round tracking when new round starts
     if (previousRoundRef.current !== gameState.round) {
-      shownClubsRef.current = false;
       previousRoundRef.current = gameState.round;
+    }
+
+    // Generate notification keys for this game/round
+    const letsPlayKey = `lets-play-${gameState.gameId}`;
+    const clubsKey = `dirty-clubs-${gameState.gameId}-${gameState.round}`;
+
+    // Safety: Clear any lingering isGameStartNotification flag if we've already shown "Let's play!"
+    // This handles cases where the notification was shown but the timeout didn't complete
+    if (hasShownNotification(letsPlayKey)) {
+      const gameStore = useGameStore.getState();
+      if (gameStore.isGameStartNotification) {
+        clearNotification();
+      }
     }
 
     // Detect "Dirty Clubs!" - show immediately when clubs are turned up (highest priority)
     // This should show even before "Let's play!" if clubs are turned up
-    if (gameState.isClubsTurnUp && !shownClubsRef.current && 
+    if (gameState.isClubsTurnUp && !hasShownNotification(clubsKey) &&
         (currentPhase === 'BIDDING' || currentPhase === 'TRUMP_REVEAL' || currentPhase === 'PLAYING')) {
       const suitSymbol = '♣';
       // Use direct call for immediate display with high priority
       showNotification(`${suitSymbol} Dirty Clubs! ${suitSymbol}`, 'special', { isGameStart: false });
-      shownClubsRef.current = true;
-      
+      markNotificationShown(clubsKey);
+
       // Wait for notification to complete (3 seconds) then clear
       setTimeout(() => {
         clearNotification();
         // Process any queued notifications after
         processQueue();
       }, 3000);
-      
-      // Also set shownLetsPlayRef so "Let's play!" doesn't show after this
+
+      // Also mark "Let's play!" as shown so it doesn't show after this
       if (gameState.round === 1) {
-        shownLetsPlayRef.current = true;
+        markNotificationShown(letsPlayKey);
       }
-      
+
       return; // Don't process other notifications until this one completes
     }
 
     // Detect game start - "Let's play!" on first round (only if clubs weren't turned up)
-    if (gameState.round === 1 && !shownLetsPlayRef.current && 
+    if (gameState.round === 1 && !hasShownNotification(letsPlayKey) &&
         (currentPhase === 'BIDDING' || currentPhase === 'TRUMP_REVEAL')) {
       // Show notification with game start flag to disable bidding
       // Use direct call to bypass queue for immediate display
       showNotification("Let's play!", 'special', { isGameStart: true });
-      shownLetsPlayRef.current = true;
-      
+      markNotificationShown(letsPlayKey);
+
       // Wait for notification to complete (3 seconds) then clear
       setTimeout(() => {
         clearNotification();
         // Process any queued notifications after
         processQueue();
       }, 3000);
-      
+
       return; // Don't process other notifications until this one completes
     }
 
