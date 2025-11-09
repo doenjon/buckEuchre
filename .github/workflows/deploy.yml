@@ -12,6 +12,7 @@ jobs:
       HOST: ${{ secrets.LIGHTSAIL_HOST }}
       USER: ${{ secrets.LIGHTSAIL_USER }}
       KEY_B64: ${{ secrets.LIGHTSAIL_SSH_KEY_B64 }}
+      KNOWN_HOSTS: ${{ secrets.LIGHTSAIL_KNOWN_HOSTS || '' }}
 
     steps:
       - name: Validate required secrets
@@ -35,10 +36,14 @@ jobs:
           ssh-keygen -y -f "$HOME/.ssh/id_ed25519" > /dev/null
 
           # trust host
-          if [ -n "${{ secrets.LIGHTSAIL_KNOWN_HOSTS || '' }}" ]; then
-            printf '%s\n' "${{ secrets.LIGHTSAIL_KNOWN_HOSTS }}" >> "$HOME/.ssh/known_hosts"
+          if [ -n "$KNOWN_HOSTS" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" >> "$HOME/.ssh/known_hosts"
           else
-            ssh-keyscan -H "$HOST" >> "$HOME/.ssh/known_hosts"
+            echo "Scanning host keys for $HOST..."
+            ssh-keyscan -H "$HOST" >> "$HOME/.ssh/known_hosts" 2>&1 || {
+              echo "Warning: ssh-keyscan failed, trying without -H flag..."
+              ssh-keyscan "$HOST" >> "$HOME/.ssh/known_hosts"
+            }
           fi
 
       - name: Test SSH connectivity
