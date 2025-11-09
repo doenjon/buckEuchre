@@ -35,36 +35,33 @@ jobs:
           # fail fast if malformed or passphrase-protected
           ssh-keygen -y -f "$HOME/.ssh/id_ed25519" > /dev/null
 
-          # trust host
+          # trust host - use provided known_hosts if available
           if [ -n "$KNOWN_HOSTS" ]; then
+            echo "Using provided KNOWN_HOSTS secret"
             printf '%s\n' "$KNOWN_HOSTS" >> "$HOME/.ssh/known_hosts"
           else
-            echo "Scanning host keys for $HOST..."
-            if ssh-keyscan -H "$HOST" >> "$HOME/.ssh/known_hosts" 2>&1; then
-              echo "Successfully scanned host keys with -H flag"
-            else
-              echo "Warning: ssh-keyscan with -H flag failed, trying without -H flag..."
-              if ssh-keyscan "$HOST" >> "$HOME/.ssh/known_hosts" 2>&1; then
-                echo "Successfully scanned host keys without -H flag"
-              else
-                echo "ERROR: Both ssh-keyscan attempts failed. This could be due to:"
-                echo "  - Host is unreachable or network issues"
-                echo "  - SSH service not running on port 22"
-                echo "  - Firewall blocking the connection"
-                echo ""
-                echo "Attempting to diagnose connection to $HOST:22..."
-                timeout 5 bash -c "echo > /dev/tcp/$HOST/22" 2>&1 && echo "Port 22 is reachable" || echo "Port 22 is NOT reachable"
-                exit 1
-              fi
-            fi
+            echo "KNOWN_HOSTS not set - will use SSH with StrictHostKeyChecking=accept-new"
+            echo "For better security, consider setting LIGHTSAIL_KNOWN_HOSTS secret"
+            echo "Run locally: ssh-keyscan -H $HOST"
           fi
 
       - name: Test SSH connectivity
         run: |
-          ssh -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+          # Use accept-new to accept host key on first connection if KNOWN_HOSTS not set
+          STRICT_MODE="${KNOWN_HOSTS:+yes}"
+          STRICT_MODE="${STRICT_MODE:-accept-new}"
+          echo "Using StrictHostKeyChecking=$STRICT_MODE"
+
+          ssh -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=$STRICT_MODE \
             "$USER@$HOST" 'echo ok'
 
       - name: Trigger remote deploy
         run: |
-          ssh -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+          # Use accept-new to accept host key on first connection if KNOWN_HOSTS not set
+          STRICT_MODE="${KNOWN_HOSTS:+yes}"
+          STRICT_MODE="${STRICT_MODE:-accept-new}"
+
+          ssh -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=$STRICT_MODE \
             "$USER@$HOST" 'bash -lc "~/buckEuchre/deploy.sh"'
