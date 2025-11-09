@@ -40,10 +40,23 @@ jobs:
             printf '%s\n' "$KNOWN_HOSTS" >> "$HOME/.ssh/known_hosts"
           else
             echo "Scanning host keys for $HOST..."
-            ssh-keyscan -H "$HOST" >> "$HOME/.ssh/known_hosts" 2>&1 || {
-              echo "Warning: ssh-keyscan failed, trying without -H flag..."
-              ssh-keyscan "$HOST" >> "$HOME/.ssh/known_hosts"
-            }
+            if ssh-keyscan -H "$HOST" >> "$HOME/.ssh/known_hosts" 2>&1; then
+              echo "Successfully scanned host keys with -H flag"
+            else
+              echo "Warning: ssh-keyscan with -H flag failed, trying without -H flag..."
+              if ssh-keyscan "$HOST" >> "$HOME/.ssh/known_hosts" 2>&1; then
+                echo "Successfully scanned host keys without -H flag"
+              else
+                echo "ERROR: Both ssh-keyscan attempts failed. This could be due to:"
+                echo "  - Host is unreachable or network issues"
+                echo "  - SSH service not running on port 22"
+                echo "  - Firewall blocking the connection"
+                echo ""
+                echo "Attempting to diagnose connection to $HOST:22..."
+                timeout 5 bash -c "echo > /dev/tcp/$HOST/22" 2>&1 && echo "Port 22 is reachable" || echo "Port 22 is NOT reachable"
+                exit 1
+              fi
+            fi
           fi
 
       - name: Test SSH connectivity
