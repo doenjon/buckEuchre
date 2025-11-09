@@ -45,6 +45,51 @@ jobs:
             echo "Run locally: ssh-keyscan -H $HOST"
           fi
 
+      - name: Diagnose network connectivity
+        run: |
+          echo "=== Network Diagnostics for $HOST ==="
+          echo ""
+
+          echo "1. DNS Resolution:"
+          if host "$HOST"; then
+            echo "✓ DNS resolves"
+            IP=$(host "$HOST" | grep "has address" | awk '{print $4}' | head -1)
+            echo "  Resolved to: $IP"
+          else
+            echo "✗ DNS resolution failed"
+            exit 1
+          fi
+
+          echo ""
+          echo "2. ICMP Ping (if allowed):"
+          ping -c 3 -W 2 "$HOST" || echo "  ICMP blocked or host unreachable (this is often blocked, not critical)"
+
+          echo ""
+          echo "3. TCP Port 22 connectivity:"
+          echo "  Attempting to connect to $HOST:22 with 10s timeout..."
+          if timeout 10 bash -c "cat < /dev/null > /dev/tcp/$HOST/22" 2>&1; then
+            echo "✓ Port 22 is REACHABLE"
+          else
+            echo "✗ Port 22 is NOT reachable (Connection timed out or refused)"
+            echo ""
+            echo "This means GitHub Actions cannot connect to your Lightsail instance."
+            echo "Possible causes:"
+            echo "  1. Lightsail instance is stopped/terminated"
+            echo "  2. Security group/firewall blocking GitHub Actions IPs"
+            echo "  3. Lightsail public IP changed"
+            echo "  4. Network routing issue"
+            echo ""
+            echo "To fix, check your AWS Lightsail console:"
+            echo "  - Verify instance is running"
+            echo "  - Check Networking > Firewall > SSH rule allows 0.0.0.0/0 or GitHub IPs"
+            echo "  - Verify public IP matches LIGHTSAIL_HOST secret"
+            exit 1
+          fi
+
+          echo ""
+          echo "4. SSH Banner grab:"
+          timeout 5 bash -c "echo 'SSH-2.0-Test' | nc $HOST 22" | head -1 || echo "  Could not grab SSH banner"
+
       - name: Test SSH connectivity
         run: |
           # Use accept-new to accept host key on first connection if KNOWN_HOSTS not set
@@ -53,6 +98,7 @@ jobs:
           echo "Using StrictHostKeyChecking=$STRICT_MODE"
 
           ssh -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes \
+            -o ConnectTimeout=10 \
             -o StrictHostKeyChecking=$STRICT_MODE \
             "$USER@$HOST" 'echo ok'
 
