@@ -19,6 +19,7 @@ import { useGame } from '@/hooks/useGame';
 import { useGameNotifications } from '@/hooks/useGameNotifications';
 import { createGame } from '@/services/api';
 import { Button } from '@/components/ui/button';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { GAME_TIMEOUTS } from '@buck-euchre/shared';
 import type { GameState } from '@buck-euchre/shared';
 
@@ -31,6 +32,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
   const navigate = useNavigate();
   const { phase, currentPlayerPosition, currentBidder, players } = gameState;
   const { playCard, startNextRound, leaveGame } = useGame();
+  const { showCardOverlay } = useSettingsStore();
   const [isRematching, setIsRematching] = useState(false);
   const [isReturning, setIsReturning] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -237,6 +239,20 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       {/* Mobile Layout: Fixed score button + flex areas | Desktop: sidebar + content */}
       <div className="flex flex-col flex-1 min-h-0 md:h-auto md:grid md:gap-4 lg:gap-6 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
         
+        {/* Mobile: Fixed Settings Button (Top Left) */}
+        <div className="md:hidden fixed top-2 left-2 z-40">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => window.location.href = '/settings'}
+            className="rounded-full border-white/20 bg-white/5 text-emerald-200 hover:bg-white/10 backdrop-blur text-xs px-2 py-1 shadow-lg"
+            aria-label="Settings"
+          >
+            <span className="text-xs">⚙️</span>
+          </Button>
+        </div>
+
         {/* Mobile: Fixed Score Button (Top Right) - Above bot names */}
         <div className="md:hidden fixed top-2 right-2 z-40">
           <Button
@@ -298,39 +314,41 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
         {/* Desktop Sidebar - Visible sidebar with info panel */}
         <aside className="hidden md:flex md:flex-col gap-6 md:order-1 py-4 lg:py-6">
           {/* Desktop Info Panel - shows trump, bidder, bid amount, etc. */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-slate-100 shadow-lg backdrop-blur">
-            <div className="space-y-3">
-              {gameState.trumpSuit && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">TRUMP:</span>
-                  <span className={`text-xl font-bold ${gameState.trumpSuit === 'HEARTS' || gameState.trumpSuit === 'DIAMONDS' ? 'text-red-400' : 'text-gray-300'}`}>
-                    {gameState.trumpSuit === 'SPADES' ? '♠' : gameState.trumpSuit === 'HEARTS' ? '♥' : gameState.trumpSuit === 'DIAMONDS' ? '♦' : '♣'}
-                  </span>
-                  {gameState.isClubsTurnUp && (
-                    <span className="ml-2 rounded-md bg-red-500/20 border border-red-400/50 px-2 py-1 text-xs font-bold uppercase tracking-wider text-red-300 animate-pulse">
-                      ♣ Dirty Clubs!
+          {showCardOverlay && (
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-slate-100 shadow-lg backdrop-blur">
+              <div className="space-y-3">
+                {gameState.trumpSuit && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">TRUMP:</span>
+                    <span className={`text-xl font-bold ${gameState.trumpSuit === 'HEARTS' || gameState.trumpSuit === 'DIAMONDS' ? 'text-red-400' : 'text-gray-300'}`}>
+                      {gameState.trumpSuit === 'SPADES' ? '♠' : gameState.trumpSuit === 'HEARTS' ? '♥' : gameState.trumpSuit === 'DIAMONDS' ? '♦' : '♣'}
                     </span>
-                  )}
-                </div>
-              )}
-              {gameState.winningBidderPosition !== null && gameState.highestBid !== null && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">BID:</span>
-                  <span className="text-lg font-bold text-white">{gameState.highestBid}</span>
-                  <span className="text-sm text-emerald-200/70">by</span>
-                  <span className="text-base font-medium text-white">
-                    {players.find(p => p.position === gameState.winningBidderPosition)?.name || `P${gameState.winningBidderPosition}`}
-                  </span>
-                </div>
-              )}
-              {phase === 'BIDDING' && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">PHASE:</span>
-                  <span className="text-base font-medium text-white">Bidding</span>
-                </div>
-              )}
+                    {gameState.isClubsTurnUp && (
+                      <span className="ml-2 rounded-md bg-red-500/20 border border-red-400/50 px-2 py-1 text-xs font-bold uppercase tracking-wider text-red-300 animate-pulse">
+                        ♣ Dirty Clubs!
+                      </span>
+                    )}
+                  </div>
+                )}
+                {gameState.winningBidderPosition !== null && gameState.highestBid !== null && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">BID:</span>
+                    <span className="text-lg font-bold text-white">{gameState.highestBid}</span>
+                    <span className="text-sm text-emerald-200/70">by</span>
+                    <span className="text-base font-medium text-white">
+                      {players.find(p => p.position === gameState.winningBidderPosition)?.name || `P${gameState.winningBidderPosition}`}
+                    </span>
+                  </div>
+                )}
+                {phase === 'BIDDING' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">PHASE:</span>
+                    <span className="text-base font-medium text-white">Bidding</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
           
           <Scoreboard
             players={players}
@@ -349,47 +367,49 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
           {/* Mobile: Top bar with opponents | Desktop: Labels around table */}
 
           {/* Mobile: Info Bar - floating just above player names */}
-          <div className="md:hidden px-2 pt-10 pb-1.5 flex-shrink-0">
-            <div className="w-full rounded-lg px-3 py-1.5 bg-white/15 border border-white/20 shadow-md backdrop-blur">
-              <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-200/90">
-                {gameState.trumpSuit && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-emerald-300 font-semibold">TRUMP:</span>
-                    <span className={`font-bold text-base ${gameState.trumpSuit === 'HEARTS' || gameState.trumpSuit === 'DIAMONDS' ? 'text-red-400' : 'text-gray-300'}`}>
-                      {gameState.trumpSuit === 'SPADES' ? '♠' : gameState.trumpSuit === 'HEARTS' ? '♥' : gameState.trumpSuit === 'DIAMONDS' ? '♦' : '♣'}
-                    </span>
-                    {gameState.isClubsTurnUp && (
-                      <span className="ml-0.5 rounded bg-red-500/20 border border-red-400/50 px-1 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300 animate-pulse">
-                        Dirty Clubs!
-                      </span>
-                    )}
-                  </div>
-                )}
-                {gameState.winningBidderPosition !== null && gameState.highestBid !== null && (
-                  <>
-                    {gameState.trumpSuit && <span className="text-emerald-200/50">•</span>}
+          {showCardOverlay && (
+            <div className="md:hidden px-2 pt-10 pb-1.5 flex-shrink-0">
+              <div className="w-full rounded-lg px-3 py-1.5 bg-white/15 border border-white/20 shadow-md backdrop-blur">
+                <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-200/90">
+                  {gameState.trumpSuit && (
                     <div className="flex items-center gap-1">
-                      <span className="text-emerald-300 font-semibold">BID:</span>
-                      <span className="text-white font-bold text-sm">{gameState.highestBid}</span>
-                      <span className="text-emerald-200/70 text-[11px]">by</span>
-                      <span className="text-white font-medium text-sm">
-                        {players.find(p => p.position === gameState.winningBidderPosition)?.name || `P${gameState.winningBidderPosition}`}
+                      <span className="text-emerald-300 font-semibold">TRUMP:</span>
+                      <span className={`font-bold text-base ${gameState.trumpSuit === 'HEARTS' || gameState.trumpSuit === 'DIAMONDS' ? 'text-red-400' : 'text-gray-300'}`}>
+                        {gameState.trumpSuit === 'SPADES' ? '♠' : gameState.trumpSuit === 'HEARTS' ? '♥' : gameState.trumpSuit === 'DIAMONDS' ? '♦' : '♣'}
                       </span>
+                      {gameState.isClubsTurnUp && (
+                        <span className="ml-0.5 rounded bg-red-500/20 border border-red-400/50 px-1 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300 animate-pulse">
+                          Dirty Clubs!
+                        </span>
+                      )}
                     </div>
-                  </>
-                )}
-                {phase === 'BIDDING' && (
-                  <>
-                    {(gameState.trumpSuit || (gameState.winningBidderPosition !== null && gameState.highestBid !== null)) && <span className="text-emerald-200/50">•</span>}
-                    <div className="flex items-center gap-1">
-                      <span className="text-emerald-300 font-semibold">PHASE:</span>
-                      <span className="text-white font-medium text-sm">Bidding</span>
-                    </div>
-                  </>
-                )}
+                  )}
+                  {gameState.winningBidderPosition !== null && gameState.highestBid !== null && (
+                    <>
+                      {gameState.trumpSuit && <span className="text-emerald-200/50">•</span>}
+                      <div className="flex items-center gap-1">
+                        <span className="text-emerald-300 font-semibold">BID:</span>
+                        <span className="text-white font-bold text-sm">{gameState.highestBid}</span>
+                        <span className="text-emerald-200/70 text-[11px]">by</span>
+                        <span className="text-white font-medium text-sm">
+                          {players.find(p => p.position === gameState.winningBidderPosition)?.name || `P${gameState.winningBidderPosition}`}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  {phase === 'BIDDING' && (
+                    <>
+                      {(gameState.trumpSuit || (gameState.winningBidderPosition !== null && gameState.highestBid !== null)) && <span className="text-emerald-200/50">•</span>}
+                      <div className="flex items-center gap-1">
+                        <span className="text-emerald-300 font-semibold">PHASE:</span>
+                        <span className="text-white font-medium text-sm">Bidding</span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Mobile: Opponents bar at top - below score button */}
           <div className="md:hidden px-2 pb-1 flex-shrink-0">

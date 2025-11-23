@@ -202,6 +202,15 @@ export function Header() {
                           >
                             🏆 Leaderboard
                           </button>
+                          <button
+                            onClick={() => {
+                              navigate('/settings');
+                              setMenuOpen(false);
+                            }}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-white/10"
+                          >
+                            ⚙️ Settings
+                          </button>
                           <div className="border-t border-white/10 my-1"></div>
                         </>
                       )}
