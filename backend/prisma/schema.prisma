@@ -38,6 +38,7 @@ model User {
   gamePlayers            GamePlayer[]
   gamesCreated           Game[]           @relation("GameCreator")
   stats                  UserStats?
+  settings               UserSettings?
   sentFriendRequests     Friendship[]     @relation("Requester")
   receivedFriendRequests Friendship[]     @relation("Receiver")
   sentInvitations        GameInvitation[] @relation("Inviter")
@@ -94,6 +95,31 @@ model UserStats {
 
   @@index([gamesWon])
   @@index([gamesPlayed])
+}
+
+// User settings/preferences
+model UserSettings {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Display settings
+  showCardOverlay Boolean @default(true) // Show trump, bid info overlay
+  showTooltips    Boolean @default(true) // Show hints and tooltips
+  autoSortHand    Boolean @default(true) // Auto-sort cards in hand
+
+  // Animation settings
+  bidSpeed      String @default("normal") // "slow", "normal", "fast"
+  animationSpeed String @default("normal") // "slow", "normal", "fast"
+
+  // Audio settings
+  soundEffects Boolean @default(true)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 // =============================================================================

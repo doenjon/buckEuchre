@@ -530,3 +530,79 @@ export async function getFriendsLeaderboard(
   // API returns { leaderboard: [...] }, return the array
   return data.leaderboard || [];
 }
+
+// ========== Settings ==========
+
+export interface UserSettings {
+  id: string;
+  userId: string;
+  showCardOverlay: boolean;
+  showTooltips: boolean;
+  autoSortHand: boolean;
+  bidSpeed: 'slow' | 'normal' | 'fast';
+  animationSpeed: 'slow' | 'normal' | 'fast';
+  soundEffects: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateSettingsData {
+  showCardOverlay?: boolean;
+  showTooltips?: boolean;
+  autoSortHand?: boolean;
+  bidSpeed?: 'slow' | 'normal' | 'fast';
+  animationSpeed?: 'slow' | 'normal' | 'fast';
+  soundEffects?: boolean;
+}
+
+/**
+ * Get user settings
+ */
+export async function getUserSettings(): Promise<UserSettings> {
+  const response = await fetch(`${API_URL}/api/settings`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to get user settings');
+  }
+
+  return response.json();
+}
+
+/**
+ * Update user settings
+ */
+export async function updateUserSettings(data: UpdateSettingsData): Promise<UserSettings> {
+  const response = await fetch(`${API_URL}/api/settings`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to update user settings');
+  }
+
+  return response.json();
+}
+
+/**
+ * Reset user settings to defaults
+ */
+export async function resetUserSettings(): Promise<UserSettings> {
+  const response = await fetch(`${API_URL}/api/settings/reset`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to reset user settings');
+  }
+
+  return response.json();
+}
