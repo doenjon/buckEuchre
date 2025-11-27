@@ -24,6 +24,7 @@ export interface UpdateSettingsParams {
   bidSpeed?: 'slow' | 'normal' | 'fast';
   animationSpeed?: 'slow' | 'normal' | 'fast';
   soundEffects?: boolean;
+  showDebugConsole?: boolean;
 }
 
 /**
@@ -55,6 +56,7 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
         bidSpeed: 'normal',
         animationSpeed: 'normal',
         soundEffects: true,
+        showDebugConsole: false,
       },
     });
   }
@@ -83,14 +85,16 @@ export async function updateUserSettings(
     bidSpeed: 'slow' | 'normal' | 'fast';
     animationSpeed: 'slow' | 'normal' | 'fast';
     soundEffects: boolean;
+    showDebugConsole: boolean;
   }> = {};
-  
+
   if (updates.showCardOverlay !== undefined) cleanUpdates.showCardOverlay = updates.showCardOverlay;
   if (updates.showTooltips !== undefined) cleanUpdates.showTooltips = updates.showTooltips;
   if (updates.autoSortHand !== undefined) cleanUpdates.autoSortHand = updates.autoSortHand;
   if (updates.bidSpeed !== undefined) cleanUpdates.bidSpeed = updates.bidSpeed;
   if (updates.animationSpeed !== undefined) cleanUpdates.animationSpeed = updates.animationSpeed;
   if (updates.soundEffects !== undefined) cleanUpdates.soundEffects = updates.soundEffects;
+  if (updates.showDebugConsole !== undefined) cleanUpdates.showDebugConsole = updates.showDebugConsole;
 
   console.log('[updateUserSettings] Clean updates (no undefined):', cleanUpdates);
 
@@ -121,6 +125,7 @@ export async function updateUserSettings(
           bidSpeed: cleanUpdates.bidSpeed ?? 'normal',
           animationSpeed: cleanUpdates.animationSpeed ?? 'normal',
           soundEffects: cleanUpdates.soundEffects ?? true,
+          showDebugConsole: cleanUpdates.showDebugConsole ?? false,
         },
       });
       console.log('[updateUserSettings] Created new settings for user', userId);
@@ -178,6 +183,7 @@ export async function resetUserSettings(userId: string): Promise<UserSettings> {
       bidSpeed: 'normal',
       animationSpeed: 'normal',
       soundEffects: true,
+      showDebugConsole: false,
     },
   });
 
