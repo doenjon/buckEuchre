@@ -716,7 +716,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
         // Trick complete but round continues - emit trick complete for animation
         io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
           trick: nextState.currentTrick,
-          delayMs: 2000
+          delayMs: 1500
         });
       }
 
