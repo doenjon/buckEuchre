@@ -132,7 +132,7 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     throw new Error('User is already in a different active game');
   }
   
-  // If user is already in THIS game, check if game has started
+  // If user is already in THIS game, handle reconnection
   if (existingGame && existingGame.gameId === gameId) {
     const game = await prisma.game.findUnique({
       where: { id: gameId },
@@ -152,49 +152,57 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
         },
       },
     });
-    
+
     if (!game) {
       throw new Error('Game not found');
     }
-    
+
+    // Validate no duplicate players (defensive check)
+    const userIds = game.players.map(p => p.userId).filter(Boolean);
+    const uniqueUserIds = new Set(userIds);
+    if (userIds.length !== uniqueUserIds.size) {
+      console.error(`[joinGame] ERROR: Duplicate players detected in game ${gameId}`);
+      throw new Error('Game has duplicate players - data corruption detected');
+    }
+
     // Check if game state exists in memory
     let gameState = getActiveGameState(gameId);
     if (gameState) {
       return gameState;
     }
-    
+
     // Check if game state exists in database
     const dbGameState = await loadGameState(gameId);
     if (dbGameState) {
       setActiveGameState(gameId, dbGameState);
       return dbGameState;
     }
-    
+
     // No state yet - check if we should start the game
     if (game.players.length === 4 && game.status === GameStatus.WAITING) {
       // All 4 players present! Initialize game
       const playerIds = game.players.map((gp) => gp.user!.id) as [string, string, string, string];
       let initialState = initializeGame(playerIds);
-      
+
       // CRITICAL: Set the gameId on the state object
       initialState.gameId = gameId;
-      
+
       // Deal the first round (moves from DEALING → BIDDING and deals cards)
       initialState = dealNewRound(initialState);
-      
+
       // Store in memory
       setActiveGameState(gameId, initialState);
-      
+
       // Update game status to IN_PROGRESS
       await prisma.game.update({
         where: { id: gameId },
         data: { status: GameStatus.IN_PROGRESS },
       });
-      
+
       console.log(`[joinGame] Game ${gameId} started with 4 players!`);
       return initialState;
     }
-    
+
     // Game exists but no state yet (still in WAITING, not enough players)
     return null;
   }
@@ -265,11 +273,34 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
       playerAdded = true;
       game = freshGame; // Update game reference for later use
     } catch (error: any) {
-      if (error.code === 'P2002' && attempts < maxAttempts - 1) {
-        // Unique constraint violation - another player took this position
-        // Retry after a short delay
-        attempts++;
-        await new Promise(resolve => setTimeout(resolve, 50 * attempts)); // Exponential backoff
+      if (error.code === 'P2002') {
+        // Unique constraint violation
+        // Check if it's a duplicate userId constraint (not just position)
+        const constraintMatch = error.meta?.target;
+
+        if (constraintMatch && Array.isArray(constraintMatch)) {
+          // If violation is on [gameId, userId], user is already in this game
+          if (constraintMatch.includes('userId') && constraintMatch.includes('gameId')) {
+            console.warn(`[joinGame] Player ${playerId} already in game ${gameId} - treating as reconnection`);
+            playerAdded = true; // Skip retry, treat as success
+            break;
+          }
+
+          // If violation is on [gameId, position], retry with different position
+          if (constraintMatch.includes('position') && attempts < maxAttempts - 1) {
+            attempts++;
+            await new Promise(resolve => setTimeout(resolve, 50 * attempts)); // Exponential backoff
+            continue;
+          }
+        }
+
+        // Generic P2002 - retry if attempts remain
+        if (attempts < maxAttempts - 1) {
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 50 * attempts));
+        } else {
+          throw error;
+        }
       } else {
         throw error;
       }

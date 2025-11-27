@@ -31,6 +31,12 @@ function withVersion(state: GameState, updates: Partial<GameState>): GameState {
  * @returns Initial game state
  */
 export function initializeGame(playerIds: [string, string, string, string]): GameState {
+  // Validate that all player IDs are unique
+  const uniqueIds = new Set(playerIds);
+  if (uniqueIds.size !== playerIds.length) {
+    throw new Error(`Duplicate player IDs detected: ${playerIds.join(', ')}`);
+  }
+
   const playersArray = playerIds.map((id, index) => ({
     id,
     name: `Player ${index + 1}`, // Will be updated when players join
@@ -42,7 +48,7 @@ export function initializeGame(playerIds: [string, string, string, string]): Gam
     folded: false,
     foldDecision: 'UNDECIDED',
   }));
-  
+
   const players = playersArray as unknown as [Player, Player, Player, Player];
 
   // Randomly choose initial dealer
