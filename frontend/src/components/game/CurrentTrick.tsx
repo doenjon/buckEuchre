@@ -175,12 +175,12 @@ export function CurrentTrick({
             key={playedCard.playerPosition}
             className={`
               absolute ${positionClass} z-10
-              flex flex-col items-center transition-transform duration-500
-              ${isWinner ? 'scale-105 drop-shadow-[0_15px_25px_rgba(250,204,21,0.35)]' : ''}
+              flex flex-col items-center transition-all duration-500
+              ${isWinner ? 'scale-[1.15] drop-shadow-[0_20px_40px_rgba(250,204,21,0.6)] animate-pulse' : ''}
             `}
             style={{ animationDelay: `${index * 150}ms` }}
           >
-            <div className={`${isWinner ? 'rounded-2xl ring-4 ring-emerald-300/60' : 'drop-shadow-[0_20px_32px_rgba(16,185,129,0.35)]'}`}>
+            <div className={`${isWinner ? 'rounded-2xl ring-8 ring-yellow-400/90 shadow-[0_0_30px_rgba(250,204,21,0.8)]' : 'drop-shadow-[0_20px_32px_rgba(16,185,129,0.35)]'}`}>
               <Card card={playedCard.card} size="large" />
             </div>
           </div>
