@@ -246,8 +246,8 @@ export default function SettingsPage() {
                 </div>
                 <Select
                   value={formData.bidSpeed}
-                  onValueChange={(value: 'slow' | 'normal' | 'fast') =>
-                    setFormData({ ...formData, bidSpeed: value })
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, bidSpeed: value as 'slow' | 'normal' | 'fast' })
                   }
                 >
                   <SelectTrigger id="bidSpeed" className="w-32">
@@ -272,8 +272,8 @@ export default function SettingsPage() {
                 </div>
                 <Select
                   value={formData.animationSpeed}
-                  onValueChange={(value: 'slow' | 'normal' | 'fast') =>
-                    setFormData({ ...formData, animationSpeed: value })
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, animationSpeed: value as 'slow' | 'normal' | 'fast' })
                   }
                 >
                   <SelectTrigger id="animationSpeed" className="w-32">

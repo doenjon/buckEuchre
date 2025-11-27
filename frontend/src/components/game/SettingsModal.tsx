@@ -74,6 +74,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         bidSpeed: updatedSettings.bidSpeed,
         animationSpeed: updatedSettings.animationSpeed,
         soundEffects: updatedSettings.soundEffects,
+        showDebugConsole: updatedSettings.showDebugConsole,
       });
       setSuccess('Settings saved!');
       setTimeout(() => {
