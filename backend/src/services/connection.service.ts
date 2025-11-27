@@ -4,7 +4,8 @@
  */
 
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import { getActiveGameState } from './state.service';
+import { getActiveGameState, setActiveGameState } from './state.service';
+import { applyFoldDecision } from '../game/state';
 
 /**
  * Player connection information
@@ -171,11 +172,33 @@ function handleGracePeriodExpired(
     return;
   }
 
+  const player = gameState.players[playerPosition];
+
+  // Auto-forfeit if player needs to make a decision
+  let updatedState = gameState;
+  let autoAction = false;
+
+  if (gameState.phase === 'FOLDING_DECISION' && player.foldDecision === 'UNDECIDED') {
+    // Automatically fold the disconnected player
+    console.log(`Auto-folding disconnected player ${playerId} (position ${playerPosition})`);
+    try {
+      updatedState = applyFoldDecision(gameState, playerPosition, true);
+      setActiveGameState(gameId, updatedState);
+      autoAction = true;
+
+      // Emit game state update to all players
+      io.to(`game:${gameId}`).emit('GAME_STATE', updatedState);
+    } catch (error) {
+      console.error(`Error auto-folding disconnected player ${playerId}:`, error);
+    }
+  }
+
   // Notify other players that this player has disconnected
   io.to(`game:${gameId}`).emit('PLAYER_DISCONNECTED', {
     playerId,
     position: playerPosition,
-    playerName: gameState.players[playerPosition].name,
+    playerName: player.name,
+    autoFolded: autoAction,
   });
 
   disconnectionTimers.delete(playerId);

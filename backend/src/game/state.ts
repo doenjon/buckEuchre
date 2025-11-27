@@ -459,8 +459,8 @@ export function applyCardPlay(
     cards: [...state.currentTrick.cards, { card, playerPosition }],
   };
   
-  // Get active (non-folded) players
-  const activePlayers = state.players
+  // Get active (non-folded) players from the UPDATED players array
+  const activePlayers = players
     .filter(p => p.folded !== true)
     .map(p => p.position);
   
@@ -508,12 +508,21 @@ export function applyCardPlay(
     });
   }
   
-  // Trick not complete - find next player
+  // Trick not complete - find next non-folded player
   let nextPlayer = ((playerPosition + 1) % 4) as PlayerPosition;
-  while (state.players[nextPlayer].folded === true) {
+  let attempts = 0;
+
+  // Use UPDATED players array and add bounds check to prevent infinite loop
+  while (players[nextPlayer].folded === true && attempts < 4) {
     nextPlayer = ((nextPlayer + 1) % 4) as PlayerPosition;
+    attempts++;
   }
-  
+
+  // Safety check: ensure we found a valid player
+  if (players[nextPlayer].folded === true) {
+    throw new Error('Unable to find next non-folded player');
+  }
+
   return withVersion(state, {
     players,
     currentTrick: newCurrentTrick,

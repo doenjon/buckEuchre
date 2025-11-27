@@ -121,21 +121,33 @@ export async function checkAndTriggerAI(
     // All non-bidders need to decide, and they can all decide simultaneously
     if (gameState.phase === 'FOLDING_DECISION') {
       const aiPlayersToAct = getAIPlayersNeedingFoldDecision(gameState);
-      
+
       if (aiPlayersToAct.length > 0) {
         console.log(`[AI Trigger] ${aiPlayersToAct.length} AI player(s) need to make fold decisions`);
-        
+
         // Trigger all AI fold decisions with slight delays to seem natural
-        for (let i = 0; i < aiPlayersToAct.length; i++) {
-          const playerId = aiPlayersToAct[i];
-          
-          // Stagger the AI actions slightly
-          setTimeout(() => {
-            executeAITurn(gameId, playerId, io).catch(err =>
-              console.error(`[AI Trigger] Error triggering AI fold decision:`, err)
-            );
-          }, i * 200); // 200ms delay between each AI
-        }
+        // Use Promise.all to ensure all AI decisions complete, even if one fails
+        const aiPromises = aiPlayersToAct.map((playerId, i) => {
+          return new Promise<void>((resolve) => {
+            setTimeout(async () => {
+              try {
+                await executeAITurn(gameId, playerId, io);
+                console.log(`[AI Trigger] AI player ${playerId} completed fold decision`);
+              } catch (err) {
+                console.error(`[AI Trigger] Error triggering AI fold decision for ${playerId}:`, err);
+                // Don't throw - let other AI players continue even if one fails
+              } finally {
+                resolve();
+              }
+            }, i * 200); // 200ms delay between each AI
+          });
+        });
+
+        // Don't await here - let AI decisions process asynchronously
+        // but ensure all promises are tracked to prevent unhandled rejections
+        Promise.all(aiPromises).catch(err => {
+          console.error(`[AI Trigger] Unexpected error in AI fold decision batch:`, err);
+        });
       }
       return;
     }
