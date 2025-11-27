@@ -280,31 +280,35 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     throw new Error('Failed to join game after multiple attempts (race condition)');
   }
 
-  // If game is now full (4 players), initialize game state
-  if (game.players.length + 1 === 4) {
-    // Get all user IDs in position order
-    const updatedGame = await prisma.game.findUnique({
-      where: { id: gameId },
-      include: {
-        players: {
-          orderBy: { position: 'asc' },
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-                displayName: true,
-                isGuest: true,
-              },
+  // Query fresh to check if game is now full (4 players)
+  // This prevents race condition where multiple players join simultaneously
+  const finalGame = await prisma.game.findUnique({
+    where: { id: gameId },
+    include: {
+      players: {
+        orderBy: { position: 'asc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              isGuest: true,
             },
           },
         },
       },
-    });
+    },
+  });
 
-    if (!updatedGame) {
-      throw new Error('Failed to retrieve updated game');
-    }
+  if (!finalGame) {
+    throw new Error('Failed to retrieve updated game');
+  }
+
+  // If game is now full (4 players), initialize game state
+  if (finalGame.players.length === 4) {
+    // Use finalGame which we just queried, guaranteed to have all 4 players
+    const updatedGame = finalGame;
 
     if (updatedGame.players.length !== 4) {
       throw new Error('Game does not have exactly 4 players');
