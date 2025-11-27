@@ -683,22 +683,25 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
         return currentState;
       }
 
+      // Check if this card will complete the trick BEFORE applying it
+      const cardsInTrickBefore = currentState.currentTrick.cards.length + 1;
+      const activePlayersBefore = currentState.players.filter((p: Player) => p.folded !== true);
+      const willCompleteTrick = cardsInTrickBefore === activePlayersBefore.length;
+
       // Apply card play
       let nextState = applyCardPlay(currentState, player.position, validated.cardId);
 
-      // Check if trick is complete (4 cards played by non-folded players)
-      const activePlayers = nextState.players.filter((p: Player) => p.folded !== true);
-      const cardsInTrick = nextState.currentTrick.cards.length;
       console.log(`[PLAY_CARD] Applied`, {
         playedBy: player.position,
-        nextCardsInTrick: cardsInTrick,
-        activePlayers: activePlayers.length,
+        nextCardsInTrick: nextState.currentTrick.cards.length,
+        activePlayers: activePlayersBefore.length,
         nextPlayer: nextState.currentPlayerPosition,
         trickNumber: nextState.currentTrick.number,
         phase: nextState.phase,
         tricksCompleted: nextState.tricks.length,
+        willCompleteTrick,
       });
-      
+
       // Check if applyCardPlay transitioned to ROUND_OVER (5 tricks complete)
       if (nextState.phase === 'ROUND_OVER') {
         // Finish round and calculate scores
@@ -712,11 +715,17 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
           gameOver: nextState.gameOver,
           scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
         });
-      } else if (cardsInTrick === activePlayers.length) {
+      } else if (willCompleteTrick) {
         // Trick complete but round continues - emit trick complete for animation
+        // The completed trick is now the last one in the tricks array
+        const completedTrick = nextState.tricks[nextState.tricks.length - 1];
         io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
-          trick: nextState.currentTrick,
+          trick: completedTrick,
           delayMs: 1500
+        });
+        console.log(`[TRICK_COMPLETE] Emitted for trick ${completedTrick.number}`, {
+          winner: completedTrick.winner,
+          cardsPlayed: completedTrick.cards.length,
         });
       }
 
