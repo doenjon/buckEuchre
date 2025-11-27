@@ -542,6 +542,7 @@ export interface UserSettings {
   bidSpeed: 'slow' | 'normal' | 'fast';
   animationSpeed: 'slow' | 'normal' | 'fast';
   soundEffects: boolean;
+  showDebugConsole: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -553,6 +554,7 @@ export interface UpdateSettingsData {
   bidSpeed?: 'slow' | 'normal' | 'fast';
   animationSpeed?: 'slow' | 'normal' | 'fast';
   soundEffects?: boolean;
+  showDebugConsole?: boolean;
 }
 
 /**
