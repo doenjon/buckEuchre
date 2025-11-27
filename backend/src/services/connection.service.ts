@@ -6,6 +6,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { getActiveGameState, setActiveGameState } from './state.service';
 import { applyFoldDecision } from '../game/state';
+import type { PlayerPosition } from '@buck-euchre/shared/types/game';
 
 /**
  * Player connection information
@@ -182,7 +183,7 @@ function handleGracePeriodExpired(
     // Automatically fold the disconnected player
     console.log(`Auto-folding disconnected player ${playerId} (position ${playerPosition})`);
     try {
-      updatedState = applyFoldDecision(gameState, playerPosition, true);
+      updatedState = applyFoldDecision(gameState, playerPosition as PlayerPosition, true);
       setActiveGameState(gameId, updatedState);
       autoAction = true;
 
