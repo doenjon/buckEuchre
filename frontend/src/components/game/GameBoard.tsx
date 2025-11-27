@@ -239,8 +239,8 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       {/* Mobile Layout: Fixed score button + flex areas | Desktop: sidebar + content */}
       <div className="flex flex-col flex-1 min-h-0 md:h-auto md:grid md:gap-4 lg:gap-6 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
         
-        {/* Mobile: Fixed Settings Button (Top Left) */}
-        <div className="md:hidden fixed top-2 left-2 z-40">
+        {/* Fixed Settings Button (Top Left) - Always visible */}
+        <div className="fixed top-2 left-2 z-40">
           <Button
             type="button"
             variant="outline"
@@ -314,21 +314,6 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
 
         {/* Desktop Sidebar - Visible sidebar with info panel */}
         <aside className="hidden md:flex md:flex-col gap-6 md:order-1 py-4 lg:py-6">
-          {/* Desktop Settings Button */}
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowSettingsModal(true)}
-              className="rounded-full border-white/20 bg-white/5 text-emerald-200 hover:bg-white/10 backdrop-blur text-xs px-3 py-1.5 shadow-lg"
-              aria-label="Settings"
-            >
-              <span className="text-xs mr-1">⚙️</span>
-              <span className="text-xs">Settings</span>
-            </Button>
-          </div>
-
           {/* Desktop Info Panel - shows trump, bidder, bid amount, etc. */}
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-slate-100 shadow-lg backdrop-blur">
               <div className="space-y-3">
