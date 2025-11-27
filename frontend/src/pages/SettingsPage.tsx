@@ -75,8 +75,16 @@ export default function SettingsPage() {
       setError('');
       setSuccess('');
 
-      await updateUserSettings(formData);
-      settingsStore.updateSettings(formData);
+      const updatedSettings = await updateUserSettings(formData);
+      // Update store with the complete settings from the server
+      settingsStore.setSettings({
+        showCardOverlay: updatedSettings.showCardOverlay,
+        showTooltips: updatedSettings.showTooltips,
+        autoSortHand: updatedSettings.autoSortHand,
+        bidSpeed: updatedSettings.bidSpeed,
+        animationSpeed: updatedSettings.animationSpeed,
+        soundEffects: updatedSettings.soundEffects,
+      });
 
       setSuccess('Settings saved successfully!');
       setTimeout(() => setSuccess(''), 3000);
@@ -306,17 +314,18 @@ export default function SettingsPage() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="flex-1 bg-green-600 hover:bg-green-700"
+              variant="primary"
+              className="flex-1"
             >
-              {saving ? 'Saving...' : 'Save Settings'}
+              {saving ? 'Saving...' : 'SAVE SETTINGS'}
             </Button>
             <Button
               onClick={handleReset}
               disabled={saving}
-              variant="outline"
+              variant="primary"
               className="flex-1"
             >
-              Reset to Defaults
+              RESET TO DEFAULTS
             </Button>
           </div>
         </div>

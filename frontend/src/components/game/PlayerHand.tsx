@@ -13,6 +13,7 @@ import {
 } from '@buck-euchre/shared';
 import { Card } from './Card';
 import { useGameStore } from '@/stores/gameStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 
 export interface PlayerHandProps {
   cards: CardType[];
@@ -82,6 +83,7 @@ export function PlayerHand({
   trumpSuit = null
 }: PlayerHandProps) {
   const { aiAnalysis, getCardAnalysis } = useGameStore();
+  const { showCardOverlay, autoSortHand } = useSettingsStore();
   const sortedCardIds = useMemo(() => {
     if (!cards || cards.length === 0) {
       return [] as string[];
@@ -92,7 +94,15 @@ export function PlayerHand({
       .map(card => card.id);
   }, [cards, trumpSuit]);
 
-  const [cardOrder, setCardOrder] = useState<string[]>(() => sortedCardIds);
+  // Initial order: sorted if autoSortHand is enabled, otherwise preserve original order
+  const initialCardIds = useMemo(() => {
+    if (!cards || cards.length === 0) {
+      return [] as string[];
+    }
+    return autoSortHand ? sortedCardIds : cards.map(card => card.id);
+  }, [cards, autoSortHand, sortedCardIds]);
+
+  const [cardOrder, setCardOrder] = useState<string[]>(() => initialCardIds);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [touchDraggedCardId, setTouchDraggedCardId] = useState<string | null>(null);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
@@ -120,12 +130,16 @@ export function PlayerHand({
 
     setCardOrder(previousOrder => {
       if (!previousOrder || previousOrder.length === 0) {
-        return sortedCardIds;
+        // Use sorted order if auto-sort is enabled, otherwise preserve original order
+        return autoSortHand ? sortedCardIds : cards.map(card => card.id);
       }
 
       const cardIdSet = new Set(cards.map(card => card.id));
       const filteredOrder = previousOrder.filter(id => cardIdSet.has(id));
-      const missingCards = sortedCardIds.filter(id => !filteredOrder.includes(id));
+      
+      // For missing cards: use sorted order if auto-sort is enabled, otherwise use original order
+      const cardOrderToUse = autoSortHand ? sortedCardIds : cards.map(card => card.id);
+      const missingCards = cardOrderToUse.filter(id => !filteredOrder.includes(id));
 
       if (filteredOrder.length === previousOrder.length && missingCards.length === 0) {
         return previousOrder;
@@ -133,16 +147,27 @@ export function PlayerHand({
 
       return [...filteredOrder, ...missingCards];
     });
-  }, [cards, sortedCardIds]);
+  }, [cards, sortedCardIds, autoSortHand]);
 
-  // Auto-sort hand when trump suit changes
+  // Auto-sort hand when trump suit changes (only if autoSortHand is enabled)
   useEffect(() => {
     if (trumpSuit !== previousTrumpSuit.current) {
       previousTrumpSuit.current = trumpSuit;
-      // Reset to sorted order when trump changes
+      // Reset to sorted order when trump changes, but only if auto-sort is enabled
+      if (autoSortHand) {
+        setCardOrder(sortedCardIds);
+      }
+    }
+  }, [trumpSuit, sortedCardIds, autoSortHand]);
+
+  // Handle autoSortHand setting changes
+  useEffect(() => {
+    if (autoSortHand) {
+      // When auto-sort is enabled, sort the cards
       setCardOrder(sortedCardIds);
     }
-  }, [trumpSuit, sortedCardIds]);
+    // When auto-sort is disabled, preserve current order (no action needed)
+  }, [autoSortHand, sortedCardIds]);
 
   const cardsById = useMemo(() => {
     if (!cards) {
@@ -424,7 +449,7 @@ export function PlayerHand({
           const archOffset = normalizedDistance * normalizedDistance * 6; // 6px max offset
 
           const analysis = getCardAnalysis(card.id);
-          const showAnalysis = !disabled && aiAnalysis && analysis;
+          const showAnalysis = !disabled && aiAnalysis && analysis && showCardOverlay;
 
           return (
             <div

@@ -22,3 +22,5 @@ echo ""
 echo "Check backend logs:"
 docker compose logs --tail=50 backend
 
+
+

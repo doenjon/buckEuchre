@@ -565,8 +565,14 @@ export async function getUserSettings(): Promise<UserSettings> {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to get user settings');
+    let errorMessage = 'Failed to get user settings';
+    try {
+      const error = await response.json();
+      errorMessage = error.message || error.details || errorMessage;
+    } catch {
+      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
   }
 
   return response.json();
@@ -583,8 +589,14 @@ export async function updateUserSettings(data: UpdateSettingsData): Promise<User
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to update user settings');
+    let errorMessage = 'Failed to update user settings';
+    try {
+      const error = await response.json();
+      errorMessage = error.message || error.details || errorMessage;
+    } catch {
+      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
   }
 
   return response.json();

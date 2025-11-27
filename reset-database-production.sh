@@ -54,3 +54,5 @@ echo "✅ Done! Backend should now be running with a fresh database."
 echo ""
 echo "To check backend logs: docker compose logs -f backend"
 
+
+

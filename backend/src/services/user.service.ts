@@ -75,6 +75,19 @@ export async function createUser(params: CreateUserParams): Promise<AuthResponse
     },
   });
 
+  // Create user settings with defaults
+  await prisma.userSettings.create({
+    data: {
+      userId: user.id,
+      showCardOverlay: true,
+      showTooltips: true,
+      autoSortHand: true,
+      bidSpeed: 'normal',
+      animationSpeed: 'normal',
+      soundEffects: true,
+    },
+  });
+
   // Create session
   const expiresAt = new Date(Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000);
   const token = generateToken(user.id, user.username, user.isGuest);

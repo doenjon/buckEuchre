@@ -5,7 +5,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, RotateCcw, LogOut, Trophy, X } from 'lucide-react';
+import { Loader2, RotateCcw, LogOut, Trophy, X, Settings } from 'lucide-react';
 import { Scoreboard } from './Scoreboard';
 import { CurrentTrick } from './CurrentTrick';
 import { PlayerHand } from './PlayerHand';
@@ -15,11 +15,11 @@ import { FoldDecision } from './FoldDecision';
 import { WaitingForPlayers } from './WaitingForPlayers';
 import { PlayerStatusIndicators } from './PlayerStatusIndicators';
 import { GameNotification } from './GameNotification';
+import { SettingsModal } from './SettingsModal';
 import { useGame } from '@/hooks/useGame';
 import { useGameNotifications } from '@/hooks/useGameNotifications';
 import { createGame } from '@/services/api';
 import { Button } from '@/components/ui/button';
-import { useSettingsStore } from '@/stores/settingsStore';
 import { GAME_TIMEOUTS } from '@buck-euchre/shared';
 import type { GameState } from '@buck-euchre/shared';
 
@@ -32,12 +32,12 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
   const navigate = useNavigate();
   const { phase, currentPlayerPosition, currentBidder, players } = gameState;
   const { playCard, startNextRound, leaveGame } = useGame();
-  const { showCardOverlay } = useSettingsStore();
   const [isRematching, setIsRematching] = useState(false);
   const [isReturning, setIsReturning] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [nextHandCountdown, setNextHandCountdown] = useState<number | null>(null);
   const [showScoreboard, setShowScoreboard] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Setup game notifications
   useGameNotifications(gameState, myPosition);
@@ -245,11 +245,12 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => window.location.href = '/settings'}
+            onClick={() => setShowSettingsModal(true)}
             className="rounded-full border-white/20 bg-white/5 text-emerald-200 hover:bg-white/10 backdrop-blur text-xs px-2 py-1 shadow-lg"
             aria-label="Settings"
           >
-            <span className="text-xs">⚙️</span>
+            <Settings className="h-3 w-3 mr-1" />
+            <span className="text-xs">Settings</span>
           </Button>
         </div>
 
@@ -313,9 +314,23 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
 
         {/* Desktop Sidebar - Visible sidebar with info panel */}
         <aside className="hidden md:flex md:flex-col gap-6 md:order-1 py-4 lg:py-6">
+          {/* Desktop Settings Button */}
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSettingsModal(true)}
+              className="rounded-full border-white/20 bg-white/5 text-emerald-200 hover:bg-white/10 backdrop-blur text-xs px-3 py-1.5 shadow-lg"
+              aria-label="Settings"
+            >
+              <span className="text-xs mr-1">⚙️</span>
+              <span className="text-xs">Settings</span>
+            </Button>
+          </div>
+
           {/* Desktop Info Panel - shows trump, bidder, bid amount, etc. */}
-          {showCardOverlay && (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-slate-100 shadow-lg backdrop-blur">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-slate-100 shadow-lg backdrop-blur">
               <div className="space-y-3">
                 {gameState.trumpSuit && (
                   <div className="flex items-center gap-2">
@@ -348,7 +363,6 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 )}
               </div>
             </div>
-          )}
           
           <Scoreboard
             players={players}
@@ -367,8 +381,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
           {/* Mobile: Top bar with opponents | Desktop: Labels around table */}
 
           {/* Mobile: Info Bar - floating just above player names */}
-          {showCardOverlay && (
-            <div className="md:hidden px-2 pt-10 pb-1.5 flex-shrink-0">
+          <div className="md:hidden px-2 pt-10 pb-1.5 flex-shrink-0">
               <div className="w-full rounded-lg px-3 py-1.5 bg-white/15 border border-white/20 shadow-md backdrop-blur">
                 <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-200/90">
                   {gameState.trumpSuit && (
@@ -409,7 +422,6 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                 </div>
               </div>
             </div>
-          )}
 
           {/* Mobile: Opponents bar at top - below score button */}
           <div className="md:hidden px-2 pb-1 flex-shrink-0">
@@ -698,6 +710,34 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             </div>
           )}
         </section>
+      </div>
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+      />
+
+      {/* Back to Lobby Button - Bottom Left */}
+      <div className="fixed bottom-2 left-2 z-40">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleReturnToLobby}
+          disabled={isReturning}
+          className="rounded-full border-white/20 bg-white/5 text-emerald-200 hover:bg-white/10 backdrop-blur text-xs px-2 py-1 shadow-lg"
+          aria-label="Back to lobby"
+        >
+          {isReturning ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <>
+              <LogOut className="h-3 w-3 mr-1" />
+              <span className="text-xs">Lobby</span>
+            </>
+          )}
+        </Button>
       </div>
     </div>
   );

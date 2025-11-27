@@ -89,3 +89,5 @@ router.get('/friends', authenticateToken, async (req: Request, res: Response) =>
 
 export default router;
 
+
+
