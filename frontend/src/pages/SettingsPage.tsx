@@ -33,6 +33,7 @@ export default function SettingsPage() {
     bidSpeed: settingsStore.bidSpeed,
     animationSpeed: settingsStore.animationSpeed,
     soundEffects: settingsStore.soundEffects,
+    showDebugConsole: settingsStore.showDebugConsole,
   });
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export default function SettingsPage() {
           bidSpeed: settings.bidSpeed,
           animationSpeed: settings.animationSpeed,
           soundEffects: settings.soundEffects,
+          showDebugConsole: settings.showDebugConsole,
         };
 
         setFormData(newSettings);
@@ -84,6 +86,7 @@ export default function SettingsPage() {
         bidSpeed: updatedSettings.bidSpeed,
         animationSpeed: updatedSettings.animationSpeed,
         soundEffects: updatedSettings.soundEffects,
+        showDebugConsole: updatedSettings.showDebugConsole,
       });
 
       setSuccess('Settings saved successfully!');
@@ -115,6 +118,7 @@ export default function SettingsPage() {
         bidSpeed: settings.bidSpeed,
         animationSpeed: settings.animationSpeed,
         soundEffects: settings.soundEffects,
+        showDebugConsole: settings.showDebugConsole,
       };
 
       setFormData(newSettings);
@@ -303,6 +307,30 @@ export default function SettingsPage() {
                   checked={formData.soundEffects}
                   onCheckedChange={(checked) =>
                     setFormData({ ...formData, soundEffects: checked })
+                  }
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* Debug Settings */}
+          <Card className="p-6 mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Debug</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="showDebugConsole" className="text-base">
+                    Show Debug Console
+                  </Label>
+                  <p className="text-sm text-gray-500">
+                    Display console logger for copying debug logs
+                  </p>
+                </div>
+                <Switch
+                  id="showDebugConsole"
+                  checked={formData.showDebugConsole}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, showDebugConsole: checked })
                   }
                 />
               </div>

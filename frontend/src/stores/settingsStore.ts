@@ -13,6 +13,7 @@ export interface UserSettings {
   bidSpeed: 'slow' | 'normal' | 'fast';
   animationSpeed: 'slow' | 'normal' | 'fast';
   soundEffects: boolean;
+  showDebugConsole: boolean;
 }
 
 export interface SettingsActions {
@@ -30,6 +31,7 @@ const defaultSettings: UserSettings = {
   bidSpeed: 'normal',
   animationSpeed: 'normal',
   soundEffects: true,
+  showDebugConsole: false,
 };
 
 /**
@@ -64,6 +66,7 @@ export const useSettingsStore = create<SettingsStore>()(
         bidSpeed: state.bidSpeed,
         animationSpeed: state.animationSpeed,
         soundEffects: state.soundEffects,
+        showDebugConsole: state.showDebugConsole,
       }),
     }
   )

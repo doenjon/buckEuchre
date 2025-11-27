@@ -14,11 +14,14 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import SettingsPage from './pages/SettingsPage';
 import { ArenaPage } from './pages/ArenaPage';
 import { ConsoleLogger } from './components/ConsoleLogger';
+import { useSettingsStore } from './stores/settingsStore';
 
 function App() {
+  const { showDebugConsole } = useSettingsStore();
+
   return (
     <BrowserRouter>
-      <ConsoleLogger />
+      {showDebugConsole && <ConsoleLogger />}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
