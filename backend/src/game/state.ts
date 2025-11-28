@@ -31,12 +31,6 @@ function withVersion(state: GameState, updates: Partial<GameState>): GameState {
  * @returns Initial game state
  */
 export function initializeGame(playerIds: [string, string, string, string]): GameState {
-  // Validate that all player IDs are unique
-  const uniqueIds = new Set(playerIds);
-  if (uniqueIds.size !== playerIds.length) {
-    throw new Error(`Duplicate player IDs detected: ${playerIds.join(', ')}`);
-  }
-
   const playersArray = playerIds.map((id, index) => ({
     id,
     name: `Player ${index + 1}`, // Will be updated when players join
