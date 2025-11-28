@@ -265,23 +265,11 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
       playerAdded = true;
       game = freshGame; // Update game reference for later use
     } catch (error: any) {
-      if (error.code === 'P2002') {
-        // Unique constraint violation - determine which constraint
-        const constraintFields = error.meta?.target;
-
-        if (Array.isArray(constraintFields) && constraintFields.includes('userId')) {
-          // User is already in this game - treat as reconnection
-          console.log(`[joinGame] Player ${playerId} already in game ${gameId} - reconnection`);
-          playerAdded = true;
-          break;
-        } else if (attempts < maxAttempts - 1) {
-          // Position conflict - another player took this spot, retry
-          attempts++;
-          await new Promise(resolve => setTimeout(resolve, 50 * attempts)); // Exponential backoff
-          continue;
-        } else {
-          throw new Error('Failed to join game after multiple attempts (race condition)');
-        }
+      if (error.code === 'P2002' && attempts < maxAttempts - 1) {
+        // Unique constraint violation - another player took this position
+        // Retry after a short delay
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, 50 * attempts)); // Exponential backoff
       } else {
         throw error;
       }
