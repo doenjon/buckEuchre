@@ -157,14 +157,6 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
       throw new Error('Game not found');
     }
 
-    // Validate no duplicate players (defensive check)
-    const userIds = game.players.map(p => p.userId).filter(Boolean);
-    const uniqueUserIds = new Set(userIds);
-    if (userIds.length !== uniqueUserIds.size) {
-      console.error(`[joinGame] ERROR: Duplicate players detected in game ${gameId}`);
-      throw new Error('Game has duplicate players - data corruption detected');
-    }
-
     // Check if game state exists in memory
     let gameState = getActiveGameState(gameId);
     if (gameState) {
@@ -274,32 +266,21 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
       game = freshGame; // Update game reference for later use
     } catch (error: any) {
       if (error.code === 'P2002') {
-        // Unique constraint violation
-        // Check if it's a duplicate userId constraint (not just position)
-        const constraintMatch = error.meta?.target;
+        // Unique constraint violation - determine which constraint
+        const constraintFields = error.meta?.target;
 
-        if (constraintMatch && Array.isArray(constraintMatch)) {
-          // If violation is on [gameId, userId], user is already in this game
-          if (constraintMatch.includes('userId') && constraintMatch.includes('gameId')) {
-            console.warn(`[joinGame] Player ${playerId} already in game ${gameId} - treating as reconnection`);
-            playerAdded = true; // Skip retry, treat as success
-            break;
-          }
-
-          // If violation is on [gameId, position], retry with different position
-          if (constraintMatch.includes('position') && attempts < maxAttempts - 1) {
-            attempts++;
-            await new Promise(resolve => setTimeout(resolve, 50 * attempts)); // Exponential backoff
-            continue;
-          }
-        }
-
-        // Generic P2002 - retry if attempts remain
-        if (attempts < maxAttempts - 1) {
+        if (Array.isArray(constraintFields) && constraintFields.includes('userId')) {
+          // User is already in this game - treat as reconnection
+          console.log(`[joinGame] Player ${playerId} already in game ${gameId} - reconnection`);
+          playerAdded = true;
+          break;
+        } else if (attempts < maxAttempts - 1) {
+          // Position conflict - another player took this spot, retry
           attempts++;
-          await new Promise(resolve => setTimeout(resolve, 50 * attempts));
+          await new Promise(resolve => setTimeout(resolve, 50 * attempts)); // Exponential backoff
+          continue;
         } else {
-          throw error;
+          throw new Error('Failed to join game after multiple attempts (race condition)');
         }
       } else {
         throw error;
