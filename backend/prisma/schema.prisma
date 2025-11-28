@@ -227,7 +227,6 @@ model GamePlayer {
   score    Int      @default(0)
 
   @@unique([gameId, position])
-  @@unique([gameId, userId]) // Prevent duplicate users in same game
   @@index([gameId])
   @@index([userId])
 }
