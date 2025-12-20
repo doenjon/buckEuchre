@@ -28,9 +28,18 @@ export function createAppServer(): {
   const httpServer = createServer(app);
 
   // Create Socket.IO server
+  let socketCorsOrigin: string | RegExp;
+  if (process.env.CORS_ORIGIN) {
+    socketCorsOrigin = process.env.CORS_ORIGIN.split(',')[0].trim();
+  } else if (process.env.NODE_ENV === 'development') {
+    socketCorsOrigin = /^http:\/\/localhost:\d+$/;
+  } else {
+    socketCorsOrigin = 'http://localhost:5173';
+  }
+  
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+      origin: socketCorsOrigin,
       methods: ['GET', 'POST'],
       credentials: true
     },
@@ -44,9 +53,41 @@ export function createAppServer(): {
   }));
 
   // CORS configuration
-  const corsOrigins = process.env.CORS_ORIGIN?.split(',').map(o => o.trim()) || ['http://localhost:5173'];
+  // In development, allow any localhost port for easier local testing
+  const corsOrigin = (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (e.g., mobile apps, Postman)
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    
+    // If CORS_ORIGIN is explicitly set, use it
+    if (process.env.CORS_ORIGIN) {
+      const allowedOrigins = process.env.CORS_ORIGIN.split(',').map(o => o.trim());
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+    }
+    
+    // In development, allow any localhost port
+    if (process.env.NODE_ENV === 'development' && /^http:\/\/localhost:\d+$/.test(origin)) {
+      callback(null, true);
+      return;
+    }
+    
+    // Default: only allow localhost:5173
+    if (origin === 'http://localhost:5173') {
+      callback(null, true);
+      return;
+    }
+    
+    // Reject all other origins
+    callback(new Error('Not allowed by CORS'));
+  };
+  
   app.use(cors({
-    origin: corsOrigins,
+    origin: corsOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
