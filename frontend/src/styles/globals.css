@@ -135,6 +135,17 @@ body {
     }
   }
 
+  @keyframes reveal-left-to-right {
+    from {
+      clip-path: inset(0 100% 0 0);
+      opacity: 0;
+    }
+    to {
+      clip-path: inset(0 0% 0 0);
+      opacity: 1;
+    }
+  }
+
   .animate-in {
     animation-fill-mode: both;
   }
@@ -181,6 +192,10 @@ body {
 
   .animate-notification-blink {
     animation: notification-blink 1.5s ease-in-out infinite;
+  }
+
+  .animate-reveal-left-to-right {
+    animation: reveal-left-to-right 0.8s ease-out forwards;
   }
 }
 

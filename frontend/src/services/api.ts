@@ -155,19 +155,60 @@ export async function joinSession(playerName: string): Promise<JoinSessionRespon
  * Join a session as a guest player
  */
 export async function joinAsGuest(): Promise<JoinSessionResponse> {
-  const response = await fetch(`${API_URL}/api/auth/guest`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+  const url = `${API_URL}/api/auth/guest`;
+  console.log('Attempting guest login to:', url);
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to join as guest');
+    console.log('Guest login response status:', response.status, response.statusText);
+
+    if (!response.ok) {
+      // Check if response is JSON before trying to parse
+      const contentType = response.headers.get('content-type');
+      console.log('Response content-type:', contentType);
+      
+      if (contentType && contentType.includes('application/json')) {
+        const error = await response.json();
+        console.error('Guest login error response:', error);
+        throw new Error(error.message || 'Failed to join as guest');
+      } else {
+        // Backend returned HTML (likely a 404 or error page)
+        const text = await response.text();
+        console.error('Guest login non-JSON error response:', text.substring(0, 200));
+        throw new Error(`Server error (${response.status}): ${response.statusText}. Check that the backend is running at ${API_URL}`);
+      }
+    }
+
+    const data = await response.json();
+    console.log('Guest login success:', { userId: data.userId, username: data.username });
+    return data;
+  } catch (error) {
+    console.error('Guest login catch block:', {
+      error,
+      errorType: error?.constructor?.name,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+      url,
+      apiUrl: API_URL,
+    });
+    
+    // Handle network errors, CORS errors, etc.
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error(`Network error: Unable to connect to backend at ${API_URL}. Make sure the backend is running.`);
+    }
+    // Re-throw if it's already an Error with a message
+    if (error instanceof Error) {
+      throw error;
+    }
+    // Fallback for unknown errors
+    throw new Error(`Failed to join as guest: ${String(error)}`);
   }
-
-  return response.json();
 }
 
 /**

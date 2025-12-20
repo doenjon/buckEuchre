@@ -4,7 +4,6 @@
  */
 
 import { Navigate, useNavigate } from 'react-router-dom';
-import { Sparkles, Users, Crown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/uiStore';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,7 @@ import { Button } from '@/components/ui/button';
 export function HomePage() {
   const navigate = useNavigate();
   const { loginAsGuest, isAuthenticated } = useAuth();
-  const { isLoading, setError } = useUIStore();
+  const { isLoading, error, setError } = useUIStore();
 
   const handleGetStarted = () => {
     navigate('/login');
@@ -24,7 +23,13 @@ export function HomePage() {
       await loginAsGuest();
       navigate('/lobby');
     } catch (err) {
-      console.error('Failed to join as guest:', err);
+      const errorMessage = err instanceof Error ? err.message : `Failed to join as guest: ${String(err)}`;
+      console.error('Failed to join as guest:', {
+        error: err,
+        message: errorMessage,
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      setError(errorMessage);
     }
   };
 
@@ -37,52 +42,42 @@ export function HomePage() {
           <div className="absolute -right-24 top-1/4 h-96 w-96 rounded-full bg-emerald-400/10 blur-3xl" />
         </div>
 
-        <div className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-4 py-16 sm:px-6 lg:px-8">
-          <div className="grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="flex flex-col gap-8">
-              <div className="flex flex-col gap-4">
-                <span className="text-sm uppercase tracking-[0.35em] text-emerald-300/80">Modern Trick Taking</span>
-                <h1 className="text-4xl font-semibold leading-tight text-white sm:text-5xl">
-                  Gather your crew and take the table in Buck Euchre.
-                </h1>
-                <p className="max-w-xl text-base text-emerald-100/80">
-                  Seamless multiplayer, crisp visuals, and a smooth flow through bidding, trump and play.
-                  Bring strategy and style to every hand.
-                </p>
-              </div>
+        <div className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col justify-start px-4 pt-24 pb-16 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center gap-12">
+            <h1 className="text-4xl font-bold leading-normal text-white text-center sm:text-5xl lg:text-6xl tracking-normal">
+              <span 
+                className="inline-block mr-2"
+                style={{ 
+                  animation: 'fade-in 0.7s ease-out 0s both',
+                  opacity: 0
+                }}
+              >
+                Welcome to
+              </span>
+              <span 
+                className="whitespace-nowrap inline-block text-emerald-300"
+                style={{ 
+                  animation: 'reveal-left-to-right 1.6s ease-out 0.7s both',
+                  opacity: 0
+                }}
+              >
+                Buck Euchre Online
+              </span>
+            </h1>
 
-              <dl className="grid grid-cols-1 gap-4 text-sm text-emerald-100/80 sm:grid-cols-3">
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                  <dt className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-emerald-200/70">
-                    <Users className="h-4 w-4" />
-                    Multiplayer
-                  </dt>
-                  <dd className="mt-3 text-2xl font-semibold text-white">Real-time</dd>
+            <div 
+              className="rounded-[32px] border border-white/15 bg-white/10 p-8 shadow-[0_30px_80px_-45px_rgba(16,185,129,0.85)] backdrop-blur w-full max-w-md"
+              style={{ 
+                animation: 'slide-in-from-bottom 1.3s ease-out 2.4s both',
+                opacity: 0
+              }}
+            >
+              {error && (
+                <div className="mb-4 p-3 bg-red-500/20 border border-red-400/50 rounded-md">
+                  <p className="text-sm text-red-200">{error}</p>
                 </div>
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                  <dt className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-emerald-200/70">
-                    <Sparkles className="h-4 w-4" />
-                    Atmosphere
-                  </dt>
-                  <dd className="mt-3 text-2xl font-semibold text-white">Glassy UI</dd>
-                </div>
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                  <dt className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-emerald-200/70">
-                    <Crown className="h-4 w-4" />
-                    Competitive
-                  </dt>
-                  <dd className="mt-3 text-2xl font-semibold text-white">Race to 0</dd>
-                </div>
-              </dl>
-            </div>
-
-            <div className="rounded-[32px] border border-white/15 bg-white/10 p-8 shadow-[0_30px_80px_-45px_rgba(16,185,129,0.85)] backdrop-blur">
-              <div className="flex flex-col gap-2 text-center">
-                <span className="text-xs uppercase tracking-[0.35em] text-emerald-200/80">Join the table</span>
-                <h2 className="text-2xl font-semibold text-white">Get Started</h2>
-              </div>
-
-              <div className="mt-6 space-y-4">
+              )}
+              <div className="space-y-4">
                 <Button
                   type="button"
                   onClick={handleGetStarted}
@@ -127,3 +122,4 @@ export function HomePage() {
 
   return null;
 }
+
