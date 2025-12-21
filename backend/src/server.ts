@@ -34,7 +34,8 @@ export function createAppServer(): {
   } else if (process.env.NODE_ENV === 'development') {
     socketCorsOrigin = /^http:\/\/localhost:\d+$/;
   } else {
-    socketCorsOrigin = 'http://localhost:5173';
+    // Production: allow all origins when CORS_ORIGIN not set (nginx proxies both)
+    socketCorsOrigin = /.*/;
   }
   
   const io = new SocketIOServer(httpServer, {
@@ -55,7 +56,7 @@ export function createAppServer(): {
   // CORS configuration
   // In development, allow any localhost port for easier local testing
   const corsOrigin = (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // Allow requests with no origin (e.g., mobile apps, Postman)
+    // Allow requests with no origin (e.g., mobile apps, Postman, same-origin requests)
     if (!origin) {
       callback(null, true);
       return;
@@ -72,6 +73,16 @@ export function createAppServer(): {
     
     // In development, allow any localhost port
     if (process.env.NODE_ENV === 'development' && /^http:\/\/localhost:\d+$/.test(origin)) {
+      callback(null, true);
+      return;
+    }
+    
+    // In production, if CORS_ORIGIN is not set, allow requests from same origin
+    // (since nginx proxies both frontend and backend, they appear same-origin)
+    // This handles cases where frontend is accessed via IP or domain
+    if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGIN) {
+      // Allow any origin in production if CORS_ORIGIN not explicitly set
+      // This is less secure but works when frontend/backend are proxied together
       callback(null, true);
       return;
     }

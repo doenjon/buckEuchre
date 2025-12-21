@@ -23,8 +23,8 @@ const envSchema = z.object({
   ).default('3000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   
-  // CORS
-  CORS_ORIGIN: z.string().url('CORS_ORIGIN must be a valid URL'),
+  // CORS (optional in production when nginx proxies both frontend and backend)
+  CORS_ORIGIN: z.string().url('CORS_ORIGIN must be a valid URL').optional(),
   
   // WebSocket
   WS_URL: z.string().url('WS_URL must be a valid URL').optional(),
