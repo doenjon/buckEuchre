@@ -35,6 +35,7 @@ import {
 } from '../game/state';
 import { displayStateManager } from '../game/display';
 import { statsQueue } from '../services/stats-queue.service';
+import { getActiveGameState } from '../services/state.service';
 import { canPlayCard, canPlaceBid, canFold } from '../game/validation';
 import { getEffectiveSuit } from '../game/deck';
 import { GameState, PlayerPosition, Player, Card } from '../../../shared/src/types/game';
@@ -781,21 +782,28 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       
       // Schedule transition to actual state after 3 seconds
       displayStateManager.scheduleTransition(validated.gameId, async () => {
+        // Get current state from memory (may have changed during delay)
+        const currentState = getActiveGameState(validated.gameId);
+        if (!currentState) {
+          console.error(`[PLAY_CARD] Game ${validated.gameId} not found in memory during transition`);
+          return;
+        }
+        
         io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
-          gameState: finalState,
+          gameState: currentState,
           event: 'CARD_PLAYED'
         });
         console.log(`[PLAY_CARD] Delayed transition after showing completed trick`, {
-          phase: finalState.phase,
-          currentPlayerPosition: finalState.currentPlayerPosition,
-          trickNumber: finalState.currentTrick.number,
-          cardsInTrick: finalState.currentTrick.cards.length,
-          tricksCompleted: finalState.tricks.length,
+          phase: currentState.phase,
+          currentPlayerPosition: currentState.currentPlayerPosition,
+          trickNumber: currentState.currentTrick.number,
+          cardsInTrick: currentState.currentTrick.cards.length,
+          tricksCompleted: currentState.tricks.length,
         });
         
         // Trigger AI after delay completes (only if round is still in progress)
-        if (finalState.phase === 'PLAYING') {
-          await checkAndTriggerAI(validated.gameId, finalState, io);
+        if (currentState.phase === 'PLAYING') {
+          await checkAndTriggerAI(validated.gameId, currentState, io);
         }
       });
     } else {

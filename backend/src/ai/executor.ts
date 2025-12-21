@@ -16,6 +16,7 @@ import {
   finishRound,
 } from '../game/state';
 import { displayStateManager } from '../game/display';
+import { getActiveGameState } from '../services/state.service';
 import { Server } from 'socket.io';
 import { canFold, canPlaceBid, canPlayCard } from '../game/validation';
 import { checkAndTriggerAI } from './trigger';
@@ -522,22 +523,29 @@ async function executeAICardPlay(
     
     // Schedule transition to actual state after 3 seconds
     displayStateManager.scheduleTransition(gameId, async () => {
+      // Get current state from memory (may have changed during delay)
+      const currentState = getActiveGameState(gameId);
+      if (!currentState) {
+        console.error(`[AI] Game ${gameId} not found in memory during transition`);
+        return;
+      }
+      
       io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
-        gameState: finalState,
+        gameState: currentState,
         event: 'CARD_PLAYED',
         data: play,
       });
       console.log(`[AI] [PLAY_CARD] Delayed transition after showing completed trick`, {
-        phase: finalState.phase,
-        currentPlayerPosition: finalState.currentPlayerPosition,
-        trickNumber: finalState.currentTrick.number,
-        cardsInTrick: finalState.currentTrick.cards.length,
-        tricksCompleted: finalState.tricks.length,
+        phase: currentState.phase,
+        currentPlayerPosition: currentState.currentPlayerPosition,
+        trickNumber: currentState.currentTrick.number,
+        cardsInTrick: currentState.currentTrick.cards.length,
+        tricksCompleted: currentState.tricks.length,
       });
       
       // Trigger AI after delay completes (only if round is still in progress)
-      if (finalState.phase === 'PLAYING') {
-        await checkAndTriggerAI(gameId, finalState, io);
+      if (currentState.phase === 'PLAYING') {
+        await checkAndTriggerAI(gameId, currentState, io);
       }
     });
   } else {
