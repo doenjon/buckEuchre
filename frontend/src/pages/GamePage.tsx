@@ -118,13 +118,7 @@ export function GamePage() {
   // Show minimal loading state while checking auth
   if (!authReady) {
     return (
-      <div
-        className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100 flex items-center justify-center"
-        style={{
-          paddingTop: `env(safe-area-inset-top, 0px)`,
-          paddingBottom: `env(safe-area-inset-bottom, 0px)`
-        }}
-      >
+      <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-emerald-300" />
       </div>
     );
@@ -132,14 +126,14 @@ export function GamePage() {
 
   if (activeError) {
     return (
-      <div
-        className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100"
-        style={{
-          paddingTop: `env(safe-area-inset-top, 0px)`,
-          paddingBottom: `env(safe-area-inset-bottom, 0px)`
-        }}
-      >
-        <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-16 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
+        <div
+          className="mx-auto flex max-w-md flex-col gap-6 px-4 sm:px-6 lg:px-8"
+          style={{
+            paddingTop: `calc(4rem + env(safe-area-inset-top, 0px))`,
+            paddingBottom: `calc(4rem + env(safe-area-inset-bottom, 0px))`
+          }}
+        >
           <div className="rounded-[32px] border border-rose-400/30 bg-rose-950/30 p-6 text-slate-100 backdrop-blur shadow-[0_30px_80px_-45px_rgba(239,68,68,0.3)]">
             <div className="flex flex-col items-center gap-4 text-center">
               <AlertCircle className="h-10 w-10 text-rose-300" />
