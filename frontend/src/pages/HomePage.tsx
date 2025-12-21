@@ -54,7 +54,13 @@ export function HomePage() {
           <div className="absolute -right-24 top-1/4 h-96 w-96 rounded-full bg-emerald-400/10 blur-3xl" />
         </div>
 
-        <div className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col justify-start px-4 pt-24 pb-16 sm:px-6 lg:px-8">
+        <div
+          className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col justify-start px-4 sm:px-6 lg:px-8"
+          style={{
+            paddingTop: `calc(6rem + env(safe-area-inset-top, 0px))`,
+            paddingBottom: `calc(4rem + env(safe-area-inset-bottom, 0px))`
+          }}
+        >
           <div className="flex flex-col items-center gap-12">
             <h1 className="text-4xl font-bold leading-normal text-white text-center sm:text-5xl lg:text-6xl tracking-normal">
               <span 

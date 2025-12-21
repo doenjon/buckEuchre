@@ -118,7 +118,13 @@ export function GamePage() {
   // Show minimal loading state while checking auth
   if (!authReady) {
     return (
-      <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100 flex items-center justify-center">
+      <div
+        className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100 flex items-center justify-center"
+        style={{
+          paddingTop: `env(safe-area-inset-top, 0px)`,
+          paddingBottom: `env(safe-area-inset-bottom, 0px)`
+        }}
+      >
         <Loader2 className="h-8 w-8 animate-spin text-emerald-300" />
       </div>
     );
@@ -126,7 +132,13 @@ export function GamePage() {
 
   if (activeError) {
     return (
-      <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
+      <div
+        className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100"
+        style={{
+          paddingTop: `env(safe-area-inset-top, 0px)`,
+          paddingBottom: `env(safe-area-inset-bottom, 0px)`
+        }}
+      >
         <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-16 sm:px-6 lg:px-8">
           <div className="rounded-[32px] border border-rose-400/30 bg-rose-950/30 p-6 text-slate-100 backdrop-blur shadow-[0_30px_80px_-45px_rgba(239,68,68,0.3)]">
             <div className="flex flex-col items-center gap-4 text-center">
@@ -192,8 +204,14 @@ export function GamePage() {
 
   return (
     <div className="h-screen overflow-hidden bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
-      <div className="mx-auto flex h-full w-full max-w-6xl flex-col gap-2 md:gap-5 px-4 py-2 sm:px-6 sm:py-4 lg:px-8 md:py-6 md:py-8">
-        <header className="flex-shrink-0 flex flex-col gap-2 text-center">
+      <div
+        className="mx-auto flex h-full w-full max-w-6xl flex-col gap-2 md:gap-5 px-4 sm:px-6 lg:px-8"
+        style={{
+          paddingTop: `calc(0.5rem + env(safe-area-inset-top, 0px))`,
+          paddingBottom: `calc(0.5rem + env(safe-area-inset-bottom, 0px))`
+        }}
+      >
+        <header className="flex-shrink-0 flex flex-col gap-2 text-center pt-2 sm:pt-4 md:pt-6">
           <span className="text-xs uppercase tracking-[0.35em] text-emerald-300/70 sm:text-sm">
             Buck Euchre
           </span>

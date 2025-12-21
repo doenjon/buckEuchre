@@ -179,7 +179,13 @@ export function WaitingForPlayers({
       : `Waiting for ${playersNeeded} more player${playersNeeded === 1 ? '' : 's'}...`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-green-600 flex items-center justify-center p-4">
+    <div
+      className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-green-600 flex items-center justify-center px-4"
+      style={{
+        paddingTop: `calc(1rem + env(safe-area-inset-top, 0px))`,
+        paddingBottom: `calc(1rem + env(safe-area-inset-bottom, 0px))`
+      }}
+    >
       <Card className="w-full max-w-2xl overflow-hidden border-emerald-500/20 bg-white/95 shadow-2xl backdrop-blur min-h-[70vh] sm:min-h-[auto] flex flex-col">
         <div className="bg-green-950/90 text-white px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex items-center gap-3">
