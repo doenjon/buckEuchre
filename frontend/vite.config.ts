@@ -109,6 +109,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    hmr: {
+      overlay: false, // Disable error overlay by default
+    },
     proxy: {
       '/api': {
         // Use backend service name when running in Docker

@@ -89,7 +89,115 @@ export async function createGame(creatorId: string): Promise<GameWithPlayers> {
     },
   });
 
+  console.log(`[createGame] Game ${game.id} created with creatorId: ${creatorId}`);
+  console.log(`[createGame] Players in game:`, game.players.map(p => ({ userId: p.userId, position: p.position })));
+
   return game;
+}
+
+/**
+ * Create a rematch game with the same 4 players from a completed game
+ * 
+ * Creates a new game and adds all 4 players from the previous game.
+ * 
+ * @param oldGameId - ID of the completed game
+ * @param requestingUserId - ID of the user requesting the rematch (must be in the old game)
+ * @returns Created game with all 4 players
+ */
+export async function createRematchGame(oldGameId: string, requestingUserId: string): Promise<GameWithPlayers> {
+  if (!oldGameId || !requestingUserId) {
+    throw new Error('Game ID and user ID are required');
+  }
+
+  // Get the old game with all players
+  const oldGame = await prisma.game.findUnique({
+    where: { id: oldGameId },
+    include: {
+      players: {
+        orderBy: { position: 'asc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              isGuest: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!oldGame) {
+    throw new Error('Original game not found');
+  }
+
+  // Verify requesting user was in the old game
+  const requestingUserInGame = oldGame.players.some(p => p.userId === requestingUserId);
+  if (!requestingUserInGame) {
+    throw new Error('You were not in the original game');
+  }
+
+  // Verify we have exactly 4 players
+  if (oldGame.players.length !== 4) {
+    throw new Error('Original game must have exactly 4 players');
+  }
+
+  // Get all player IDs in order
+  const playerIds = oldGame.players.map(p => p.userId);
+
+  // Check if any player is already in an active game
+  for (const playerId of playerIds) {
+    const existingGame = await prisma.gamePlayer.findFirst({
+      where: {
+        userId: playerId,
+        game: {
+          status: {
+            in: [GameStatus.WAITING, GameStatus.IN_PROGRESS],
+          },
+        },
+      },
+    });
+
+    if (existingGame) {
+      throw new Error(`Player ${playerId} is already in an active game`);
+    }
+  }
+
+  // Create new game with the first player as creator
+  const newGame = await prisma.game.create({
+    data: {
+      creatorId: playerIds[0],
+      status: GameStatus.WAITING,
+      players: {
+        create: playerIds.map((playerId, index) => ({
+          userId: playerId,
+          position: index as 0 | 1 | 2 | 3,
+        })),
+      },
+    },
+    include: {
+      players: {
+        orderBy: { position: 'asc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              isGuest: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  console.log(`[createRematchGame] Rematch game ${newGame.id} created from game ${oldGameId}`);
+  console.log(`[createRematchGame] Players in rematch:`, newGame.players.map(p => ({ userId: p.userId, position: p.position })));
+
+  return newGame;
 }
 
 /**
@@ -116,46 +224,38 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     throw new Error('User not found');
   }
 
-  // Check if user is already in another active game (different from this one)
-  const existingGame = await prisma.gamePlayer.findFirst({
+  // First, check if user is already in THIS game (reconnection case)
+  // Use a single query with include to get both the GamePlayer and Game in one go
+  const inThisGame = await prisma.gamePlayer.findFirst({
     where: {
       userId: playerId,
-      game: {
-        status: {
-          in: [GameStatus.WAITING, GameStatus.IN_PROGRESS],
-        },
-      },
+      gameId: gameId,
     },
-  });
-
-  if (existingGame && existingGame.gameId !== gameId) {
-    throw new Error('User is already in a different active game');
-  }
-  
-  // If user is already in THIS game, handle reconnection
-  if (existingGame && existingGame.gameId === gameId) {
-    const game = await prisma.game.findUnique({
-      where: { id: gameId },
-      include: {
-        players: {
-          orderBy: { position: 'asc' },
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-                displayName: true,
-                isGuest: true,
+    include: {
+      game: {
+        include: {
+          players: {
+            orderBy: { position: 'asc' },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  displayName: true,
+                  isGuest: true,
+                },
               },
             },
           },
         },
       },
-    });
+    },
+  });
 
-    if (!game) {
-      throw new Error('Game not found');
-    }
+  if (inThisGame && inThisGame.game) {
+    // User is already in this game - handle reconnection
+    console.log(`[joinGame] User ${playerId} is already in game ${gameId} - handling reconnection`);
+    const game = inThisGame.game;
 
     // Check if game state exists in memory
     let gameState = getActiveGameState(gameId);
@@ -199,6 +299,26 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     return null;
   }
 
+  // Check if user is already in another active game (different from this one)
+  // Use a more efficient query that filters by status at the database level
+  const existingGame = await prisma.gamePlayer.findFirst({
+    where: {
+      userId: playerId,
+      gameId: { not: gameId }, // Exclude this game
+      game: {
+        status: {
+          in: [GameStatus.WAITING, GameStatus.IN_PROGRESS],
+        },
+      },
+    },
+  });
+
+  if (existingGame) {
+    // User is in a DIFFERENT game - this is an error
+    console.log(`[joinGame] User ${playerId} is already in different game ${existingGame.gameId}, cannot join ${gameId}`);
+    throw new Error('User is already in a different active game');
+  }
+
   // Get game with current players
   let game = await prisma.game.findUnique({
     where: { id: gameId },
@@ -219,6 +339,13 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
 
   if (game.players.length >= 4) {
     throw new Error('Game is full');
+  }
+
+  // Check if user is already in THIS game (double-check to prevent duplicates)
+  const alreadyInGame = game.players.some(p => p.userId === playerId);
+  if (alreadyInGame) {
+    console.log(`[joinGame] User ${playerId} is already in game ${gameId}, returning null (reconnection)`);
+    return null;
   }
 
   // Find next available position and add player (with retry for race conditions)
@@ -242,6 +369,15 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
         throw new Error('Game not found');
       }
 
+      // Check if user is already in game (double-check in retry loop to prevent race conditions)
+      const userAlreadyInGame = freshGame.players.some(p => p.userId === playerId);
+      if (userAlreadyInGame) {
+        console.log(`[joinGame] User ${playerId} already in game ${gameId} (detected in retry loop)`);
+        playerAdded = true; // Consider it "added" since they're already there
+        game = freshGame;
+        break;
+      }
+
       // Find next available position
       const takenPositions = freshGame.players.map((p) => p.position);
       let nextPosition = 0;
@@ -253,7 +389,7 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
         throw new Error('Game is full');
       }
 
-      // Try to add user (may fail if another user took this position)
+      // Try to add user (may fail if another user took this position or user already in game)
       await prisma.gamePlayer.create({
         data: {
           gameId,
@@ -265,11 +401,33 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
       playerAdded = true;
       game = freshGame; // Update game reference for later use
     } catch (error: any) {
-      if (error.code === 'P2002' && attempts < maxAttempts - 1) {
-        // Unique constraint violation - another player took this position
-        // Retry after a short delay
-        attempts++;
-        await new Promise(resolve => setTimeout(resolve, 50 * attempts)); // Exponential backoff
+      if (error.code === 'P2002') {
+        // Unique constraint violation - could be position or userId
+        // Check if it's because user is already in game
+        const checkGame = await prisma.game.findUnique({
+          where: { id: gameId },
+          include: {
+            players: {
+              where: { userId: playerId },
+            },
+          },
+        });
+        
+        if (checkGame && checkGame.players.length > 0) {
+          // User is already in game - this is fine, treat as success
+          console.log(`[joinGame] User ${playerId} already in game ${gameId} (unique constraint violation)`);
+          playerAdded = true;
+          game = checkGame;
+          break; // Exit the while loop
+        }
+        
+        // It's a position conflict - retry after a short delay
+        if (attempts < maxAttempts - 1) {
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 50 * attempts)); // Exponential backoff
+        } else {
+          throw error;
+        }
       } else {
         throw error;
       }
@@ -377,6 +535,8 @@ export async function getUserActiveGames(userId: string): Promise<GameSummary[]>
     throw new Error('User ID is required');
   }
 
+  console.log(`[getUserActiveGames] Querying games for userId: ${userId}`);
+  
   const games = await prisma.game.findMany({
     where: {
       players: {
@@ -415,6 +575,16 @@ export async function getUserActiveGames(userId: string): Promise<GameSummary[]>
     },
   });
 
+  console.log(`[getUserActiveGames] Found ${games.length} games for userId: ${userId}`);
+  games.forEach((game, index) => {
+    console.log(`[getUserActiveGames] Game ${index + 1}:`, {
+      gameId: game.id,
+      status: game.status,
+      playerCount: game.players.length,
+      playerUserIds: game.players.map(p => p.userId),
+    });
+  });
+
   return games.map((game) => ({
     gameId: game.id,
     createdAt: game.createdAt.getTime(),
@@ -430,6 +600,8 @@ export async function leaveGame(gameId: string, userId: string): Promise<void> {
     throw new Error('Game ID and User ID are required');
   }
 
+  console.log(`[leaveGame] Attempting to leave game ${gameId} for userId: ${userId}`);
+
   const game = await prisma.game.findUnique({
     where: { id: gameId },
     include: {
@@ -438,14 +610,20 @@ export async function leaveGame(gameId: string, userId: string): Promise<void> {
   });
 
   if (!game) {
+    console.log(`[leaveGame] Game ${gameId} not found`);
     throw new Error('Game not found');
   }
+
+  console.log(`[leaveGame] Game found: ${game.id}, status: ${game.status}, players: ${game.players.map(p => p.userId).join(', ')}`);
 
   const gamePlayer = game.players.find((gp) => gp.userId === userId);
 
   if (!gamePlayer) {
+    console.log(`[leaveGame] User ${userId} not found in game ${gameId}. Players in game: ${game.players.map(p => p.userId).join(', ')}`);
     throw new Error('User is not in this game');
   }
+
+  console.log(`[leaveGame] Found gamePlayer ${gamePlayer.id} for userId ${userId}`);
 
   // Remove player from game
   // Handle race condition: player might already be deleted
@@ -453,13 +631,16 @@ export async function leaveGame(gameId: string, userId: string): Promise<void> {
     await prisma.gamePlayer.delete({
       where: { id: gamePlayer.id },
     });
+    console.log(`[leaveGame] Successfully removed player ${userId} from game ${gameId}`);
   } catch (error: any) {
     // P2025 = Record not found (already deleted in concurrent request)
-    if (error.code !== 'P2025') {
+    if (error.code === 'P2025') {
+      // Player already left - this is fine, continue cleanup
+      console.log(`[leaveGame] Player ${userId} already removed from game ${gameId} (race condition)`);
+    } else {
+      console.error(`[leaveGame] Error deleting gamePlayer:`, error);
       throw error; // Re-throw if it's a different error
     }
-    // Otherwise, player already left - this is fine, continue cleanup
-    console.log(`[leaveGame] Player ${userId} already removed from game ${gameId}`);
   }
 
   // If game was in progress, mark as abandoned

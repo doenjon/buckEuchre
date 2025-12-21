@@ -17,7 +17,7 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 export function GamePage() {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
-  const { checkAuth, loginAsGuest } = useAuth();
+  const { checkAuth } = useAuth();
   const { joinGame, gameState, myPosition, setMyPosition, waitingInfo, error, clearGame } = useGame();
   const authStore = useAuthStore();
   const userId = authStore.userId;
@@ -34,61 +34,33 @@ export function GamePage() {
   }, [authStore.userId, authStore.username, authStore.displayName, authStore.isAuthenticated, authStore.isGuest]);
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  // Attempt to ensure the visitor is authenticated, logging in as a guest if needed
+  // Check if user is authenticated - if not, redirect to home with gameId
   useEffect(() => {
-    if (authReady || isAuthenticating) {
+    if (authReady) {
       return;
     }
 
-    let isActive = true;
-
-    async function ensureAuthenticated() {
-      if (checkAuth()) {
-        if (isActive) {
-          setAuthReady(true);
-        }
-        return;
-      }
-
-      try {
-        setIsAuthenticating(true);
-        await loginAsGuest();
-        if (isActive) {
-          setAuthReady(true);
-        }
-      } catch (err) {
-        if (!isActive) {
-          return;
-        }
-        const message = err instanceof Error ? err.message : 'Unable to join as a guest right now.';
-        setAuthError(message);
-        setAuthReady(true);
-      } finally {
-        if (isActive) {
-          setIsAuthenticating(false);
-        }
-      }
+    if (checkAuth()) {
+      setAuthReady(true);
+    } else {
+      // Not authenticated - redirect to home page with gameId so they can login
+      // The redirect will happen in the next useEffect
+      setAuthReady(true); // Set to true so we don't block the redirect
     }
+  }, [authReady, checkAuth]);
 
-    ensureAuthenticated();
-
-    return () => {
-      isActive = false;
-    };
-  }, [authReady, checkAuth, loginAsGuest, isAuthenticating]);
-
-  // Check authentication
+  // Check authentication - if not authenticated, redirect to home with gameId in URL
   useEffect(() => {
     if (!authReady || authError) {
       return;
     }
 
     if (!checkAuth()) {
-      navigate('/');
+      // Store gameId in URL so we can redirect back after login
+      navigate(`/?gameId=${gameId}`, { replace: true });
     }
-  }, [authReady, authError, checkAuth, navigate]);
+  }, [authReady, authError, checkAuth, navigate, gameId]);
 
   // Join game when component mounts
   useEffect(() => {
@@ -145,20 +117,11 @@ export function GamePage() {
 
   const activeError = useMemo(() => authError || error, [authError, error]);
 
-  if (!authReady || isAuthenticating) {
+  // Show minimal loading state while checking auth
+  if (!authReady) {
     return (
-      <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
-        <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-16 sm:px-6 lg:px-8">
-          <Card className="border-white/10 bg-white/5 text-center text-slate-200 backdrop-blur">
-            <CardHeader className="items-center gap-2 text-center">
-              <CardTitle className="text-lg font-semibold tracking-[0.25em] text-emerald-200/80 uppercase">Joining Table</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4 pb-8">
-              <Loader2 className="h-10 w-10 animate-spin text-emerald-300" />
-              <p className="text-sm text-slate-300">Preparing a guest seat for you&hellip;</p>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-300" />
       </div>
     );
   }
@@ -167,25 +130,24 @@ export function GamePage() {
     return (
       <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
         <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-16 sm:px-6 lg:px-8">
-          <Card className="border-rose-400/30 bg-rose-950/30 text-slate-100 backdrop-blur">
-            <CardHeader className="items-center gap-2 text-center">
+          <div className="rounded-[32px] border border-rose-400/30 bg-rose-950/30 p-6 text-slate-100 backdrop-blur shadow-[0_30px_80px_-45px_rgba(239,68,68,0.3)]">
+            <div className="flex flex-col items-center gap-4 text-center">
               <AlertCircle className="h-10 w-10 text-rose-300" />
-              <CardTitle className="text-lg font-semibold">We couldn&apos;t seat you at this table</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4 pb-8 text-center text-sm text-slate-200">
-              <p>{activeError}</p>
+              <h2 className="text-lg font-semibold text-slate-100">We couldn&apos;t seat you at this table</h2>
+              <p className="text-sm text-slate-200">{activeError}</p>
               <Button
-                variant="secondary"
+                variant="primary"
                 size="md"
                 onClick={() => {
                   clearGame();
-                  navigate('/');
+                  navigate('/lobby');
                 }}
+                className="mt-4"
               >
                 Return to lobby
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -210,6 +172,7 @@ export function GamePage() {
         playerCount={fallbackWaiting.playerCount}
         playersNeeded={fallbackWaiting.playersNeeded}
         message={fallbackWaiting.message}
+        players={[]}
       />
     );
   }
@@ -224,6 +187,7 @@ export function GamePage() {
         playerCount={connectedPlayers}
         playersNeeded={seatsRemaining}
         message={waitingInfo?.message}
+        players={gameState.players.map(p => ({ id: p.id, name: p.name, position: p.position }))}
       />
     );
   }

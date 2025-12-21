@@ -59,9 +59,13 @@ export async function executeGameAction<T = GameState>(
     activeGames.set(gameId, newState);
 
     // Persist to database as backup (fire-and-forget, async)
-    saveGameState(gameId, newState).catch((err) =>
-      console.error(`Failed to persist game state for ${gameId}:`, err)
-    );
+    // Use setImmediate to defer database write to next event loop tick
+    // This prevents database writes from blocking the action queue
+    setImmediate(() => {
+      saveGameState(gameId, newState).catch((err) =>
+        console.error(`Failed to persist game state for ${gameId}:`, err)
+      );
+    });
 
     return newState;
   });

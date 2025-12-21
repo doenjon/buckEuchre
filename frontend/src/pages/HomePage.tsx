@@ -3,25 +3,37 @@
  * @description Home page with authentication and game creation
  */
 
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/uiStore';
 import { Button } from '@/components/ui/button';
 
 export function HomePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const gameId = searchParams.get('gameId');
   const { loginAsGuest, isAuthenticated } = useAuth();
   const { isLoading, error, setError } = useUIStore();
 
   const handleGetStarted = () => {
-    navigate('/login');
+    // If there's a gameId, pass it to the login page
+    if (gameId) {
+      navigate(`/login?gameId=${gameId}`);
+    } else {
+      navigate('/login');
+    }
   };
 
   const handleGuestJoin = async () => {
     try {
       setError(null);
       await loginAsGuest();
-      navigate('/lobby');
+      // If there's a gameId, redirect to game instead of lobby
+      if (gameId) {
+        navigate(`/game/${gameId}`);
+      } else {
+        navigate('/lobby');
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : `Failed to join as guest: ${String(err)}`;
       console.error('Failed to join as guest:', {
@@ -115,8 +127,11 @@ export function HomePage() {
     );
   }
 
-  // If authenticated, redirect to lobby
+  // If authenticated, redirect to game if gameId provided, otherwise lobby
   if (isAuthenticated) {
+    if (gameId) {
+      return <Navigate to={`/game/${gameId}`} replace />;
+    }
     return <Navigate to="/lobby" replace />;
   }
 

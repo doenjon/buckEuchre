@@ -468,11 +468,12 @@ async function executeAICardPlay(
 
   const activePlayers = finalState.players.filter(p => p.folded !== true);
   const cardsInTrick = finalState.currentTrick.cards.length;
+  const trickWasCompleted = cardsInTrick === activePlayers.length;
 
-  if (cardsInTrick === activePlayers.length) {
+  if (trickWasCompleted) {
     io.to(`game:${gameId}`).emit('TRICK_COMPLETE', {
       trick: finalState.currentTrick,
-      delayMs: 2000,
+      delayMs: 3000,
     });
 
     if (finalState.tricks.length === 5) {
@@ -490,13 +491,23 @@ async function executeAICardPlay(
         );
       }
     }
-  }
 
-  io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
-    gameState: finalState,
-    event: 'CARD_PLAYED',
-    data: play,
-  });
+    // Delay state update by 3 seconds to show completed trick
+    setTimeout(() => {
+      io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
+        gameState: finalState,
+        event: 'CARD_PLAYED',
+        data: play,
+      });
+    }, 3000);
+  } else {
+    // Broadcast update immediately if trick not complete
+    io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
+      gameState: finalState,
+      event: 'CARD_PLAYED',
+      data: play,
+    });
+  }
 
   await checkAndTriggerAI(gameId, finalState, io);
 }

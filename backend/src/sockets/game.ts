@@ -622,6 +622,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
     let illegalPlayerPosition: PlayerPosition | null = null;
     let roundCompletionPayload: RoundCompletionPayload | null = null;
 
+    let trickWasCompleted = false;
     const newState = await executeGameAction(validated.gameId, async (currentState) => {
       console.log(`[PLAY_CARD] Incoming`, {
         gameId: validated.gameId,
@@ -715,18 +716,30 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
           gameOver: nextState.gameOver,
           scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
         });
+        // Emit TRICK_COMPLETE for the final trick before round ends
+        const completedTrick = nextState.tricks[nextState.tricks.length - 1];
+        io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
+          trick: completedTrick,
+          delayMs: 3000
+        });
+        console.log(`[TRICK_COMPLETE] Emitted for final trick ${completedTrick.number} (round complete)`, {
+          winner: completedTrick.winner,
+          cardsPlayed: completedTrick.cards.length,
+        });
+        trickWasCompleted = true;
       } else if (willCompleteTrick) {
         // Trick complete but round continues - emit trick complete for animation
         // The completed trick is now the last one in the tricks array
         const completedTrick = nextState.tricks[nextState.tricks.length - 1];
         io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
           trick: completedTrick,
-          delayMs: 1500
+          delayMs: 3000
         });
         console.log(`[TRICK_COMPLETE] Emitted for trick ${completedTrick.number}`, {
           winner: completedTrick.winner,
           cardsPlayed: completedTrick.cards.length,
         });
+        trickWasCompleted = true;
       }
 
       return nextState;
@@ -745,18 +758,36 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       void persistRoundCompletionStats(roundCompletionPayload);
     }
 
-    // Broadcast update
-    io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
-      gameState: newState,
-      event: 'CARD_PLAYED'
-    });
-    console.log(`[PLAY_CARD] Broadcast`, {
-      phase: newState.phase,
-      currentPlayerPosition: newState.currentPlayerPosition,
-      trickNumber: newState.currentTrick.number,
-      cardsInTrick: newState.currentTrick.cards.length,
-      tricksCompleted: newState.tricks.length,
-    });
+    // Delay state update if trick was completed to show winner
+    if (trickWasCompleted) {
+      // Delay state update by 3 seconds to show completed trick
+      setTimeout(() => {
+        io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
+          gameState: newState,
+          event: 'CARD_PLAYED'
+        });
+        console.log(`[PLAY_CARD] Delayed broadcast after trick complete`, {
+          phase: newState.phase,
+          currentPlayerPosition: newState.currentPlayerPosition,
+          trickNumber: newState.currentTrick.number,
+          cardsInTrick: newState.currentTrick.cards.length,
+          tricksCompleted: newState.tricks.length,
+        });
+      }, 3000);
+    } else {
+      // Broadcast update immediately
+      io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
+        gameState: newState,
+        event: 'CARD_PLAYED'
+      });
+      console.log(`[PLAY_CARD] Broadcast`, {
+        phase: newState.phase,
+        currentPlayerPosition: newState.currentPlayerPosition,
+        trickNumber: newState.currentTrick.number,
+        cardsInTrick: newState.currentTrick.cards.length,
+        tricksCompleted: newState.tricks.length,
+      });
+    }
 
     // Trigger AI if needed
     checkAndTriggerAI(validated.gameId, newState, io);

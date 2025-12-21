@@ -14,6 +14,7 @@ import {
 import { Card } from './Card';
 import { useGameStore } from '@/stores/gameStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { Loader2 } from 'lucide-react';
 
 export interface PlayerHandProps {
   cards: CardType[];
@@ -105,6 +106,7 @@ export function PlayerHand({
   const [cardOrder, setCardOrder] = useState<string[]>(() => initialCardIds);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [touchDraggedCardId, setTouchDraggedCardId] = useState<string | null>(null);
+  const [playingCardId, setPlayingCardId] = useState<string | null>(null);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
   const cardPositions = useRef(new Map<string, DOMRect>());
   const previousCardCount = useRef<number>(cards?.length ?? 0);
@@ -419,11 +421,34 @@ export function PlayerHand({
     });
     if (!disabled && onCardClick) {
       console.log('[PlayerHand] Calling onCardClick with:', card.id);
+      // Set loading state immediately
+      setPlayingCardId(card.id);
       onCardClick(card.id);
     } else {
       console.warn('[PlayerHand] Card click ignored:', { disabled, hasOnClick: !!onCardClick });
     }
   };
+
+  // Clear playing state when card is no longer in hand (it was played) or after timeout
+  useEffect(() => {
+    if (!playingCardId) return;
+
+    // Check if card is still in hand
+    const cardStillInHand = cards.some(card => card.id === playingCardId);
+    
+    if (!cardStillInHand) {
+      // Card was played, clear loading state
+      setPlayingCardId(null);
+      return;
+    }
+
+    // Set timeout to clear loading state after 5 seconds (in case of error or no response)
+    const timeout = setTimeout(() => {
+      setPlayingCardId(null);
+    }, 5000);
+
+    return () => clearTimeout(timeout);
+  }, [cards, playingCardId]);
 
   // Always fan cards - calculate rotation based on card count
   const cardCount = cards.length;
@@ -450,6 +475,7 @@ export function PlayerHand({
 
           const analysis = getCardAnalysis(card.id);
           const showAnalysis = !disabled && aiAnalysis && analysis && showCardOverlay;
+          const isPlaying = playingCardId === card.id;
 
           return (
             <div
@@ -472,7 +498,6 @@ export function PlayerHand({
                 // Slight rotation for fanning effect + subtle arch
                 transform: `rotate(${distanceFromCenter * 2}deg) translateY(${archOffset}px)`,
                 animationDelay: `${index * 50}ms`,
-                opacity: 1,
                 touchAction: 'none', // Prevent default touch actions during drag
                 zIndex: index, // Cards to the right appear on top
               }}
@@ -480,10 +505,15 @@ export function PlayerHand({
               <Card
                 card={card}
                 onClick={() => handleCardClick(card)}
-                disabled={disabled}
+                disabled={disabled || isPlaying}
                 selected={selectedCardId === card.id}
                 size="large"
               />
+              {isPlaying && (
+                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                  <Loader2 className="h-10 w-10 md:h-12 md:w-12 text-emerald-300 animate-spin" strokeWidth={3} />
+                </div>
+              )}
               {showAnalysis && (
                 <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/95 to-black/30 rounded-t-lg p-1.5 pointer-events-none shadow-lg">
                   <div className="flex flex-col gap-1 text-[10px] font-bold">

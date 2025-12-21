@@ -65,16 +65,6 @@ export function Header() {
             >
               Lobby
             </button>
-            <button
-              onClick={() => navigate('/arena')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                isActive('/arena')
-                  ? 'bg-white/10 text-white'
-                  : 'text-emerald-200/80 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              AI Arena
-            </button>
             {!isGuest && (
               <>
                 <button
@@ -163,15 +153,6 @@ export function Header() {
                         className="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-white/10"
                       >
                         🎮 Lobby
-                      </button>
-                      <button
-                        onClick={() => {
-                          navigate('/arena');
-                          setMenuOpen(false);
-                        }}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-white/10"
-                      >
-                        ⚔️ AI Arena
                       </button>
                       {!isGuest && (
                         <>

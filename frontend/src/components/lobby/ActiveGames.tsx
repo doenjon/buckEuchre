@@ -26,9 +26,12 @@ export function ActiveGames() {
         setInitialLoading(true);
       }
       const response = await getUserGames();
+      console.log('[ActiveGames] Fetched games:', response);
+      console.log('[ActiveGames] Games array:', response.games);
       setGames(response.games || []);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load your games';
+      console.error('[ActiveGames] Error fetching games:', err);
       setError(message);
     } finally {
       if (isInitial) {
@@ -62,19 +65,33 @@ export function ActiveGames() {
     try {
       setLeavingGameId(gameId);
       
-      // 1. Notify the socket to leave the game room
+      // 1. Call REST API to remove from database first
+      // This ensures we have the latest state before doing client-side cleanup
+      await leaveGame(gameId);
+      
+      // 2. Notify the socket to leave the game room
       socketLeaveGame(gameId);
       
-      // 2. Clear the client-side game state
+      // 3. Clear the client-side game state
       clearGame();
-      
-      // 3. Call REST API to remove from database
-      await leaveGame(gameId);
       
       // 4. Refresh the list after leaving
       await fetchGames(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to leave game';
+      console.error('[ActiveGames] Error leaving game:', err);
+      
+      // If the error is "User is not in this game", it might mean:
+      // - The game was already left/deleted
+      // - The user's session changed
+      // In this case, just refresh the list to update the UI
+      if (message.includes('not in this game') || message.includes('not found')) {
+        console.log('[ActiveGames] User not in game - refreshing list');
+        await fetchGames(false);
+        // Don't show error for this case, just refresh
+        return;
+      }
+      
       setError(message);
     } finally {
       setLeavingGameId(null);
@@ -127,87 +144,79 @@ export function ActiveGames() {
   }
 
   if (games.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-[28px] border border-dashed border-white/20 bg-white/5 py-10 text-center text-sm text-emerald-100/80">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10">
-          <Users className="h-6 w-6 text-emerald-200" />
-        </div>
-        <div>
-          <h3 className="text-base font-semibold text-white">No active games</h3>
-          <p className="mt-1 text-xs text-emerald-100/70">You're not currently in any games.</p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-sm uppercase tracking-[0.35em] text-emerald-200/80">Your active games</h3>
-        <span className="text-xs uppercase tracking-[0.3em] text-emerald-100/60">{games.length} game{games.length !== 1 ? 's' : ''}</span>
-      </div>
+    <div className="rounded-[28px] border border-white/15 bg-white/10 p-6 backdrop-blur">
+      <div className="space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-sm uppercase tracking-[0.35em] text-emerald-200/80">Your games</h2>
+          <span className="text-xs uppercase tracking-[0.3em] text-emerald-100/60">{games.length} game{games.length !== 1 ? 's' : ''}</span>
+        </div>
 
-      <div className="space-y-3">
-        {games
-          .filter(game => game.gameId)
-          .map(game => (
-            <div
-              key={game.gameId}
-              className="rounded-[20px] border border-white/15 bg-white/5 p-4 transition-transform duration-300 hover:-translate-y-0.5 hover:border-emerald-300/40 hover:shadow-[0_25px_80px_-45px_rgba(16,185,129,0.85)]"
-            >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex-1 space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="text-lg font-semibold text-white">
-                      {game.creatorName || 'Unknown'}'s table
-                    </h4>
-                    {getStatusBadge(game.status)}
+        <div className="space-y-3">
+          {games
+            .filter(game => game.gameId)
+            .map(game => (
+              <div
+                key={game.gameId}
+                className="rounded-[20px] border border-white/15 bg-white/5 p-4 transition-transform duration-300 hover:-translate-y-0.5 hover:border-emerald-300/40 hover:shadow-[0_25px_80px_-45px_rgba(16,185,129,0.85)]"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="text-lg font-semibold text-white">
+                        {game.creatorName || 'Unknown'}'s table
+                      </h4>
+                      {getStatusBadge(game.status)}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-emerald-100/80">
+                      <div className="flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5 text-emerald-200" />
+                        <span>
+                          {game.playerCount}/{game.maxPlayers} players
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-emerald-200" />
+                        <span>{formatTime(game.createdAt)}</span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-emerald-100/80">
-                    <div className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5 text-emerald-200" />
-                      <span>
-                        {game.playerCount}/{game.maxPlayers} players
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 text-emerald-200" />
-                      <span>{formatTime(game.createdAt)}</span>
-                    </div>
+                  <div className="flex items-center gap-2 self-start sm:self-center">
+                    <Button
+                      onClick={() => handleJoinGame(game.gameId)}
+                      variant={game.status === 'IN_PROGRESS' ? 'primary' : 'default'}
+                      size="sm"
+                      className="gap-1.5"
+                      aria-label={`Join game ${game.gameId}`}
+                    >
+                      <Play className="h-3.5 w-3.5" />
+                      {game.status === 'IN_PROGRESS' ? 'Resume' : 'Join'}
+                    </Button>
+                    <Button
+                      onClick={() => handleLeaveGame(game.gameId!)}
+                      disabled={leavingGameId === game.gameId}
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 border-rose-400/40 text-rose-200 hover:bg-rose-500/10 hover:text-rose-100"
+                      aria-label={`Leave game ${game.gameId}`}
+                    >
+                      {leavingGameId === game.gameId ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <X className="h-3.5 w-3.5" />
+                      )}
+                      Leave
+                    </Button>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2 self-start sm:self-center">
-                  <Button
-                    onClick={() => handleJoinGame(game.gameId)}
-                    variant={game.status === 'IN_PROGRESS' ? 'primary' : 'default'}
-                    size="sm"
-                    className="gap-1.5"
-                    aria-label={`Join game ${game.gameId}`}
-                  >
-                    <Play className="h-3.5 w-3.5" />
-                    {game.status === 'IN_PROGRESS' ? 'Resume' : 'Join'}
-                  </Button>
-                  <Button
-                    onClick={() => handleLeaveGame(game.gameId!)}
-                    disabled={leavingGameId === game.gameId}
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 border-rose-400/40 text-rose-200 hover:bg-rose-500/10 hover:text-rose-100"
-                    aria-label={`Leave game ${game.gameId}`}
-                  >
-                    {leavingGameId === game.gameId ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <X className="h-3.5 w-3.5" />
-                    )}
-                    Leave
-                  </Button>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+        </div>
       </div>
     </div>
   );

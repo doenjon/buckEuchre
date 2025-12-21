@@ -8,6 +8,9 @@ import { PrismaClient } from '@prisma/client';
  */
 export const prisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error'] : ['error'],
+  // Increase connection pool timeout and limit to handle concurrent requests
+  // Default is 10s timeout and connection_limit is set via DATABASE_URL
+  // We'll rely on DATABASE_URL connection_limit parameter for pool size
 });
 
 /**

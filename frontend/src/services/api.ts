@@ -212,6 +212,31 @@ export async function joinAsGuest(): Promise<JoinSessionResponse> {
 }
 
 /**
+ * Create a rematch game with the same 4 players
+ */
+export async function createRematchGame(oldGameId: string): Promise<CreateGameResponse> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const response = await fetch(`${API_URL}/api/games/${oldGameId}/rematch`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to create rematch: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Create a new game
  */
 export async function createGame(): Promise<CreateGameResponse> {
@@ -249,32 +274,53 @@ export async function listGames(): Promise<ListGamesResponse> {
  * Get user's active games
  */
 export async function getUserGames(): Promise<ListGamesResponse> {
+  const headers = getAuthHeaders();
+  console.log('[getUserGames] Request headers:', { 
+    hasAuth: !!headers.Authorization,
+    authLength: headers.Authorization?.length 
+  });
+  
   const response = await fetch(`${API_URL}/api/games/my`, {
     method: 'GET',
-    headers: getAuthHeaders(),
+    headers,
   });
 
+  console.log('[getUserGames] Response status:', response.status);
+  
   if (!response.ok) {
     const error = await response.json();
+    console.error('[getUserGames] Error response:', error);
     throw new Error(error.message || 'Failed to get user games');
   }
 
-  return response.json();
+  const data = await response.json();
+  console.log('[getUserGames] Response data:', data);
+  return data;
 }
 
 /**
  * Leave a game
  */
 export async function leaveGame(gameId: string): Promise<void> {
+  console.log(`[leaveGame] Attempting to leave game: ${gameId}`);
+  const headers = getAuthHeaders();
+  
   const response = await fetch(`${API_URL}/api/games/${gameId}`, {
     method: 'DELETE',
-    headers: getAuthHeaders(),
+    headers,
   });
+
+  console.log(`[leaveGame] Response status: ${response.status}`);
 
   if (!response.ok) {
     const error = await response.json();
+    console.error(`[leaveGame] Error response:`, error);
     throw new Error(error.message || 'Failed to leave game');
   }
+
+  const data = await response.json();
+  console.log(`[leaveGame] Success:`, data);
+  return data;
 }
 
 /**

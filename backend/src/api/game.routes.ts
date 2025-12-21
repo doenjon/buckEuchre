@@ -6,7 +6,8 @@ import {
   getGameState,
   getGame,
   getUserActiveGames,
-  leaveGame
+  leaveGame,
+  createRematchGame
 } from '../services/game.service';
 import { addAIToGame } from '../services/ai-player.service';
 import { getSocketServer } from '../utils/socketManager';
@@ -22,9 +23,11 @@ const router = Router();
 router.post('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
+    console.log(`[POST /api/games] Creating game for userId: ${userId}, isGuest: ${req.user!.isGuest}`);
 
     // Create game
     const game = await createGame(userId);
+    console.log(`[POST /api/games] Game created: ${game.id}, creatorId: ${game.creatorId}, players: ${game.players.map(p => p.userId).join(', ')}`);
 
     res.status(201).json({
       gameId: game.id,
@@ -77,7 +80,9 @@ router.get('/', authenticateToken, async (_req: Request, res: Response) => {
 router.get('/my', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
+    console.log(`[GET /api/games/my] Querying games for userId: ${userId}, isGuest: ${req.user!.isGuest}`);
     const games = await getUserActiveGames(userId);
+    console.log(`[GET /api/games/my] Returning ${games.length} games`);
 
     res.status(200).json({
       games
@@ -100,6 +105,8 @@ router.delete('/:gameId', authenticateToken, async (req: Request, res: Response)
   try {
     const { gameId } = req.params;
     const userId = req.user!.id;
+    
+    console.log(`[DELETE /api/games/:gameId] Leaving game ${gameId} for userId: ${userId}, isGuest: ${req.user!.isGuest}`);
 
     await leaveGame(gameId, userId);
 
@@ -108,11 +115,45 @@ router.delete('/:gameId', authenticateToken, async (req: Request, res: Response)
       message: 'Left game successfully'
     });
   } catch (error: any) {
-    console.error('Error leaving game:', error);
+    console.error('[DELETE /api/games/:gameId] Error leaving game:', error);
     const statusCode = error.message === 'Game not found' || error.message === 'User is not in this game' ? 404 : 500;
     res.status(statusCode).json({
       error: 'Server error',
       message: error.message || 'Failed to leave game'
+    });
+  }
+});
+
+/**
+ * POST /api/games/:gameId/rematch
+ * Create a rematch game with the same 4 players
+ * Requires authentication
+ * Must come before /:gameId route
+ */
+router.post('/:gameId/rematch', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { gameId } = req.params;
+    const userId = req.user!.id;
+    
+    console.log(`[POST /api/games/:gameId/rematch] Creating rematch for game ${gameId} by userId: ${userId}`);
+
+    const rematchGame = await createRematchGame(gameId, userId);
+
+    res.status(201).json({
+      gameId: rematchGame.id,
+      createdBy: userId,
+      createdAt: rematchGame.createdAt.getTime()
+    });
+  } catch (error: any) {
+    console.error('Error creating rematch:', error);
+    const statusCode = error.message === 'Original game not found' || error.message === 'You were not in the original game' 
+      ? 404 
+      : error.message === 'Original game must have exactly 4 players' || error.message.includes('already in an active game')
+      ? 400
+      : 500;
+    res.status(statusCode).json({
+      error: 'Server error',
+      message: error.message || 'Failed to create rematch'
     });
   }
 });

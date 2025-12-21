@@ -3,7 +3,7 @@
  * @description Display cards played in current trick
  */
 
-import { useRef, useLayoutEffect, useState, useEffect } from 'react';
+import { useRef, useLayoutEffect, useState } from 'react';
 import type { Trick, Player, GameState } from '@buck-euchre/shared';
 import { Card } from './Card';
 
@@ -24,33 +24,6 @@ export function CurrentTrick({
 }: CurrentTrickProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [borderRadius, setBorderRadius] = useState<string>('9999px');
-  // Track which players' fold/stay indicators should be visible (after delay)
-  const [visibleIndicators, setVisibleIndicators] = useState<Set<number>>(new Set());
-
-  // Handle delayed display of fold/stay indicators
-  useEffect(() => {
-    // Reset visible indicators when trick changes or phase changes
-    if (gameState.phase !== 'FOLDING_DECISION' && gameState.phase !== 'PLAYING') {
-      setVisibleIndicators(new Set());
-      return;
-    }
-
-    const timers: ReturnType<typeof setTimeout>[] = [];
-
-    // For each player who has made a decision, show their indicator after 300ms delay
-    gameState.players.forEach((player, index) => {
-      if (player.foldDecision !== 'UNDECIDED') {
-        const timer = setTimeout(() => {
-          setVisibleIndicators(prev => new Set([...prev, player.position]));
-        }, index * 300); // 300ms delay between each player
-        timers.push(timer);
-      }
-    });
-
-    return () => {
-      timers.forEach(timer => clearTimeout(timer));
-    };
-  }, [gameState.players, gameState.phase]);
 
   useLayoutEffect(() => {
     const updateBorderRadius = () => {
@@ -85,18 +58,6 @@ export function CurrentTrick({
     };
   }, [trick]);
 
-  if (!trick || trick.cards.length === 0) {
-    return (
-      <div
-        ref={containerRef}
-        className="flex w-full h-full items-center justify-center border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 shadow-lg md:shadow-2xl backdrop-blur"
-        style={{ borderRadius }}
-        role="region"
-        aria-label="Current trick area"
-      />
-    );
-  }
-
   // Arrange cards around the center with the local player seated at the bottom
   const cardPositions = [
     'bottom-6 left-1/2 -translate-x-1/2 sm:bottom-10', // South (you)
@@ -112,6 +73,77 @@ export function CurrentTrick({
     'top-2 left-1/2 -translate-x-1/2 sm:top-4', // Across from you - much closer to center
     'right-2 top-1/2 -translate-y-1/2 sm:right-3' // Seat to your right - much closer to center
   ];
+
+  // Check if we should show fold indicators even when trick is empty
+  const hasFoldDecisions = gameState.players.some(p => p.foldDecision !== 'UNDECIDED');
+  
+  if (!trick || trick.cards.length === 0) {
+    // If there are fold decisions, show the container with indicators
+    // Show during FOLDING_DECISION phase or PLAYING phase (for players who folded)
+    if (hasFoldDecisions) {
+      return (
+        <div
+          ref={containerRef}
+          className="relative flex w-full h-full items-center justify-center overflow-visible border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 shadow-lg md:shadow-[0_30px_80px_-40px_rgba(16,185,129,0.9)] backdrop-blur"
+          style={{ borderRadius }}
+          role="region"
+          aria-label="Current trick area"
+        >
+          {/* Glow effect in center */}
+          <div className="pointer-events-none absolute left-1/2 top-1/2 h-[40%] w-[40%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-900/60 blur-3xl" />
+
+          {/* Fold/Stay indicators for each player position */}
+          {gameState.players.map((player) => {
+            // Show immediately if player has made a decision
+            if (player.foldDecision === 'UNDECIDED') {
+              return null;
+            }
+
+            const isFolding = player.foldDecision === 'FOLD';
+
+            // During PLAYING phase, only show "Fold" text
+            // During FOLDING_DECISION phase, show both "Stay" and "Fold"
+            if (gameState.phase === 'PLAYING' && !isFolding) {
+              return null;
+            }
+
+            const relativeSeatIndex = ((player.position - myPosition) % 4 + 4) % 4;
+            const positionClass = indicatorPositions[relativeSeatIndex];
+
+            return (
+              <div
+                key={`indicator-${player.position}`}
+                className={`absolute ${positionClass} z-10 flex items-center justify-center`}
+                style={{
+                  animation: 'fade-in 0.3s ease-out',
+                }}
+              >
+                <div className={`
+                  px-3 py-1.5 rounded-lg font-semibold text-sm
+                  ${isFolding
+                    ? 'bg-slate-600/20 text-slate-400 border border-slate-500/50'
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/50'}
+                `}>
+                  {isFolding ? 'Fold' : 'Stay'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+    
+    // No fold decisions and no cards - show empty container
+    return (
+      <div
+        ref={containerRef}
+        className="flex w-full h-full items-center justify-center border border-white/10 bg-gradient-to-br from-emerald-950/90 via-emerald-900/80 to-emerald-800/60 shadow-lg md:shadow-2xl backdrop-blur"
+        style={{ borderRadius }}
+        role="region"
+        aria-label="Current trick area"
+      />
+    );
+  }
 
   return (
     <div
@@ -130,8 +162,8 @@ export function CurrentTrick({
         const hasPlayedCard = trick?.cards.some(c => c.playerPosition === player.position);
         if (hasPlayedCard) return null;
 
-        // Only show if player has made a decision AND it's in the visible set
-        if (player.foldDecision === 'UNDECIDED' || !visibleIndicators.has(player.position)) {
+        // Show immediately if player has made a decision
+        if (player.foldDecision === 'UNDECIDED') {
           return null;
         }
 
@@ -150,7 +182,10 @@ export function CurrentTrick({
         return (
           <div
             key={`indicator-${player.position}`}
-            className={`absolute ${positionClass} z-10 flex items-center justify-center animate-in bounce-in`}
+            className={`absolute ${positionClass} z-10 flex items-center justify-center`}
+            style={{
+              animation: 'fade-in 0.3s ease-out',
+            }}
           >
             <div className={`
               px-3 py-1.5 rounded-lg font-semibold text-sm

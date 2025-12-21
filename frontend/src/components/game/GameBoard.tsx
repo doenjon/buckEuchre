@@ -18,7 +18,7 @@ import { GameNotification } from './GameNotification';
 import { SettingsModal } from './SettingsModal';
 import { useGame } from '@/hooks/useGame';
 import { useGameNotifications } from '@/hooks/useGameNotifications';
-import { createGame } from '@/services/api';
+import { createRematchGame, leaveGame as leaveGameAPI } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { GAME_TIMEOUTS } from '@buck-euchre/shared';
 import type { GameState } from '@buck-euchre/shared';
@@ -86,10 +86,23 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
     setIsRematching(true);
 
     try {
-      // Leave the completed table before creating a new one
+      // Leave the completed table before creating a new one (use API to ensure DB cleanup)
+      try {
+        await leaveGameAPI(gameState.gameId);
+      } catch (leaveError) {
+        // If leave fails, continue anyway - the game is already over
+        console.warn('Error leaving old game (continuing with rematch):', leaveError);
+      }
+      
+      // Also emit socket leave to clean up socket room
       leaveGame(gameState.gameId);
 
-      const response = await createGame();
+      // Create rematch with the same 4 players
+      const response = await createRematchGame(gameState.gameId);
+      
+      // Small delay to ensure the old game is cleaned up
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       navigate(`/game/${response.gameId}`);
     } catch (error) {
       const message =
@@ -108,6 +121,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
         gameId={gameState.gameId}
         playerCount={players.length}
         playersNeeded={4}
+        players={players.map(p => ({ id: p.id, name: p.name, position: p.position }))}
       />
     );
   }
@@ -643,55 +657,51 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             )}
           </div>
 
-          {/* Game Over Screen */}
+          {/* Game Over Screen - Overlay */}
           {phase === 'GAME_OVER' && gameState.winner !== null && (
-            <div className="rounded-2xl md:rounded-[32px] border border-emerald-400/40 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 p-6 md:p-8 text-center shadow-xl md:shadow-2xl backdrop-blur">
-              <h2 className="text-xl md:text-2xl font-semibold uppercase tracking-[0.35em] md:tracking-[0.4em] text-emerald-100">
-                Game complete
-              </h2>
-              <p className="mt-2 md:mt-3 text-lg md:text-lg text-white">
-                Winner · <span className="font-semibold">{getPlayerByPosition(gameState.winner)?.name}</span>
-              </p>
-              <p className="mt-1 text-base md:text-sm text-emerald-200/70">
-                Final score {getPlayerByPosition(gameState.winner)?.score}
-              </p>
-              <p className="mt-4 md:mt-6 text-base md:text-sm text-emerald-100/80">
-                Ready for another showdown? Start a fresh table or head back to the lobby to celebrate.
-              </p>
-              <div className="mt-4 md:mt-6 flex flex-col items-center justify-center gap-2 md:gap-3 sm:flex-row">
-                <Button
-                  type="button"
-                  size="lg"
-                  className="w-full sm:w-auto min-w-[160px] md:min-w-[180px] justify-center bg-emerald-500/90 text-white transition hover:bg-emerald-500"
-                  onClick={handleRematch}
-                  disabled={isRematching || isReturning}
-                >
-                  {isRematching ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                  )}
-                  Start rematch
-                </Button>
-                <Button
-                  type="button"
-                  size="lg"
-                  variant="outline"
-                  className="w-full sm:w-auto min-w-[160px] md:min-w-[180px] justify-center border-white/40 bg-white/10 text-white transition hover:bg-white/20"
-                  onClick={handleReturnToLobby}
-                  disabled={isRematching || isReturning}
-                >
-                  {isReturning ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <LogOut className="mr-2 h-4 w-4" />
-                  )}
-                  Return to lobby
-                </Button>
+            <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center px-4 md:px-6 lg:px-8 pb-16 md:pb-20 lg:pb-24" style={{ opacity: 1, filter: 'none', isolation: 'isolate' }}>
+              <div className="pointer-events-auto w-full max-w-md rounded-2xl md:rounded-3xl border border-white/10 bg-slate-950 p-5 md:p-6 lg:p-8 text-slate-100 shadow-lg md:shadow-[0_35px_80px_-35px_rgba(16,185,129,0.9)]" style={{ opacity: 1, filter: 'none' }}>
+                <h2 className="text-xl md:text-2xl font-semibold uppercase tracking-[0.35em] md:tracking-[0.4em] text-emerald-200/80">
+                  Game complete
+                </h2>
+                <p className="mt-2 md:mt-3 text-lg md:text-lg text-white">
+                  Winner · <span className="font-semibold">{getPlayerByPosition(gameState.winner)?.name}</span>
+                </p>
+                <div className="mt-4 md:mt-6 flex flex-col items-center justify-center gap-2 md:gap-3 sm:flex-row">
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="w-full sm:w-auto min-w-[160px] md:min-w-[180px] justify-center bg-emerald-500/90 text-white transition hover:bg-emerald-500"
+                    onClick={handleRematch}
+                    disabled={isRematching || isReturning}
+                  >
+                    {isRematching ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                    )}
+                    Start rematch
+                  </Button>
+                  <Button
+                    type="button"
+                    size="lg"
+                    variant="outline"
+                    className="w-full sm:w-auto min-w-[160px] md:min-w-[180px] justify-center border-white/40 bg-white/10 text-white transition hover:bg-white/20"
+                    onClick={handleReturnToLobby}
+                    disabled={isRematching || isReturning}
+                  >
+                    {isReturning ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <LogOut className="mr-2 h-4 w-4" />
+                    )}
+                    Return to lobby
+                  </Button>
+                </div>
+                {actionError && (
+                  <p className="mt-3 md:mt-4 text-base md:text-sm text-rose-200/80">{actionError}</p>
+                )}
               </div>
-              {actionError && (
-                <p className="mt-3 md:mt-4 text-base md:text-sm text-rose-200/80">{actionError}</p>
-              )}
             </div>
           )}
         </section>

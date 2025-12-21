@@ -24,8 +24,6 @@ import {
 
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
-  const pendingStateUpdateRef = useRef<any>(null);
-  const delayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { token } = useAuthStore();
   const { setGameState, setError, setWaitingInfo, setAIAnalysis, setBidAnalysis, setFoldAnalysis } = useGameStore();
   const { setConnected, setNotification } = useUIStore();
@@ -104,15 +102,8 @@ export function useSocket() {
         const currentVersion = currentState?.version || 0;
 
         if (newVersion > currentVersion) {
-          // Check if we have a pending delayed update
-          if (pendingStateUpdateRef.current !== null) {
-            // We're waiting for a trick complete delay - queue this update
-            console.log('Queuing state update during trick complete delay');
-            pendingStateUpdateRef.current = data.gameState;
-          } else {
-            // No delay active - apply update immediately
-            setGameState(data.gameState);
-          }
+          // Apply update immediately (backend handles delays)
+          setGameState(data.gameState);
         } else if (newVersion < currentVersion) {
           console.warn('Received stale update, requesting fresh state');
           if (socketRef.current && data.gameState?.gameId) {
@@ -158,29 +149,8 @@ export function useSocket() {
       
       onTrickComplete: (data) => {
         console.log('Trick complete:', data);
-
-        // Clear any existing delay timeout
-        if (delayTimeoutRef.current) {
-          clearTimeout(delayTimeoutRef.current);
-        }
-
-        // Mark that we're in a delay period
-        pendingStateUpdateRef.current = {};
-
-        // Set up delayed state application
-        const delayMs = data.delayMs || 1500;
-        delayTimeoutRef.current = setTimeout(() => {
-          console.log('Applying delayed state update after trick complete');
-
-          // Apply any pending state update
-          if (pendingStateUpdateRef.current && Object.keys(pendingStateUpdateRef.current).length > 0) {
-            setGameState(pendingStateUpdateRef.current);
-          }
-
-          // Clear the pending update
-          pendingStateUpdateRef.current = null;
-          delayTimeoutRef.current = null;
-        }, delayMs);
+        // Backend now handles the delay, so we just log this
+        // The state update will arrive after the backend's 1-second delay
       },
       
       onRoundComplete: (data) => {
@@ -225,12 +195,6 @@ export function useSocket() {
     return () => {
       console.log('[useSocket] Cleaning up socket connection');
 
-      // Clear any pending trick complete delay
-      if (delayTimeoutRef.current) {
-        clearTimeout(delayTimeoutRef.current);
-        delayTimeoutRef.current = null;
-      }
-      pendingStateUpdateRef.current = null;
 
       cleanupSocketListeners(socket);
       socket.disconnect();
