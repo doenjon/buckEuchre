@@ -31,7 +31,13 @@ export function LobbyPage() {
     <>
       <Header />
       <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
-        <div className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-12 sm:px-6 lg:px-8">
+        <div
+          className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col px-4 sm:px-6 lg:px-8"
+          style={{
+            paddingTop: '3rem',
+            paddingBottom: `calc(3rem + env(safe-area-inset-bottom, 0px))`
+          }}
+        >
           <div className="grid flex-1 grid-cols-1 gap-8 lg:grid-cols-[0.9fr_1.1fr]">
             <aside className="flex flex-col gap-6">
               <div className="rounded-[28px] border border-white/15 bg-white/10 p-6 backdrop-blur">
