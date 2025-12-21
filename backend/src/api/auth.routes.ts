@@ -115,13 +115,18 @@ router.post('/login', async (req: Request, res: Response) => {
       username: user.username,
       displayName: user.displayName,
       email: user.email,
-      avatarUrl: user.avatarUrl,
+      avatarUrl: user.avatarUrl || null,
       token,
       expiresAt: session.expiresAt.getTime(),
       isGuest: user.isGuest,
     });
   } catch (error) {
     console.error('Error logging in:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
 
     if (error instanceof Error && error.message === 'Invalid credentials') {
       return res.status(401).json({
@@ -132,7 +137,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     res.status(500).json({
       error: 'Server error',
-      message: 'Failed to login',
+      message: error instanceof Error ? error.message : 'Failed to login',
     });
   }
 });
@@ -155,9 +160,14 @@ router.post('/guest', async (_req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error creating guest user:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
     res.status(500).json({
       error: 'Server error',
-      message: 'Failed to create guest session',
+      message: error instanceof Error ? error.message : 'Failed to create guest session',
     });
   }
 });

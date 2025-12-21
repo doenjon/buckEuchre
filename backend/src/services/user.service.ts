@@ -86,7 +86,7 @@ export async function createUser(params: CreateUserParams): Promise<AuthResponse
       animationSpeed: 'normal',
       soundEffects: true,
       showDebugConsole: false,
-    } as any, // Type assertion needed until Prisma client is regenerated
+    },
   });
 
   // Create session

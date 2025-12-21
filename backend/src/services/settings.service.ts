@@ -57,7 +57,7 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
         animationSpeed: 'normal',
         soundEffects: true,
         showDebugConsole: false,
-      } as any, // Type assertion needed until Prisma client is regenerated
+      }
     });
   }
 
@@ -126,7 +126,7 @@ export async function updateUserSettings(
           animationSpeed: cleanUpdates.animationSpeed ?? 'normal',
           soundEffects: cleanUpdates.soundEffects ?? true,
           showDebugConsole: cleanUpdates.showDebugConsole ?? false,
-        } as any, // Type assertion needed until Prisma client is regenerated
+        }
       });
       console.log('[updateUserSettings] Created new settings for user', userId);
       return newSettings;
