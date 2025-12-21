@@ -54,6 +54,14 @@ export function useSocket() {
           willReconnect: socket.active,
         });
         setConnected(false);
+
+        // Clear any blocking errors on disconnect to allow reconnection
+        // (errors will be re-shown if they persist after reconnect)
+        const currentError = useGameStore.getState().error;
+        if (currentError) {
+          console.log('[useSocket] Clearing error on disconnect to allow reconnection');
+          setError(null);
+        }
       },
 
       onConnectError: (error) => {
@@ -73,17 +81,37 @@ export function useSocket() {
       onError: (error) => {
         console.error('Socket error:', error);
 
-        // Only show blocking errors for join-related failures
-        // Gameplay errors should be notifications, not blocking
+        // Only show blocking errors for critical join-related failures
+        // Gameplay errors (including AUTHENTICATION_REQUIRED during gameplay) should be notifications, not blocking
         const blockingErrorCodes = [
           'JOIN_GAME_FAILED',
-          'AUTHENTICATION_REQUIRED',
           'GAME_NOT_FOUND',
           'SEAT_FAILED'
         ];
 
-        if (error.code && blockingErrorCodes.includes(error.code)) {
-          // This is a blocking error - show the error modal
+        // Check if we're already in a game (have game state)
+        const currentGameState = useGameStore.getState().gameState;
+        const isInGame = currentGameState && currentGameState.phase !== 'WAITING_FOR_PLAYERS';
+
+        // If we get AUTHENTICATION_REQUIRED while already in game, treat it as recoverable
+        // Only block on AUTHENTICATION_REQUIRED during initial join
+        if (error.code === 'AUTHENTICATION_REQUIRED' && isInGame) {
+          console.warn('[useSocket] Authentication error during gameplay - attempting recovery');
+          const message = 'Connection issue detected. Reconnecting...';
+          setNotification(message);
+          setTimeout(() => setNotification(null), 5000);
+
+          // Try to request fresh game state to recover
+          if (socketRef.current && currentGameState) {
+            setTimeout(() => {
+              if (socketRef.current && currentGameState) {
+                console.log('[useSocket] Requesting fresh state for recovery');
+                emitRequestState(socketRef.current, currentGameState.gameId);
+              }
+            }, 1000);
+          }
+        } else if (error.code && blockingErrorCodes.includes(error.code)) {
+          // This is a critical blocking error - show the error modal
           setError(error.message || 'An error occurred');
         } else {
           // This is a gameplay error - just show a notification
