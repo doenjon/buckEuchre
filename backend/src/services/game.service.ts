@@ -166,9 +166,14 @@ export async function createRematchGame(oldGameId: string, requestingUserId: str
   }
 
   // Create new game with the first player as creator
+  const firstPlayerId = playerIds[0];
+  if (!firstPlayerId) {
+    throw new Error('Cannot create rematch: no players found');
+  }
+
   const newGame = await prisma.game.create({
     data: {
-      creatorId: playerIds[0],
+      creatorId: firstPlayerId,
       status: GameStatus.WAITING,
       players: {
         create: playerIds.map((playerId, index) => ({
@@ -195,9 +200,9 @@ export async function createRematchGame(oldGameId: string, requestingUserId: str
   });
 
   console.log(`[createRematchGame] Rematch game ${newGame.id} created from game ${oldGameId}`);
-  console.log(`[createRematchGame] Players in rematch:`, newGame.players.map(p => ({ userId: p.userId, position: p.position })));
+  console.log(`[createRematchGame] Players in rematch:`, newGame.players.map((p: any) => ({ userId: p.userId, position: p.position })));
 
-  return newGame;
+  return newGame as GameWithPlayers;
 }
 
 /**

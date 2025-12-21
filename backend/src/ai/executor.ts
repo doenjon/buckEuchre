@@ -16,7 +16,6 @@ import {
   finishRound,
 } from '../game/state';
 import { displayStateManager } from '../game/display';
-import { getActiveGameState } from '../services/state.service';
 import { Server } from 'socket.io';
 import { canFold, canPlaceBid, canPlayCard } from '../game/validation';
 import { checkAndTriggerAI } from './trigger';

@@ -35,7 +35,6 @@ import {
 } from '../game/state';
 import { displayStateManager } from '../game/display';
 import { statsQueue } from '../services/stats-queue.service';
-import { getActiveGameState } from '../services/state.service';
 import { canPlayCard, canPlaceBid, canFold } from '../game/validation';
 import { getEffectiveSuit } from '../game/deck';
 import { GameState, PlayerPosition, Player, Card } from '../../../shared/src/types/game';
