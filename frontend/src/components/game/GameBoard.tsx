@@ -254,7 +254,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       <div className="flex flex-col flex-1 min-h-0 md:h-auto md:grid md:gap-4 lg:gap-6 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
         
         {/* Fixed Settings Button (Top Left) - Always visible */}
-        <div className="fixed top-2 left-2 z-40">
+        <div className="fixed left-2 z-40" style={{ top: `calc(0.5rem + env(safe-area-inset-top, 0px))` }}>
           <Button
             type="button"
             variant="outline"
@@ -269,7 +269,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
         </div>
 
         {/* Mobile: Fixed Score Button (Top Right) - Above bot names */}
-        <div className="md:hidden fixed top-2 right-2 z-40">
+        <div className="md:hidden fixed right-2 z-40" style={{ top: `calc(0.5rem + env(safe-area-inset-top, 0px))` }}>
           <Button
             type="button"
             variant="outline"
@@ -289,8 +289,13 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
 
           {showScoreboard && (
             <div 
-              className="pointer-events-auto fixed inset-x-0 top-16 bottom-0 z-30 flex items-start justify-center px-4 pt-2" 
-              style={{ opacity: 1, filter: 'none', isolation: 'isolate' }}
+              className="pointer-events-auto fixed inset-x-0 bottom-0 z-30 flex items-start justify-center px-4 pt-2" 
+              style={{ 
+                opacity: 1, 
+                filter: 'none', 
+                isolation: 'isolate',
+                top: `calc(4rem + env(safe-area-inset-top, 0px))`
+              }}
               onClick={() => setShowScoreboard(false)}
             >
               <div 

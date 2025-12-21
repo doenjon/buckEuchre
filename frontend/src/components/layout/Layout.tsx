@@ -22,7 +22,10 @@ export function Layout({ children, showHeader = true }: LayoutProps) {
       {showHeader && <Header />}
 
       {notification && (
-        <div className="fixed top-4 right-4 z-50 rounded-3xl border border-white/15 bg-white/10 px-5 py-4 text-sm font-medium shadow-[0_25px_65px_-35px_rgba(16,185,129,0.65)] backdrop-blur">
+        <div 
+          className="fixed right-4 z-50 rounded-3xl border border-white/15 bg-white/10 px-5 py-4 text-sm font-medium shadow-[0_25px_65px_-35px_rgba(16,185,129,0.65)] backdrop-blur"
+          style={{ top: `calc(1rem + env(safe-area-inset-top, 0px))` }}
+        >
           <p>{notification}</p>
         </div>
       )}

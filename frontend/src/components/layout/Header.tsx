@@ -36,7 +36,7 @@ export function Header() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <header className="relative z-30 border-b border-white/10 bg-white/5 backdrop-blur">
+    <header className="relative z-30 border-b border-white/10 bg-white/5 backdrop-blur" style={{ paddingTop: `calc(1rem + env(safe-area-inset-top, 0px))` }}>
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <button 
