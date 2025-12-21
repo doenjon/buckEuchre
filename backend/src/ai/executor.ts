@@ -6,7 +6,7 @@
  * action system, simulating human-like thinking delays.
  */
 
-import { GameState, PlayerPosition, BidAmount, Suit, Card } from '@buck-euchre/shared';
+import { GameState, PlayerPosition, BidAmount, Suit, Card, Player } from '@buck-euchre/shared';
 import { executeGameAction, getActiveGameState } from '../services/state.service';
 import {
   applyBid,
@@ -15,6 +15,7 @@ import {
   applyCardPlay,
   finishRound,
 } from '../game/state';
+import { displayStateManager } from '../game/display';
 import { Server } from 'socket.io';
 import { canFold, canPlaceBid, canPlayCard } from '../game/validation';
 import { checkAndTriggerAI } from './trigger';
@@ -400,6 +401,8 @@ async function executeAICardPlay(
     card: Card;
   } | null = null;
 
+  let tricksBeforePlay = 0;
+  let willCompleteTrick = false;
   const postPlayState = await executeGameAction(gameId, async (currentState) => {
     const player = currentState.players.find((p: any) => p.id === aiPlayerId);
     if (!player) {
@@ -432,6 +435,12 @@ async function executeAICardPlay(
       return currentState;
     }
 
+    // Check if this card will complete the trick BEFORE applying it
+    const cardsInTrickBefore = currentState.currentTrick.cards.length + 1;
+    const activePlayersBefore = currentState.players.filter((p: Player) => p.folded !== true);
+    willCompleteTrick = cardsInTrickBefore === activePlayersBefore.length;
+    tricksBeforePlay = currentState.tricks.length;
+
     // Get AI provider and make decision
     const aiProvider = await getAIProvider(aiPlayerId);
     const card = await aiProvider.decideCardToPlay(currentState, player.position);
@@ -457,23 +466,28 @@ async function executeAICardPlay(
       card,
     };
 
-    return applyCardPlay(currentState, player.position, card.id);
+    const nextState = applyCardPlay(currentState, player.position, card.id);
+    return nextState;
   });
 
   if (!play) {
     return;
   }
 
+  // Check if trick was completed by comparing tricks count before and after
   let finalState = postPlayState;
-
-  const activePlayers = finalState.players.filter(p => p.folded !== true);
-  const cardsInTrick = finalState.currentTrick.cards.length;
-  const trickWasCompleted = cardsInTrick === activePlayers.length;
+  const trickWasCompleted = willCompleteTrick || finalState.tricks.length > tricksBeforePlay;
 
   if (trickWasCompleted) {
+    // The completed trick is now the last one in the tricks array
+    const completedTrick = finalState.tricks[finalState.tricks.length - 1];
     io.to(`game:${gameId}`).emit('TRICK_COMPLETE', {
-      trick: finalState.currentTrick,
+      trick: completedTrick,
       delayMs: 3000,
+    });
+    console.log(`[AI] [TRICK_COMPLETE] Emitted for trick ${completedTrick.number}`, {
+      winner: completedTrick.winner,
+      cardsPlayed: completedTrick.cards.length,
     });
 
     if (finalState.tricks.length === 5) {
@@ -492,14 +506,40 @@ async function executeAICardPlay(
       }
     }
 
-    // Delay state update by 3 seconds to show completed trick
-    setTimeout(() => {
+    // Create display state showing completed trick
+    const displayState = displayStateManager.createTrickCompleteDisplay(finalState, 3000);
+    
+    // Emit display state immediately so all cards are visible
+    io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
+      gameState: displayState,
+      event: 'CARD_PLAYED',
+      data: play,
+    });
+    console.log(`[AI] [PLAY_CARD] Immediate broadcast showing all cards in completed trick`, {
+      trickNumber: displayState.currentTrick.number,
+      cardsInTrick: displayState.currentTrick.cards.length,
+    });
+    
+    // Schedule transition to actual state after 3 seconds
+    displayStateManager.scheduleTransition(gameId, async () => {
       io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
         gameState: finalState,
         event: 'CARD_PLAYED',
         data: play,
       });
-    }, 3000);
+      console.log(`[AI] [PLAY_CARD] Delayed transition after showing completed trick`, {
+        phase: finalState.phase,
+        currentPlayerPosition: finalState.currentPlayerPosition,
+        trickNumber: finalState.currentTrick.number,
+        cardsInTrick: finalState.currentTrick.cards.length,
+        tricksCompleted: finalState.tricks.length,
+      });
+      
+      // Trigger AI after delay completes (only if round is still in progress)
+      if (finalState.phase === 'PLAYING') {
+        await checkAndTriggerAI(gameId, finalState, io);
+      }
+    });
   } else {
     // Broadcast update immediately if trick not complete
     io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
@@ -507,7 +547,15 @@ async function executeAICardPlay(
       event: 'CARD_PLAYED',
       data: play,
     });
+    console.log(`[AI] [PLAY_CARD] Broadcast`, {
+      phase: finalState.phase,
+      currentPlayerPosition: finalState.currentPlayerPosition,
+      trickNumber: finalState.currentTrick.number,
+      cardsInTrick: finalState.currentTrick.cards.length,
+      tricksCompleted: finalState.tricks.length,
+    });
+    
+    // Trigger AI immediately if trick not complete
+    await checkAndTriggerAI(gameId, finalState, io);
   }
-
-  await checkAndTriggerAI(gameId, finalState, io);
 }

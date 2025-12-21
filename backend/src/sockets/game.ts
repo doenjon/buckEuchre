@@ -33,6 +33,8 @@ import {
   finishRound,
   startNextRound
 } from '../game/state';
+import { displayStateManager } from '../game/display';
+import { statsQueue } from '../services/stats-queue.service';
 import { canPlayCard, canPlaceBid, canFold } from '../game/validation';
 import { getEffectiveSuit } from '../game/deck';
 import { GameState, PlayerPosition, Player, Card } from '../../../shared/src/types/game';
@@ -164,28 +166,24 @@ async function persistRoundCompletionStats(payload: RoundCompletionPayload): Pro
     gameUpdates: payload.gameUpdates?.length || 0,
   });
 
-  const tasks: Promise<unknown>[] = payload.roundUpdates.map((update) => updateRoundStats(update));
-
-  if (payload.gameUpdates) {
-    tasks.push(...payload.gameUpdates.map((update) => updateGameStats(update)));
-  }
-
-  if (tasks.length === 0) {
+  if (payload.roundUpdates.length === 0 && (!payload.gameUpdates || payload.gameUpdates.length === 0)) {
     console.log('[STATS PERSIST] No tasks to execute');
     return;
   }
 
-  console.log('[STATS PERSIST] Executing', tasks.length, 'tasks');
-  const results = await Promise.allSettled(tasks);
-  let successCount = 0;
-  for (const result of results) {
-    if (result.status === 'rejected') {
-      console.error('[STATS PERSIST] Failed to persist:', result.reason);
-    } else {
-      successCount++;
-    }
-  }
-  console.log('[STATS PERSIST] Complete:', successCount, 'succeeded,', (tasks.length - successCount), 'failed');
+  // Extract game ID from first player if available
+  const gameId = payload.roundUpdates[0]?.userId || 'unknown';
+  
+  // Enqueue stats persistence (non-blocking, with retries)
+  await statsQueue.enqueue({
+    gameId,
+    roundNumber: Date.now(), // Use timestamp as unique identifier
+    timestamp: Date.now(),
+    updates: payload.roundUpdates,
+    gameUpdates: payload.gameUpdates,
+  });
+
+  console.log('[STATS PERSIST] Enqueued stats for background processing');
 }
 
 /**
@@ -623,7 +621,11 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
     let roundCompletionPayload: RoundCompletionPayload | null = null;
 
     let trickWasCompleted = false;
+    let tricksBeforePlay = 0;
+    
     const newState = await executeGameAction(validated.gameId, async (currentState) => {
+      // Store tricks count before play to detect completion
+      tricksBeforePlay = currentState.tricks.length;
       console.log(`[PLAY_CARD] Incoming`, {
         gameId: validated.gameId,
         userId,
@@ -689,7 +691,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       const activePlayersBefore = currentState.players.filter((p: Player) => p.folded !== true);
       const willCompleteTrick = cardsInTrickBefore === activePlayersBefore.length;
 
-      // Apply card play
+      // Apply card play (this will transition the trick if complete)
       let nextState = applyCardPlay(currentState, player.position, validated.cardId);
 
       console.log(`[PLAY_CARD] Applied`, {
@@ -745,6 +747,10 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       return nextState;
     });
 
+    // Check if trick was completed by comparing tricks count before and after
+    const finalState = newState;
+    trickWasCompleted = finalState.tricks.length > tricksBeforePlay;
+
     if (illegalPlayAttempt) {
       console.warn('[PLAY_CARD] Ignored illegal card play attempt', {
         playerId: illegalPlayerId ?? userId,
@@ -758,56 +764,74 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       void persistRoundCompletionStats(roundCompletionPayload);
     }
 
-    // Delay state update if trick was completed to show winner
+    // Show all cards immediately if trick was completed, then delay transition
     if (trickWasCompleted) {
-      // Delay state update by 3 seconds to show completed trick
-      setTimeout(() => {
+      // Create display state showing completed trick
+      const displayState = displayStateManager.createTrickCompleteDisplay(finalState, 3000);
+      
+      // Emit display state immediately so all cards are visible
+      io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
+        gameState: displayState,
+        event: 'CARD_PLAYED'
+      });
+      console.log(`[PLAY_CARD] Immediate broadcast showing all cards in completed trick`, {
+        trickNumber: displayState.currentTrick.number,
+        cardsInTrick: displayState.currentTrick.cards.length,
+      });
+      
+      // Schedule transition to actual state after 3 seconds
+      displayStateManager.scheduleTransition(validated.gameId, async () => {
         io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
-          gameState: newState,
+          gameState: finalState,
           event: 'CARD_PLAYED'
         });
-        console.log(`[PLAY_CARD] Delayed broadcast after trick complete`, {
-          phase: newState.phase,
-          currentPlayerPosition: newState.currentPlayerPosition,
-          trickNumber: newState.currentTrick.number,
-          cardsInTrick: newState.currentTrick.cards.length,
-          tricksCompleted: newState.tricks.length,
+        console.log(`[PLAY_CARD] Delayed transition after showing completed trick`, {
+          phase: finalState.phase,
+          currentPlayerPosition: finalState.currentPlayerPosition,
+          trickNumber: finalState.currentTrick.number,
+          cardsInTrick: finalState.currentTrick.cards.length,
+          tricksCompleted: finalState.tricks.length,
         });
-      }, 3000);
+        
+        // Trigger AI after delay completes (only if round is still in progress)
+        if (finalState.phase === 'PLAYING') {
+          await checkAndTriggerAI(validated.gameId, finalState, io);
+        }
+      });
     } else {
-      // Broadcast update immediately
+      // Broadcast update immediately if trick not complete
       io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
-        gameState: newState,
+        gameState: finalState,
         event: 'CARD_PLAYED'
       });
       console.log(`[PLAY_CARD] Broadcast`, {
-        phase: newState.phase,
-        currentPlayerPosition: newState.currentPlayerPosition,
-        trickNumber: newState.currentTrick.number,
-        cardsInTrick: newState.currentTrick.cards.length,
-        tricksCompleted: newState.tricks.length,
+        phase: finalState.phase,
+        currentPlayerPosition: finalState.currentPlayerPosition,
+        trickNumber: finalState.currentTrick.number,
+        cardsInTrick: finalState.currentTrick.cards.length,
+        tricksCompleted: finalState.tricks.length,
       });
+      
+      // Trigger AI immediately if trick not complete
+      await checkAndTriggerAI(validated.gameId, finalState, io);
     }
 
-    // Trigger AI if needed
-    checkAndTriggerAI(validated.gameId, newState, io);
-
     // Handle round completion
-    if (newState.phase === 'ROUND_OVER' || newState.phase === 'GAME_OVER') {
+    if (finalState.phase === 'ROUND_OVER' || finalState.phase === 'GAME_OVER') {
       io.to(`game:${validated.gameId}`).emit('ROUND_COMPLETE', {
-        roundNumber: newState.round,
-        scores: newState.players.map(p => ({ name: p.name, score: p.score }))
+        roundNumber: finalState.round,
+        scores: finalState.players.map(p => ({ name: p.name, score: p.score }))
       });
 
-      if (!newState.gameOver) {
+      if (!finalState.gameOver) {
         console.log(`[ROUND] Scheduling auto-start timer for game ${validated.gameId}`, {
-          round: newState.round,
-          version: newState.version
+          round: finalState.round,
+          version: finalState.version
         });
         scheduleAutoStartNextRound(
           validated.gameId,
           io,
-          { round: newState.round, version: newState.version },
+          { round: finalState.round, version: finalState.version },
           checkAndTriggerAI
         );
       }
