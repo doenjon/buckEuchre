@@ -10,7 +10,6 @@ import { useGame } from '@/hooks/useGame';
 import { useAuthStore } from '@/stores/authStore';
 import { GameBoard } from '@/components/game/GameBoard';
 import { WaitingForPlayers } from '@/components/game/WaitingForPlayers';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
@@ -33,7 +32,6 @@ export function GamePage() {
     });
   }, [authStore.userId, authStore.username, authStore.displayName, authStore.isAuthenticated, authStore.isGuest]);
   const [authReady, setAuthReady] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
 
   // Check if user is authenticated - if not, redirect to home with gameId
   useEffect(() => {
@@ -52,7 +50,7 @@ export function GamePage() {
 
   // Check authentication - if not authenticated, redirect to home with gameId in URL
   useEffect(() => {
-    if (!authReady || authError) {
+    if (!authReady) {
       return;
     }
 
@@ -60,7 +58,7 @@ export function GamePage() {
       // Store gameId in URL so we can redirect back after login
       navigate(`/?gameId=${gameId}`, { replace: true });
     }
-  }, [authReady, authError, checkAuth, navigate, gameId]);
+  }, [authReady, checkAuth, navigate, gameId]);
 
   // Join game when component mounts
   useEffect(() => {
@@ -115,7 +113,7 @@ export function GamePage() {
     }
   }, [gameState, userId, myPosition, setMyPosition]);
 
-  const activeError = useMemo(() => authError || error, [authError, error]);
+  const activeError = useMemo(() => error, [error]);
 
   // Show minimal loading state while checking auth
   if (!authReady) {

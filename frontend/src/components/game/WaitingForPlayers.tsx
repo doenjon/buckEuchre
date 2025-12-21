@@ -3,7 +3,7 @@
  * @description Component shown while waiting for players to join
  */
 
-import { Users, Copy, CheckCircle2, Bot, Loader2, Hourglass } from 'lucide-react';
+import { Users, Copy, CheckCircle2, Bot, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';

@@ -25,7 +25,7 @@ function getAuthToken(): string | null {
  */
 function getAuthHeaders(): HeadersInit {
   const token = getAuthToken();
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
   

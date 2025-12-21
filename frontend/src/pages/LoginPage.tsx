@@ -84,25 +84,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleGuestLogin = async () => {
-    setError('');
-    setLoading(true);
-
-    try {
-      await loginAsGuest();
-      // If there's a gameId, redirect to game instead of lobby
-      if (gameId) {
-        navigate(`/game/${gameId}`);
-      } else {
-        navigate('/lobby');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Guest login failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
       <div className="pointer-events-none absolute inset-0">
