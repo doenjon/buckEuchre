@@ -100,6 +100,9 @@ export class DisplayStateManager {
       return;
     }
 
+    // Store the original game state as fallback (before clearing)
+    const fallbackState = display.gameState;
+
     // Clear any existing timer
     this.clearTransition(gameId);
 
@@ -107,19 +110,34 @@ export class DisplayStateManager {
     const timer = setTimeout(async () => {
       console.log(`[DisplayStateManager] Executing transition for game ${gameId}`);
       
+      // Get stored state BEFORE clearing (for fallback)
+      const storedState = this.displayStates.get(gameId)?.gameState || fallbackState;
+      
       // Clear display state
       this.displayStates.delete(gameId);
       this.transitionTimers.delete(gameId);
 
-      // Execute callback
+      // Execute callback with access to stored state via closure
       try {
         await callback();
       } catch (error) {
         console.error(`[DisplayStateManager] Error in transition callback for game ${gameId}:`, error);
+        // Don't re-throw - we've already cleared the display state
       }
     }, display.pendingTransition.after);
 
     this.transitionTimers.set(gameId, timer);
+  }
+
+  /**
+   * Get the stored game state for a game (fallback if memory state is unavailable)
+   * 
+   * @param gameId - Game ID
+   * @returns Stored game state, or null if not found
+   */
+  public getStoredState(gameId: string): GameState | null {
+    const display = this.displayStates.get(gameId);
+    return display?.gameState || null;
   }
 
   /**

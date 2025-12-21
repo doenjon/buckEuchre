@@ -510,23 +510,50 @@ async function executeAICardPlay(
     // Create display state showing completed trick
     const displayState = displayStateManager.createTrickCompleteDisplay(finalState, 3000);
     
-    // Emit display state immediately so all cards are visible
-    io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
-      gameState: displayState,
-      event: 'CARD_PLAYED',
-      data: play,
-    });
+    // Validate display state before emitting
+    if (!displayState || !displayState.gameId) {
+      console.error(`[AI] Invalid display state for game ${gameId}:`, displayState);
+      // Fallback: emit the actual state
+      io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
+        gameState: finalState,
+        event: 'CARD_PLAYED',
+        data: play,
+      });
+    } else {
+      // Emit display state immediately so all cards are visible
+      io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
+        gameState: displayState,
+        event: 'CARD_PLAYED',
+        data: play,
+      });
+    }
     console.log(`[AI] [PLAY_CARD] Immediate broadcast showing all cards in completed trick`, {
       trickNumber: displayState.currentTrick.number,
       cardsInTrick: displayState.currentTrick.cards.length,
     });
     
+    // Store finalState for fallback in case memory state is unavailable
+    const stateForTransition = finalState;
+    
     // Schedule transition to actual state after 3 seconds
     displayStateManager.scheduleTransition(gameId, async () => {
       // Get current state from memory (may have changed during delay)
-      const currentState = getActiveGameState(gameId);
+      let currentState = getActiveGameState(gameId);
+      
+      // Fallback to the state we stored when creating the display
       if (!currentState) {
-        console.error(`[AI] Game ${gameId} not found in memory during transition`);
+        console.warn(`[AI] Game ${gameId} not found in memory, using fallback state`);
+        currentState = stateForTransition;
+      }
+      
+      if (!currentState) {
+        console.error(`[AI] No state available for game ${gameId} during transition - this should not happen`);
+        return; // Can't emit without state
+      }
+      
+      // Validate state before emitting
+      if (!currentState || !currentState.gameId) {
+        console.error(`[AI] Invalid state for game ${gameId} during transition:`, currentState);
         return;
       }
       

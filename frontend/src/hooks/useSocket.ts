@@ -96,9 +96,21 @@ export function useSocket() {
       onGameStateUpdate: (data) => {
         console.log('Game state update:', data);
 
+        // Validate that we have a valid game state
+        if (!data.gameState || !data.gameState.gameId) {
+          console.error('Received invalid game state update:', data);
+          // Don't clear state - just log the error and request fresh state if we have a gameId
+          const currentState = useGameStore.getState().gameState;
+          if (socketRef.current && currentState?.gameId) {
+            console.log('Requesting fresh state due to invalid update');
+            emitRequestState(socketRef.current, currentState.gameId);
+          }
+          return;
+        }
+
         // Version check: ensure we don't apply stale updates
         const currentState = useGameStore.getState().gameState;
-        const newVersion = data.gameState?.version || 0;
+        const newVersion = data.gameState.version || 0;
         const currentVersion = currentState?.version || 0;
 
         if (newVersion > currentVersion) {
@@ -106,8 +118,17 @@ export function useSocket() {
           setGameState(data.gameState);
         } else if (newVersion < currentVersion) {
           console.warn('Received stale update, requesting fresh state');
-          if (socketRef.current && data.gameState?.gameId) {
+          if (socketRef.current && data.gameState.gameId) {
             emitRequestState(socketRef.current, data.gameState.gameId);
+          }
+        } else {
+          // Same version - might be a duplicate or display state transition
+          // Only update if we don't have a current state (shouldn't happen, but be safe)
+          if (!currentState) {
+            console.log('Applying state update with same version (no current state)');
+            setGameState(data.gameState);
+          } else {
+            console.log('Ignoring state update with same version (duplicate or display transition)');
           }
         }
       },

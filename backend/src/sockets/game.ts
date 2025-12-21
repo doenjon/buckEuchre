@@ -770,22 +770,48 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       // Create display state showing completed trick
       const displayState = displayStateManager.createTrickCompleteDisplay(finalState, 3000);
       
-      // Emit display state immediately so all cards are visible
-      io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
-        gameState: displayState,
-        event: 'CARD_PLAYED'
-      });
+      // Validate display state before emitting
+      if (!displayState || !displayState.gameId) {
+        console.error(`[PLAY_CARD] Invalid display state for game ${validated.gameId}:`, displayState);
+        // Fallback: emit the actual state
+        io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
+          gameState: finalState,
+          event: 'CARD_PLAYED'
+        });
+      } else {
+        // Emit display state immediately so all cards are visible
+        io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
+          gameState: displayState,
+          event: 'CARD_PLAYED'
+        });
+      }
       console.log(`[PLAY_CARD] Immediate broadcast showing all cards in completed trick`, {
         trickNumber: displayState.currentTrick.number,
         cardsInTrick: displayState.currentTrick.cards.length,
       });
       
+      // Store finalState for fallback in case memory state is unavailable
+      const stateForTransition = finalState;
+      
       // Schedule transition to actual state after 3 seconds
       displayStateManager.scheduleTransition(validated.gameId, async () => {
         // Get current state from memory (may have changed during delay)
-        const currentState = getActiveGameState(validated.gameId);
+        let currentState = getActiveGameState(validated.gameId);
+        
+        // Fallback to the state we stored when creating the display
         if (!currentState) {
-          console.error(`[PLAY_CARD] Game ${validated.gameId} not found in memory during transition`);
+          console.warn(`[PLAY_CARD] Game ${validated.gameId} not found in memory, using fallback state`);
+          currentState = stateForTransition;
+        }
+        
+        if (!currentState) {
+          console.error(`[PLAY_CARD] No state available for game ${validated.gameId} during transition - this should not happen`);
+          return; // Can't emit without state
+        }
+        
+        // Validate state before emitting
+        if (!currentState || !currentState.gameId) {
+          console.error(`[PLAY_CARD] Invalid state for game ${validated.gameId} during transition:`, currentState);
           return;
         }
         
