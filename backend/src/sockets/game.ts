@@ -579,11 +579,10 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
       const nextState = applyFoldDecision(currentState, player.position, validated.folded);
 
       if (nextState.phase === 'ROUND_OVER' || nextState.phase === 'GAME_OVER') {
-        // Stats code disabled to debug crashes
-        // const statsPayload = buildRoundCompletionPayload(currentState, nextState);
-        // if (statsPayload) {
-        //   roundCompletionPayload = statsPayload;
-        // }
+        const statsPayload = buildRoundCompletionPayload(currentState, nextState);
+        if (statsPayload) {
+          roundCompletionPayload = statsPayload;
+        }
       }
 
       return nextState;
@@ -598,10 +597,9 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
     // Trigger AI if needed
     checkAndTriggerAI(validated.gameId, newState, io);
 
-    // Stats persistence disabled to debug crashes
-    // if (roundCompletionPayload) {
-    //   void persistRoundCompletionStats(roundCompletionPayload);
-    // }
+    if (roundCompletionPayload) {
+      void persistRoundCompletionStats(roundCompletionPayload);
+    }
 
     if (newState.phase === 'ROUND_OVER' || newState.phase === 'GAME_OVER') {
       io.to(`game:${validated.gameId}`).emit('ROUND_COMPLETE', {
@@ -764,12 +762,11 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
           gameOver: nextState.gameOver,
           scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
         });
-        
-        // Stats code disabled to debug crashes
-        // const statsPayload = buildRoundCompletionPayload(stateBeforeScoring, nextState);
-        // if (statsPayload) {
-        //   roundCompletionPayload = statsPayload;
-        // }
+
+        const statsPayload = buildRoundCompletionPayload(stateBeforeScoring, nextState);
+        if (statsPayload) {
+          roundCompletionPayload = statsPayload;
+        }
         console.log(`[ROUND] Completed. Moving to ${nextState.phase}`, {
           gameOver: nextState.gameOver,
           scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
@@ -832,10 +829,9 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       return;
     }
 
-    // Stats persistence disabled to debug crashes
-    // if (roundCompletionPayload) {
-    //   void persistRoundCompletionStats(roundCompletionPayload);
-    // }
+    if (roundCompletionPayload) {
+      void persistRoundCompletionStats(roundCompletionPayload);
+    }
 
     console.log(`${logPrefix} Step 5: Handling trick completion and broadcasts...`);
     // Show all cards immediately if trick was completed, then delay transition
