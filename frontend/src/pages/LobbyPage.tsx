@@ -34,13 +34,15 @@ export function LobbyPage() {
         <div
           className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col px-4 sm:px-6 lg:px-8"
           style={{
-            paddingTop: '3rem',
+            paddingTop: '1rem',
             paddingBottom: `calc(3rem + env(safe-area-inset-bottom, 0px))`
           }}
         >
-          <div className="flex flex-1 flex-col gap-4">
+          <div className="mb-4">
             <CreateGame />
+          </div>
 
+          <div className="flex flex-1 flex-col gap-4">
             <ActiveGames />
 
             <section className="rounded-[28px] border border-white/15 bg-white/10 p-6 backdrop-blur">
