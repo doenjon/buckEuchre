@@ -8,6 +8,7 @@ import leaderboardRoutes from './leaderboard.routes';
 import testRoutes from './test.routes';
 import arenaRoutes from './arena.routes';
 import settingsRoutes from './settings.routes';
+import bugsRoutes from './bugs.routes';
 
 const router = Router();
 
@@ -22,6 +23,7 @@ router.use('/api', invitationsRoutes); // Handles /api/invitations and /api/game
 router.use('/api/leaderboard', leaderboardRoutes);
 router.use('/api/arena', arenaRoutes);
 router.use('/api/settings', settingsRoutes);
+router.use('/api/bugs', bugsRoutes);
 
 const enableTestRoutes = process.env.ENABLE_TEST_CONTROLS !== 'false';
 

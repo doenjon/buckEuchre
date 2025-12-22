@@ -6,12 +6,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { BugReportModal } from '@/components/BugReportModal';
 
 export function Header() {
   const { displayName, username, isGuest, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showBugReport, setShowBugReport] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
@@ -192,10 +194,21 @@ export function Header() {
                           >
                             ⚙️ Settings
                           </button>
-                          <div className="border-t border-white/10 my-1"></div>
                         </>
                       )}
                     </div>
+
+                    {/* Bug Report Button */}
+                    <button
+                      onClick={() => {
+                        setShowBugReport(true);
+                        setMenuOpen(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-orange-300 hover:bg-white/10"
+                    >
+                      🐛 Report a Bug
+                    </button>
+                    <div className="border-t border-white/10 my-1"></div>
 
                     {/* User Info */}
                     {!isGuest && username && (
@@ -242,6 +255,12 @@ export function Header() {
           </div>
         )}
       </div>
+
+      {/* Bug Report Modal */}
+      <BugReportModal
+        isOpen={showBugReport}
+        onClose={() => setShowBugReport(false)}
+      />
     </header>
   );
 }
