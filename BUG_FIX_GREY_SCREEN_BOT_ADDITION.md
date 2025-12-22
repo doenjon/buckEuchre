@@ -137,3 +137,4 @@ To verify the fix:
 - **Reference**: `/Users/Jon/dev/BuckEuchre/backend/src/services/ai-player.service.ts` (addAIToGame service)
 - **Reference**: `/Users/Jon/dev/BuckEuchre/frontend/src/pages/GamePage.tsx` (where grey screen was visible)
 
+

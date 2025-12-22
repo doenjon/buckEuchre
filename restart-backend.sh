@@ -19,3 +19,4 @@ cd /Users/Jon/dev/BuckEuchre/backend
 export PATH="/Users/Jon/miniforge3/bin:$PATH"
 npm run dev
 
+
