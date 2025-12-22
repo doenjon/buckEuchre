@@ -43,8 +43,18 @@ export function calculateRoundScores(
     if (player.folded === true) {
       // Folded players get 0 score change
       scores[i] = 0;
-    } else if (!isClubsTurnUp && i === winningBidderPosition) {
-      // Bidder scoring (only when there was actual bidding)
+    } else if (isClubsTurnUp === true) {
+      // DIRTY CLUBS: ALL players are scored as non-bidders
+      // Win 1+ tricks to avoid getting bucked
+      if (player.tricksTaken >= 1) {
+        // Took tricks: score DECREASES (good)
+        scores[i] = -player.tricksTaken;
+      } else {
+        // Took no tricks: score INCREASES by 5 (bad - got set)
+        scores[i] = 5;
+      }
+    } else if (i === winningBidderPosition) {
+      // NORMAL BIDDING: This player is the bidder
       const bidderTricks = player.tricksTaken;
       if (bidderTricks >= bid) {
         // Made contract: subtract tricks actually taken
@@ -54,7 +64,7 @@ export function calculateRoundScores(
         scores[i] = 5;
       }
     } else {
-      // Non-bidder who stayed in (or clubs turn-up where everyone is scored as non-bidder)
+      // NORMAL BIDDING: Non-bidder who stayed in
       if (player.tricksTaken >= 1) {
         // Took tricks: score DECREASES (good)
         scores[i] = -player.tricksTaken;
