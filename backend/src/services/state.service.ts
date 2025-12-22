@@ -222,10 +222,12 @@ export function setActiveGameState(gameId: string, state: GameState): void {
 
 /**
  * Save game state to database (async backup)
- * 
+ *
  * This is called automatically by executeGameAction.
  * Database is a backup; in-memory state is the source of truth.
- * 
+ *
+ * Also updates the Game record status to COMPLETED when game ends.
+ *
  * @param gameId - The game ID
  * @param state - The game state to persist
  */
@@ -241,6 +243,15 @@ export async function saveGameState(gameId: string, state: GameState): Promise<v
         state: state as any,
       },
     });
+
+    // Update Game status to COMPLETED when game reaches GAME_OVER phase
+    if (state.phase === 'GAME_OVER' && state.gameOver) {
+      await prisma.game.update({
+        where: { id: gameId },
+        data: { status: 'COMPLETED' },
+      });
+      console.log(`[saveGameState] Updated game ${gameId} status to COMPLETED`);
+    }
   } catch (error) {
     console.error(`Error saving game state for ${gameId}:`, error);
     throw error;
