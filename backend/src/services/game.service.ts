@@ -293,9 +293,9 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
         gameId,
         () => {
           console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - INSIDE INITIALIZER creating initial state`);
-          let initialState = initializeGame(playerIds);
-          // CRITICAL: Set the gameId on the state object
-          initialState.gameId = gameId;
+      let initialState = initializeGame(playerIds);
+      // CRITICAL: Set the gameId on the state object
+      initialState.gameId = gameId;
           console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - initial state created phase=${initialState.phase}`);
 
           // Update player names from database
@@ -333,10 +333,10 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
         let retries = 3;
         while (retries > 0) {
           try {
-            await prisma.game.update({
-              where: { id: gameId },
-              data: { status: GameStatus.IN_PROGRESS },
-            });
+      await prisma.game.update({
+        where: { id: gameId },
+        data: { status: GameStatus.IN_PROGRESS },
+      });
             break; // Success
           } catch (error: any) {
             retries--;
@@ -544,26 +544,26 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
       gameId,
       () => {
         console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - INSIDE INITIALIZER (new player path)`);
-        let initialState = initializeGame(playerIds);
-
-        // CRITICAL: Set the gameId on the state object
-        initialState.gameId = gameId;
+    let initialState = initializeGame(playerIds);
+    
+    // CRITICAL: Set the gameId on the state object
+    initialState.gameId = gameId;
         console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - initial state created phase=${initialState.phase}`);
-
-        // Update player names from database
-        initialState.players = initialState.players.map((p, index) => {
-          const gamePlayer = updatedGame.players[index];
-          const displayName = gamePlayer.user?.displayName || gamePlayer.guestName || `Player ${index + 1}`;
-
+    
+    // Update player names from database
+    initialState.players = initialState.players.map((p, index) => {
+      const gamePlayer = updatedGame.players[index];
+      const displayName = gamePlayer.user?.displayName || gamePlayer.guestName || `Player ${index + 1}`;
+      
           console.log(
             `[JOIN_GAME] gameId=${gameId} Setting player ${index} name: ${displayName} (user: ${gamePlayer.user?.id}, username: ${gamePlayer.user?.username})`
           );
-
-          return {
-            ...p,
-            name: displayName,
-          };
-        }) as [Player, Player, Player, Player];
+      
+      return {
+        ...p,
+        name: displayName,
+      };
+    }) as [Player, Player, Player, Player];
 
         // Keep initial phase as DEALING (no cards yet); the queued action will deal.
         console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - initializer returning phase=${initialState.phase}`);
@@ -588,10 +588,10 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
       let retries = 3;
       while (retries > 0) {
         try {
-          await prisma.game.update({
-            where: { id: gameId },
-            data: { status: GameStatus.IN_PROGRESS },
-          });
+    await prisma.game.update({
+      where: { id: gameId },
+      data: { status: GameStatus.IN_PROGRESS },
+    });
           break; // Success
         } catch (error: any) {
           retries--;

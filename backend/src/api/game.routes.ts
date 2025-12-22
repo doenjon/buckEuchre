@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../auth/middleware';
-import { 
-  createGame, 
+import {
+  createGame,
   listAvailableGames,
   getGameState,
   getGame,
@@ -225,9 +225,9 @@ router.post('/:gameId/ai', authenticateToken, async (req: Request, res: Response
     // Add AI to game
     console.log(`[REST:ADD_AI] ENTRY gameId=${gameId} difficulty=${difficulty || 'medium'} name=${name || 'undefined'}`);
     let gameState = await addAIToGame(gameId, {
-      difficulty: difficulty || 'medium',
-      name: name || undefined,
-    });
+        difficulty: difficulty || 'medium',
+        name: name || undefined,
+      });
     console.log(`[REST:ADD_AI] gameId=${gameId} - addAIToGame returned gameState=${gameState ? `phase=${gameState.phase} version=${gameState.version}` : 'null'}`);
 
     const updatedGame = await getGame(gameId);
@@ -241,9 +241,9 @@ router.post('/:gameId/ai', authenticateToken, async (req: Request, res: Response
     // joinGame now deals cards directly, so gameState is already in BIDDING phase
     if (gameState) {
       console.log(`[REST:ADD_AI] gameId=${gameId} - game started, getting socket server`);
-      const io = getSocketServer();
-      
-      if (io) {
+    const io = getSocketServer();
+    
+    if (io) {
         console.log(`[REST:ADD_AI] gameId=${gameId} - broadcasting GAME_STATE_UPDATE phase=${gameState.phase} version=${gameState.version}`);
         // Broadcast the game state to all players in the room
         io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
@@ -262,15 +262,15 @@ router.post('/:gameId/ai', authenticateToken, async (req: Request, res: Response
       }
     }
 
-    if (!gameState) {
+        if (!gameState) {
       const io = getSocketServer();
       if (io) {
-        io.to(`game:${gameId}`).emit('GAME_WAITING', {
-          gameId,
-          playerCount,
-          playersNeeded,
-          message: waitingMessage,
-        });
+          io.to(`game:${gameId}`).emit('GAME_WAITING', {
+            gameId,
+            playerCount,
+            playersNeeded,
+            message: waitingMessage,
+          });
       }
     }
 

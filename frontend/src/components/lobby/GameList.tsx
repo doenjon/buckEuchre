@@ -3,45 +3,22 @@
  * @description List of available games in the lobby
  */
 
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listGames } from '@/services/api';
 import type { GameSummary } from '@buck-euchre/shared';
 import { useUIStore } from '@/stores/uiStore';
 import { Users, Clock, Play, Loader2 } from 'lucide-react';
 import { AddAIButton } from './AddAIButton';
 import { Button } from '@/components/ui/button';
 
-export function GameList() {
+interface GameListProps {
+  games: GameSummary[];
+  initialLoading: boolean;
+  onRefresh: () => void;
+}
+
+export function GameList({ games, initialLoading, onRefresh }: GameListProps) {
   const navigate = useNavigate();
   const { setError } = useUIStore();
-  const [games, setGames] = useState<GameSummary[]>([]);
-  const [initialLoading, setInitialLoading] = useState(true);
-
-  const fetchGames = async (isInitial = false) => {
-    try {
-      if (isInitial) {
-        setInitialLoading(true);
-      }
-      const response = await listGames();
-      setGames(response.games);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load games';
-      setError(message);
-    } finally {
-      if (isInitial) {
-        setInitialLoading(false);
-      }
-    }
-  };
-
-  useEffect(() => {
-    fetchGames(true);
-    
-    // Auto-refresh game list every 5 seconds
-    const interval = setInterval(() => fetchGames(false), 5000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleJoinGame = (gameId: string | undefined) => {
     if (!gameId) {
@@ -97,17 +74,7 @@ export function GameList() {
   }
 
   if (games.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 rounded-[28px] border border-dashed border-white/20 bg-white/5 py-16 text-center text-sm text-emerald-100/80">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/15 bg-white/10">
-          <Users className="h-8 w-8 text-emerald-200" />
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-white">No games available</h3>
-          <p className="mt-1 text-sm text-emerald-100/70">Create a new table to get the first deal.</p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -153,7 +120,7 @@ export function GameList() {
 
                 <div className="flex items-center gap-3 self-start lg:self-center">
                   {game.status === 'WAITING' && game.playerCount < game.maxPlayers && (
-                    <AddAIButton gameId={game.gameId!} onAIAdded={fetchGames} />
+                    <AddAIButton gameId={game.gameId!} onAIAdded={onRefresh} />
                   )}
 
                   <Button

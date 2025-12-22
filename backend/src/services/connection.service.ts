@@ -189,10 +189,10 @@ function handleGracePeriodExpired(
         return applyFoldDecision(currentState, playerPosition as PlayerPosition, true);
       }).then((newState) => {
         updatedState = newState;
-        autoAction = true;
+      autoAction = true;
 
-        // Emit game state update to all players
-        io.to(`game:${gameId}`).emit('GAME_STATE', updatedState);
+      // Emit game state update to all players
+      io.to(`game:${gameId}`).emit('GAME_STATE', updatedState);
       }).catch((error) => {
         console.error(`Error auto-folding disconnected player ${playerId}:`, error);
       });
