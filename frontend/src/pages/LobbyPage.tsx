@@ -38,14 +38,10 @@ export function LobbyPage() {
             paddingBottom: `calc(3rem + env(safe-area-inset-bottom, 0px))`
           }}
         >
-          <div className="mb-6">
+          <div className="flex flex-1 flex-col gap-4">
             <CreateGame />
-          </div>
 
-          <div className="grid flex-1 grid-cols-1 gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-            <aside className="flex flex-col gap-6">
-              <ActiveGames />
-            </aside>
+            <ActiveGames />
 
             <section className="rounded-[28px] border border-white/15 bg-white/10 p-6 backdrop-blur">
               {error && (
