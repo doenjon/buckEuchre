@@ -22,6 +22,7 @@ import { createRematchGame, leaveGame as leaveGameAPI } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { GAME_TIMEOUTS } from '@buck-euchre/shared';
 import type { GameState } from '@buck-euchre/shared';
+import { canPlayCard } from '@/utils/gameValidation';
 
 interface GameBoardProps {
   gameState: GameState;
@@ -619,7 +620,17 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
               <>
                 <PlayerHand
                   cards={myPlayer.hand}
-                  onCardClick={isMyTurn && phase === 'PLAYING' ? playCard : undefined}
+                  onCardClick={isMyTurn && phase === 'PLAYING' ? (cardId: string) => {
+                    // Validate card before playing - only show loading if valid
+                    const validation = canPlayCard(gameState, myPosition as 0 | 1 | 2 | 3, cardId);
+                    if (validation.valid) {
+                      playCard(cardId);
+                      return true; // Signal that loading should be shown
+                    } else {
+                      console.warn('[GameBoard] Invalid card selection:', validation.reason);
+                      return false; // Don't show loading for invalid selections
+                    }
+                  } : undefined}
                   disabled={!isMyTurn || phase !== 'PLAYING'}
                   trumpSuit={gameState.trumpSuit}
                 />

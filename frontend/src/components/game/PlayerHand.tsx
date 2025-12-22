@@ -18,7 +18,7 @@ import { Loader2 } from 'lucide-react';
 
 export interface PlayerHandProps {
   cards: CardType[];
-  onCardClick?: (cardId: string) => void;
+  onCardClick?: (cardId: string) => boolean | void; // Returns true if loading should be shown
   disabled?: boolean;
   selectedCardId?: string | null;
   trumpSuit?: Suit | null;
@@ -421,9 +421,13 @@ export function PlayerHand({
     });
     if (!disabled && onCardClick) {
       console.log('[PlayerHand] Calling onCardClick with:', card.id);
-      // Set loading state immediately
-      setPlayingCardId(card.id);
-      onCardClick(card.id);
+      // onCardClick should validate and only set loading if valid
+      // Don't set loading here - let the validation happen first
+      const result = onCardClick(card.id);
+      // Only set loading if the function returns true (validation passed)
+      if (result === true) {
+        setPlayingCardId(card.id);
+      }
     } else {
       console.warn('[PlayerHand] Card click ignored:', { disabled, hasOnClick: !!onCardClick });
     }
