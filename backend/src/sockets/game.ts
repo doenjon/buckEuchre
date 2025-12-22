@@ -190,14 +190,30 @@ async function persistRoundCompletionStats(payload: RoundCompletionPayload): Pro
  * Register all game event handlers
  */
 export function registerGameHandlers(io: Server, socket: Socket): void {
+  // DEBUG: Log when handlers are registered
+  process.stdout.write(`[WEBSOCKET_REGISTRATION] Registering handlers for socket ${socket.id}\n`);
+  
   socket.on('JOIN_GAME', (payload) => handleJoinGame(io, socket, payload));
   socket.on('LEAVE_GAME', (payload) => handleLeaveGame(io, socket, payload));
   socket.on('PLACE_BID', (payload) => handlePlaceBid(io, socket, payload));
   socket.on('DECLARE_TRUMP', (payload) => handleDeclareTrump(io, socket, payload));
   socket.on('FOLD_DECISION', (payload) => handleFoldDecision(io, socket, payload));
   socket.on('PLAY_CARD', (payload) => handlePlayCard(io, socket, payload));
-  socket.on('START_NEXT_ROUND', (payload) => handleStartNextRound(io, socket, payload));
+  socket.on('START_NEXT_ROUND', (payload) => {
+    // DEBUG BREAKPOINT HERE - This should pause in debugger
+    const debugBreakpoint = true; // Set breakpoint on this line
+    process.stdout.write(`[WEBSOCKET] START_NEXT_ROUND event received! Payload: ${JSON.stringify(payload)}\n`);
+    process.stdout.write(`[WEBSOCKET] Socket ID: ${socket.id}\n`);
+    process.stdout.write(`[WEBSOCKET] About to call handleStartNextRound...\n`);
+    handleStartNextRound(io, socket, payload).catch((error) => {
+      process.stdout.write(`[WEBSOCKET] ERROR in handleStartNextRound: ${error.message}\n`);
+      process.stdout.write(`[WEBSOCKET] Stack: ${error.stack}\n`);
+    });
+  });
   socket.on('REQUEST_STATE', (payload) => handleRequestState(socket, payload));
+  
+  // DEBUG: Log all registered events
+  process.stdout.write(`[WEBSOCKET_REGISTRATION] Handlers registered for socket ${socket.id}\n`);
 }
 
 /**
@@ -563,10 +579,11 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
       const nextState = applyFoldDecision(currentState, player.position, validated.folded);
 
       if (nextState.phase === 'ROUND_OVER' || nextState.phase === 'GAME_OVER') {
-        const statsPayload = buildRoundCompletionPayload(currentState, nextState);
-        if (statsPayload) {
-          roundCompletionPayload = statsPayload;
-        }
+        // Stats code disabled to debug crashes
+        // const statsPayload = buildRoundCompletionPayload(currentState, nextState);
+        // if (statsPayload) {
+        //   roundCompletionPayload = statsPayload;
+        // }
       }
 
       return nextState;
@@ -581,9 +598,10 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
     // Trigger AI if needed
     checkAndTriggerAI(validated.gameId, newState, io);
 
-    if (roundCompletionPayload) {
-      void persistRoundCompletionStats(roundCompletionPayload);
-    }
+    // Stats persistence disabled to debug crashes
+    // if (roundCompletionPayload) {
+    //   void persistRoundCompletionStats(roundCompletionPayload);
+    // }
 
     if (newState.phase === 'ROUND_OVER' || newState.phase === 'GAME_OVER') {
       io.to(`game:${validated.gameId}`).emit('ROUND_COMPLETE', {
@@ -613,12 +631,19 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
  * Handle PLAY_CARD event
  */
 async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Promise<void> {
+  const startTime = Date.now();
+  const logPrefix = `[PLAY_CARD:${startTime}]`;
+  console.log(`${logPrefix} ========== PLAY_CARD HANDLER START ==========`);
+  
   try {
+    console.log(`${logPrefix} Step 1: Validating payload...`);
     // Validate payload
     const validated = PlayCardSchema.parse(payload);
     const userId = socket.data.userId;
+    console.log(`${logPrefix} Step 1: Payload validated`, { gameId: validated.gameId, cardId: validated.cardId, userId });
 
     if (!userId) {
+      console.log(`${logPrefix} Step 1: ERROR - No userId`);
       socket.emit('ERROR', {
         code: 'AUTHENTICATION_REQUIRED',
         message: 'Authentication required to play card'
@@ -626,6 +651,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       return;
     }
 
+    console.log(`${logPrefix} Step 2: Setting up variables...`);
     // Execute action through queue
     let illegalPlayAttempt = false;
     let illegalReason: string | null = null;
@@ -636,6 +662,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
     let trickWasCompleted = false;
     let tricksBeforePlay = 0;
     
+    console.log(`${logPrefix} Step 3: Calling executeGameAction...`);
     const newState = await executeGameAction(validated.gameId, async (currentState) => {
       // Store tricks count before play to detect completion
       tricksBeforePlay = currentState.tricks.length;
@@ -720,19 +747,43 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
 
       // Check if applyCardPlay transitioned to ROUND_OVER (5 tricks complete)
       if (nextState.phase === 'ROUND_OVER') {
+        console.log(`[PLAY_CARD] ROUND_OVER detected! About to call finishRound...`);
         // Finish round and calculate scores
         const stateBeforeScoring = nextState;
+        console.log(`[PLAY_CARD] State before finishRound:`, {
+          round: stateBeforeScoring.round,
+          phase: stateBeforeScoring.phase,
+          scores: stateBeforeScoring.players.map(p => ({ name: p.name, score: p.score }))
+        });
+        
+        console.log(`[PLAY_CARD] Calling finishRound...`);
         nextState = finishRound(nextState);
-        const statsPayload = buildRoundCompletionPayload(stateBeforeScoring, nextState);
-        if (statsPayload) {
-          roundCompletionPayload = statsPayload;
-        }
+        console.log(`[PLAY_CARD] finishRound returned:`, {
+          phase: nextState.phase,
+          round: nextState.round,
+          gameOver: nextState.gameOver,
+          scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
+        });
+        
+        // Stats code disabled to debug crashes
+        // const statsPayload = buildRoundCompletionPayload(stateBeforeScoring, nextState);
+        // if (statsPayload) {
+        //   roundCompletionPayload = statsPayload;
+        // }
         console.log(`[ROUND] Completed. Moving to ${nextState.phase}`, {
           gameOver: nextState.gameOver,
           scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
         });
+        
+        console.log(`[PLAY_CARD] About to emit TRICK_COMPLETE...`);
         // Emit TRICK_COMPLETE for the final trick before round ends
         const completedTrick = nextState.tricks[nextState.tricks.length - 1];
+        console.log(`[PLAY_CARD] Completed trick:`, {
+          number: completedTrick.number,
+          winner: completedTrick.winner,
+          cardsCount: completedTrick.cards.length
+        });
+        
         io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
           trick: completedTrick,
           delayMs: 3000
@@ -742,6 +793,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
           cardsPlayed: completedTrick.cards.length,
         });
         trickWasCompleted = true;
+        console.log(`[PLAY_CARD] Round completion handling done`);
       } else if (willCompleteTrick) {
         // Trick complete but round continues - emit trick complete for animation
         // The completed trick is now the last one in the tricks array
@@ -763,9 +815,16 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
     // Check if trick was completed by comparing tricks count before and after
     const finalState = newState;
     trickWasCompleted = finalState.tricks.length > tricksBeforePlay;
+    console.log(`${logPrefix} Step 4: executeGameAction returned`, {
+      phase: finalState.phase,
+      round: finalState.round,
+      tricksBefore: tricksBeforePlay,
+      tricksAfter: finalState.tricks.length,
+      trickWasCompleted
+    });
 
     if (illegalPlayAttempt) {
-      console.warn('[PLAY_CARD] Ignored illegal card play attempt', {
+      console.warn(`${logPrefix} Ignored illegal card play attempt`, {
         playerId: illegalPlayerId ?? userId,
         playerPosition: illegalPlayerPosition,
         reason: illegalReason,
@@ -773,10 +832,12 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       return;
     }
 
-    if (roundCompletionPayload) {
-      void persistRoundCompletionStats(roundCompletionPayload);
-    }
+    // Stats persistence disabled to debug crashes
+    // if (roundCompletionPayload) {
+    //   void persistRoundCompletionStats(roundCompletionPayload);
+    // }
 
+    console.log(`${logPrefix} Step 5: Handling trick completion and broadcasts...`);
     // Show all cards immediately if trick was completed, then delay transition
     if (trickWasCompleted) {
       // Create display state showing completed trick
@@ -862,14 +923,18 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       await checkAndTriggerAI(validated.gameId, finalState, io);
     }
 
+    console.log(`${logPrefix} Step 6: Checking for round completion...`);
     // Handle round completion
     if (finalState.phase === 'ROUND_OVER' || finalState.phase === 'GAME_OVER') {
+      console.log(`${logPrefix} Step 6a: Round is over, emitting ROUND_COMPLETE...`);
       io.to(`game:${validated.gameId}`).emit('ROUND_COMPLETE', {
         roundNumber: finalState.round,
         scores: finalState.players.map(p => ({ name: p.name, score: p.score }))
       });
+      console.log(`${logPrefix} Step 6a: ROUND_COMPLETE emitted`);
 
       if (!finalState.gameOver) {
+        console.log(`${logPrefix} Step 6b: Game not over, scheduling auto-start...`);
         console.log(`[ROUND] Scheduling auto-start timer for game ${validated.gameId}`, {
           round: finalState.round,
           version: finalState.version
@@ -880,9 +945,25 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
           { round: finalState.round, version: finalState.version },
           checkAndTriggerAI
         );
+        console.log(`${logPrefix} Step 6b: Auto-start scheduled`);
+      } else {
+        console.log(`${logPrefix} Step 6b: Game is over, not scheduling auto-start`);
       }
+    } else {
+      console.log(`${logPrefix} Step 6: Round not complete, phase=${finalState.phase}`);
     }
+    
+    const duration = Date.now() - startTime;
+    console.log(`${logPrefix} ========== PLAY_CARD HANDLER SUCCESS (${duration}ms) ==========`);
   } catch (error: any) {
+    const duration = Date.now() - startTime;
+    console.error(`${logPrefix} ========== PLAY_CARD HANDLER ERROR (${duration}ms) ==========`);
+    console.error(`${logPrefix} Error details:`, {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code
+    });
     console.error('Error in PLAY_CARD:', error);
     socket.emit('ERROR', {
       code: 'PLAY_CARD_FAILED',
@@ -895,41 +976,106 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
  * Handle START_NEXT_ROUND event
  */
 async function handleStartNextRound(io: Server, socket: Socket, payload: unknown): Promise<void> {
+  const startTime = Date.now();
+  const logPrefix = `[START_NEXT_ROUND:${startTime}]`;
+  // Log IMMEDIATELY - even before anything else - use process.stdout.write for synchronous logging
+  process.stdout.write(`${logPrefix} ========== START_NEXT_ROUND HANDLER CALLED ==========\n`);
+  process.stdout.write(`${logPrefix} Payload received: ${JSON.stringify(payload)}\n`);
+  process.stdout.write(`${logPrefix} Socket ID: ${socket.id}\n`);
+  process.stdout.write(`${logPrefix} ========== START_NEXT_ROUND HANDLER START ==========\n`);
+  process.stdout.write(`${logPrefix} Step 1: Validating payload...\n`);
+  
   try {
+    console.log(`${logPrefix} Step 1: Validating payload...`);
     // Validate payload
     const validated = StartNextRoundSchema.parse(payload);
+    console.log(`${logPrefix} Step 1: Payload validated`, { gameId: validated.gameId });
 
+    console.log(`${logPrefix} Step 2: Cancelling auto-start timer...`);
     // Prevent any pending auto-start from firing
     cancelAutoStartNextRound(validated.gameId);
+    console.log(`${logPrefix} Step 2: Auto-start timer cancelled`);
 
-    // Execute action through queue - transition ROUND_OVER -> DEALING
-    let dealingState = await executeGameAction(validated.gameId, (currentState) => {
+    console.log(`${logPrefix} Step 3: Getting current state before executeGameAction...`);
+    const stateBefore = getActiveGameState(validated.gameId);
+    console.log(`${logPrefix} Step 3: Current state`, {
+      exists: !!stateBefore,
+      phase: stateBefore?.phase,
+      round: stateBefore?.round,
+      version: stateBefore?.version,
+      gameOver: stateBefore?.gameOver
+    });
+
+    console.log(`${logPrefix} Step 4: Calling executeGameAction to start next round and deal cards...`);
+    // Execute action through queue - transition ROUND_OVER -> DEALING -> BIDDING in one atomic operation
+    const roundState = await executeGameAction(validated.gameId, (currentState) => {
+      console.log(`${logPrefix} Step 4a: Inside executeGameAction callback - validating phase...`);
       // Validate phase
       if (currentState.phase !== 'ROUND_OVER') {
+        console.error(`${logPrefix} Step 4a: ERROR - Phase is not ROUND_OVER`, { phase: currentState.phase });
         throw new Error('Round is not over');
       }
 
       // If game is over, don't start new round
       if (currentState.gameOver) {
+        console.error(`${logPrefix} Step 4a: ERROR - Game is over`);
         throw new Error('Game is over');
       }
 
+      console.log(`${logPrefix} Step 4b: Calling startNextRound...`);
       // Start next round (transitions to DEALING)
-      return startNextRound(currentState);
+      const dealingState = startNextRound(currentState);
+      console.log(`${logPrefix} Step 4b: startNextRound returned`, {
+        phase: dealingState.phase,
+        round: dealingState.round,
+        version: dealingState.version
+      });
+
+      console.log(`${logPrefix} Step 4c: Calling dealNewRound...`);
+      // Deal cards and transition to BIDDING (all in one atomic action)
+      const result = dealNewRound(dealingState);
+      console.log(`${logPrefix} Step 4c: dealNewRound returned`, {
+        phase: result.phase,
+        round: result.round,
+        version: result.version,
+        playersHaveCards: result.players.every(p => p.hand.length > 0)
+      });
+      return result;
+    });
+    console.log(`${logPrefix} Step 4: executeGameAction completed`, {
+      phase: roundState.phase,
+      round: roundState.round,
+      version: roundState.version
     });
 
-    // Deal cards and transition to BIDDING
-    const roundState = await executeGameAction(validated.gameId, dealNewRound);
-
+    console.log(`${logPrefix} Step 5: Broadcasting GAME_STATE_UPDATE...`);
     // Broadcast update
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
       gameState: roundState,
       event: 'ROUND_STARTED'
     });
+    console.log(`${logPrefix} Step 6: Broadcast sent`);
 
+    console.log(`${logPrefix} Step 6: Triggering AI...`);
     // Trigger AI if needed
     checkAndTriggerAI(validated.gameId, roundState, io);
+    console.log(`${logPrefix} Step 7: AI triggered`);
+    
+    const duration = Date.now() - startTime;
+    process.stdout.write(`${logPrefix} ========== START_NEXT_ROUND HANDLER SUCCESS (${duration}ms) ==========\n`);
+    console.log(`${logPrefix} ========== START_NEXT_ROUND HANDLER SUCCESS (${duration}ms) ==========`);
   } catch (error: any) {
+    const duration = Date.now() - startTime;
+    process.stdout.write(`${logPrefix} ========== START_NEXT_ROUND HANDLER ERROR (${duration}ms) ==========\n`);
+    process.stdout.write(`${logPrefix} Error message: ${error?.message || String(error)}\n`);
+    process.stdout.write(`${logPrefix} Error stack: ${error?.stack || 'No stack trace'}\n`);
+    console.error(`${logPrefix} ========== START_NEXT_ROUND HANDLER ERROR (${duration}ms) ==========`);
+    console.error(`${logPrefix} Error details:`, {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code
+    });
     console.error('Error in START_NEXT_ROUND:', error);
     socket.emit('ERROR', {
       code: 'START_NEXT_ROUND_FAILED',
