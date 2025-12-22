@@ -399,6 +399,27 @@ export function PlayerHand({
     setTouchDraggedCardId(null);
   };
 
+  // Clear playing state when card is no longer in hand (it was played) or after timeout
+  useEffect(() => {
+    if (!playingCardId) return;
+
+    // Check if card is still in hand
+    const cardStillInHand = cards.some(card => card.id === playingCardId);
+    
+    if (!cardStillInHand) {
+      // Card was played, clear loading state
+      setPlayingCardId(null);
+      return;
+    }
+
+    // Set timeout to clear loading state after 5 seconds (in case of error or no response)
+    const timeout = setTimeout(() => {
+      setPlayingCardId(null);
+    }, 5000);
+
+    return () => clearTimeout(timeout);
+  }, [cards, playingCardId]);
+
   if (!cards || cards.length === 0) {
     return (
       <div
@@ -432,27 +453,6 @@ export function PlayerHand({
       console.warn('[PlayerHand] Card click ignored:', { disabled, hasOnClick: !!onCardClick });
     }
   };
-
-  // Clear playing state when card is no longer in hand (it was played) or after timeout
-  useEffect(() => {
-    if (!playingCardId) return;
-
-    // Check if card is still in hand
-    const cardStillInHand = cards.some(card => card.id === playingCardId);
-    
-    if (!cardStillInHand) {
-      // Card was played, clear loading state
-      setPlayingCardId(null);
-      return;
-    }
-
-    // Set timeout to clear loading state after 5 seconds (in case of error or no response)
-    const timeout = setTimeout(() => {
-      setPlayingCardId(null);
-    }, 5000);
-
-    return () => clearTimeout(timeout);
-  }, [cards, playingCardId]);
 
   // Always fan cards - calculate rotation based on card count
   const cardCount = cards.length;

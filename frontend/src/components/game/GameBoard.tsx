@@ -193,21 +193,6 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       isMyTurn = false;
   }
 
-  // Debug logging for card selection
-  useEffect(() => {
-    if (phase === 'PLAYING' && myPlayer) {
-      console.log('[GameBoard] PLAYING phase debug:', {
-        myPosition,
-        currentPlayerPosition,
-        isMyTurn,
-        phase,
-        myPlayerName: myPlayer?.name,
-        currentPlayerName: getPlayerByPosition(currentPlayerPosition)?.name,
-        cardsInHand: myPlayer?.hand?.length || 0
-      });
-    }
-  }, [phase, myPosition, currentPlayerPosition, isMyTurn, myPlayer]);
-
   const completedTrick =
     gameState.tricks.length > 0
       ? gameState.tricks[gameState.tricks.length - 1]
