@@ -108,31 +108,27 @@ export function useSocket() {
           return;
         }
 
-        // Version and timestamp check: ensure we don't apply stale updates
+        // Version check: ensure we don't apply stale updates
         const currentState = useGameStore.getState().gameState;
         const newVersion = data.gameState.version || 0;
         const currentVersion = currentState?.version || 0;
-        const newUpdatedAt = data.gameState.updatedAt || 0;
-        const currentUpdatedAt = currentState?.updatedAt || 0;
 
-        // Accept update if EITHER version is higher OR timestamp is newer (for display state transitions)
-        if (newVersion > currentVersion ||
-            (newVersion === currentVersion && newUpdatedAt > currentUpdatedAt)) {
+        if (newVersion > currentVersion) {
           // Apply update immediately (backend handles delays)
           setGameState(data.gameState);
         } else if (newVersion < currentVersion) {
-          console.warn('Received stale update (old version), requesting fresh state');
+          console.warn('Received stale update, requesting fresh state');
           if (socketRef.current && data.gameState.gameId) {
             emitRequestState(socketRef.current, data.gameState.gameId);
           }
         } else {
-          // Same version AND same/older timestamp - likely duplicate
+          // Same version - might be a duplicate or display state transition
           // Only update if we don't have a current state (shouldn't happen, but be safe)
           if (!currentState) {
             console.log('Applying state update with same version (no current state)');
             setGameState(data.gameState);
           } else {
-            console.log('Ignoring duplicate state update (same version and timestamp)');
+            console.log('Ignoring state update with same version (duplicate or display transition)');
           }
         }
       },

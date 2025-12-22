@@ -56,11 +56,9 @@ export class DisplayStateManager {
     // Create display state with override
     // Keep currentPlayerPosition so frontend knows whose turn it is
     // The frontend can handle disabling play during the delay
-    // Update updatedAt so frontend can distinguish this from the actual state (which comes later)
     const displayState: GameState = {
       ...gameState,
       currentTrick: completedTrick, // Override: show completed trick
-      updatedAt: Date.now(), // Update timestamp so frontend accepts the actual state after delay
       // Keep currentPlayerPosition as-is (winner should be able to play after delay)
     };
     
