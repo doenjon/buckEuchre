@@ -123,6 +123,10 @@ services:
     
     networks:
       - buckeuchre-web
+    
+    # Expose to host for local development
+    ports:
+      - "5173:80"
 
   # ----------------------------------------------------------------------------
   # Nginx Reverse Proxy
