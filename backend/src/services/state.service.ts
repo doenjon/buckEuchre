@@ -19,6 +19,17 @@ const activeGames = new Map<string, GameState>();
 const gameActionQueues = new Map<string, Promise<any>>();
 
 /**
+ * Initialization queue per game to prevent double-initialization races.
+ *
+ * This solves the "chicken-and-egg" problem: executeGameAction() requires an
+ * in-memory state to exist, but game start/recovery sometimes needs to create it.
+ *
+ * All callers that might initialize state concurrently should go through
+ * ensureGameStateInitialized() / executeGameActionWithInit().
+ */
+const gameInitLocks = new Map<string, Promise<void>>();
+
+/**
  * Execute an action on a game state, ensuring sequential processing
  * 
  * This prevents race conditions when multiple players act simultaneously.
@@ -75,6 +86,68 @@ export async function executeGameAction<T = GameState>(
 
   // Wait for this action to complete and return the new state
   return newQueue;
+}
+
+/**
+ * Ensure a game has an in-memory state, creating it at most once.
+ *
+ * IMPORTANT:
+ * - This does NOT run through the action queue because the queue needs state first.
+ * - It *does* serialize initialization using a per-game init lock.
+ * - After this resolves, it is safe to call executeGameAction().
+ */
+export async function ensureGameStateInitialized(
+  gameId: string,
+  initializer: () => Promise<GameState> | GameState
+): Promise<GameState> {
+  const existing = activeGames.get(gameId);
+  if (existing) return existing;
+
+  const currentLock = gameInitLocks.get(gameId);
+  if (currentLock) {
+    await currentLock;
+    const after = activeGames.get(gameId);
+    if (!after) throw new Error(`Game ${gameId} failed to initialize state`);
+    return after;
+  }
+
+  const lock = (async () => {
+    try {
+      // Double-check after acquiring the lock.
+      if (activeGames.get(gameId)) return;
+      const created = await initializer();
+      activeGames.set(gameId, created);
+      // Persist as backup (fire-and-forget)
+      setImmediate(() => {
+        saveGameState(gameId, created).catch((err) =>
+          console.error(`Failed to persist initialized game state for ${gameId}:`, err)
+        );
+      });
+    } finally {
+      gameInitLocks.delete(gameId);
+    }
+  })();
+
+  gameInitLocks.set(gameId, lock);
+  await lock;
+
+  const initialized = activeGames.get(gameId);
+  if (!initialized) throw new Error(`Game ${gameId} failed to initialize state`);
+  return initialized;
+}
+
+/**
+ * Execute an action, initializing state first if needed (exactly once).
+ *
+ * Use this for lifecycle transitions like game start where state might not exist yet.
+ */
+export async function executeGameActionWithInit(
+  gameId: string,
+  initializer: () => Promise<GameState> | GameState,
+  action: (currentState: GameState) => Promise<GameState> | GameState
+): Promise<GameState> {
+  await ensureGameStateInitialized(gameId, initializer);
+  return executeGameAction(gameId, action);
 }
 
 /**

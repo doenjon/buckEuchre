@@ -2,7 +2,7 @@ import { prisma } from '../db/client';
 import { Game, GameStatus, GamePlayer } from '@prisma/client';
 import { GameState, Player } from '@buck-euchre/shared';
 import { initializeGame, dealNewRound } from '../game/state';
-import { setActiveGameState, getActiveGameState, loadGameState } from './state.service';
+import { executeGameActionWithInit, getActiveGameState, loadGameState, setActiveGameState } from './state.service';
 
 /**
  * Game summary for listing available games
@@ -277,27 +277,43 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
 
     // No state yet - check if we should start the game
     if (game.players.length === 4 && game.status === GameStatus.WAITING) {
-      // All 4 players present! Initialize game
+      // All 4 players present! Initialize game (atomic init + queue)
       const playerIds = game.players.map((gp) => gp.user!.id) as [string, string, string, string];
-      let initialState = initializeGame(playerIds);
+      const startedState = await executeGameActionWithInit(
+        gameId,
+        () => {
+          let initialState = initializeGame(playerIds);
+          // CRITICAL: Set the gameId on the state object
+          initialState.gameId = gameId;
 
-      // CRITICAL: Set the gameId on the state object
-      initialState.gameId = gameId;
+          // Update player names from database
+          initialState.players = initialState.players.map((p, index) => {
+            const gamePlayer = game.players[index];
+            const displayName = gamePlayer.user?.displayName || gamePlayer.guestName || `Player ${index + 1}`;
+            return {
+              ...p,
+              name: displayName,
+            };
+          }) as [Player, Player, Player, Player];
 
-      // Deal the first round (moves from DEALING → BIDDING and deals cards)
-      initialState = dealNewRound(initialState);
+          // Keep initial phase as DEALING (no cards yet); the queued action will deal.
+          return initialState;
+        },
+        (currentState) => {
+          // If already dealt by another concurrent starter, don't deal again.
+          if (currentState.phase !== 'DEALING') return currentState;
+          return dealNewRound(currentState);
+        }
+      );
 
-      // Store in memory
-      setActiveGameState(gameId, initialState);
-
-      // Update game status to IN_PROGRESS
+      // Update game status to IN_PROGRESS (idempotent; safe if called multiple times)
       await prisma.game.update({
         where: { id: gameId },
         data: { status: GameStatus.IN_PROGRESS },
       });
 
-      console.log(`[joinGame] Game ${gameId} started with 4 players!`);
-      return initialState;
+      console.log(`[joinGame] Game ${gameId} started with 4 players! (phase: ${startedState.phase})`);
+      return startedState;
     }
 
     // Game exists but no state yet (still in WAITING, not enough players)
@@ -481,28 +497,37 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     const playerIds = updatedGame.players.map((gp) => gp.user!.id) as [string, string, string, string];
 
     // Initialize game state using pure function from game/state.ts
-    let initialState = initializeGame(playerIds);
-    
-    // CRITICAL: Set the gameId on the state object
-    initialState.gameId = gameId;
-    
-    // Update player names from database
-    initialState.players = initialState.players.map((p, index) => {
-      const gamePlayer = updatedGame.players[index];
-      const displayName = gamePlayer.user?.displayName || gamePlayer.guestName || `Player ${index + 1}`;
-      
-      console.log(`[joinGame] Setting player ${index} name: ${displayName} (user: ${gamePlayer.user?.id}, username: ${gamePlayer.user?.username})`);
-      
-      return {
-        ...p,
-        name: displayName,
-        foldDecision: p.foldDecision, // Ensure foldDecision is preserved
-      };
-    }) as [Player, Player, Player, Player];
+    const startedState = await executeGameActionWithInit(
+      gameId,
+      () => {
+        let initialState = initializeGame(playerIds);
 
-    // Store initial state in memory (DEALING phase)
-    // Socket handler will deal cards and transition to BIDDING
-    setActiveGameState(gameId, initialState);
+        // CRITICAL: Set the gameId on the state object
+        initialState.gameId = gameId;
+
+        // Update player names from database
+        initialState.players = initialState.players.map((p, index) => {
+          const gamePlayer = updatedGame.players[index];
+          const displayName = gamePlayer.user?.displayName || gamePlayer.guestName || `Player ${index + 1}`;
+
+          console.log(
+            `[joinGame] Setting player ${index} name: ${displayName} (user: ${gamePlayer.user?.id}, username: ${gamePlayer.user?.username})`
+          );
+
+          return {
+            ...p,
+            name: displayName,
+          };
+        }) as [Player, Player, Player, Player];
+
+        // Keep initial phase as DEALING (no cards yet); the queued action will deal.
+        return initialState;
+      },
+      (currentState) => {
+        if (currentState.phase !== 'DEALING') return currentState;
+        return dealNewRound(currentState);
+      }
+    );
 
     // Update game status to IN_PROGRESS
     await prisma.game.update({
@@ -510,9 +535,8 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
       data: { status: GameStatus.IN_PROGRESS },
     });
 
-    console.log(`[joinGame] Game ${gameId} started! 4 players joined.`);
-    // Return initial state in DEALING phase - socket handler will deal and transition
-    return initialState;
+    console.log(`[joinGame] Game ${gameId} started! 4 players joined. Now in ${startedState.phase} phase`);
+    return startedState;
   }
 
   // Game not full yet, return null (waiting for more players)

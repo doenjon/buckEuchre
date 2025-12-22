@@ -11,6 +11,7 @@ import {
 } from '../services/game.service';
 import { addAIToGame } from '../services/ai-player.service';
 import { getSocketServer } from '../utils/socketManager';
+import { checkAndTriggerAI } from '../ai/trigger';
 import type { AddAIPlayerResponse } from '@buck-euchre/shared';
 
 const router = Router();
@@ -222,7 +223,7 @@ router.post('/:gameId/ai', authenticateToken, async (req: Request, res: Response
     }
 
     // Add AI to game
-    const gameState = await addAIToGame(gameId, {
+    let gameState = await addAIToGame(gameId, {
       difficulty: difficulty || 'medium',
       name: name || undefined,
     });
@@ -233,6 +234,27 @@ router.post('/:gameId/ai', authenticateToken, async (req: Request, res: Response
     const waitingMessage = playersNeeded > 0
       ? `Waiting for ${playersNeeded} more player${playersNeeded === 1 ? '' : 's'}...`
       : 'All seats filled. Starting shortly...';
+
+    // If game started (gameState is not null), broadcast the state
+    // joinGame now deals cards directly, so gameState is already in BIDDING phase
+    if (gameState) {
+      const io = getSocketServer();
+      
+      if (io) {
+        // Broadcast the game state to all players in the room
+        io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
+          gameState,
+          event: 'GAME_STARTED'
+        });
+        console.log(`[ADD_AI] Game ${gameId} started, broadcasting state (phase: ${gameState.phase})`);
+        
+        // Trigger AI if needed
+        checkAndTriggerAI(gameId, gameState, io).catch((aiError: any) => {
+          console.error(`[ADD_AI] Error triggering AI for game ${gameId}:`, aiError);
+          // Don't fail the request - game started successfully
+        });
+      }
+    }
 
     if (!gameState) {
       const io = getSocketServer();

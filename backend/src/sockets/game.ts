@@ -256,22 +256,26 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
     }
 
     // Game has started or player is reconnecting
+    // joinGame now deals cards directly, so gameState should already be in BIDDING phase
+    // But handle DEALING phase for backwards compatibility (shouldn't happen anymore)
     if (gameState.phase === 'DEALING') {
-      // Game just started! Deal cards and transition to BIDDING
-      console.log(`[JOIN_GAME] Game ${validated.gameId} started with 4 players - dealing cards`);
+      // This shouldn't happen anymore since joinGame deals cards directly
+      // But handle it just in case for safety
+      console.log(`[JOIN_GAME] WARNING: Game ${validated.gameId} in DEALING phase - this shouldn't happen. Dealing cards...`);
       
-      // Deal cards synchronously
-      const dealtState = await executeGameAction(validated.gameId, dealNewRound);
+      const dealtState = await executeGameAction(validated.gameId, async (currentState) => {
+        if (currentState.phase !== 'DEALING') {
+          console.log(`[JOIN_GAME] Game ${validated.gameId} already dealt (phase: ${currentState.phase})`);
+          return currentState;
+        }
+        return dealNewRound(currentState);
+      });
       
-      // Broadcast the dealt state (now in BIDDING phase with cards)
       io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
         gameState: dealtState,
         event: 'GAME_STARTED'
       });
-      
-      console.log(`[JOIN_GAME] Cards dealt for game ${validated.gameId}, now in BIDDING phase`);
-      
-      // Trigger AI if needed
+      console.log(`[JOIN_GAME] Cards dealt for game ${validated.gameId}, now in ${dealtState.phase} phase`);
       checkAndTriggerAI(validated.gameId, dealtState, io);
     } else {
       // Player reconnecting to game in progress - just send current state

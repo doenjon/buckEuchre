@@ -4,7 +4,7 @@
  */
 
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import { getActiveGameState, setActiveGameState } from './state.service';
+import { executeGameAction, getActiveGameState } from './state.service';
 import { applyFoldDecision } from '../game/state';
 import type { PlayerPosition } from '@buck-euchre/shared/types/game';
 
@@ -183,12 +183,19 @@ function handleGracePeriodExpired(
     // Automatically fold the disconnected player
     console.log(`Auto-folding disconnected player ${playerId} (position ${playerPosition})`);
     try {
-      updatedState = applyFoldDecision(gameState, playerPosition as PlayerPosition, true);
-      setActiveGameState(gameId, updatedState);
-      autoAction = true;
+      // Serialize through the per-game action queue to avoid races with gameplay events.
+      // NOTE: This function isn't async; we fire-and-forget but log errors.
+      void executeGameAction(gameId, (currentState) => {
+        return applyFoldDecision(currentState, playerPosition as PlayerPosition, true);
+      }).then((newState) => {
+        updatedState = newState;
+        autoAction = true;
 
-      // Emit game state update to all players
-      io.to(`game:${gameId}`).emit('GAME_STATE', updatedState);
+        // Emit game state update to all players
+        io.to(`game:${gameId}`).emit('GAME_STATE', updatedState);
+      }).catch((error) => {
+        console.error(`Error auto-folding disconnected player ${playerId}:`, error);
+      });
     } catch (error) {
       console.error(`Error auto-folding disconnected player ${playerId}:`, error);
     }
