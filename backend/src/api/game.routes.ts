@@ -223,10 +223,12 @@ router.post('/:gameId/ai', authenticateToken, async (req: Request, res: Response
     }
 
     // Add AI to game
+    console.log(`[REST:ADD_AI] ENTRY gameId=${gameId} difficulty=${difficulty || 'medium'} name=${name || 'undefined'}`);
     let gameState = await addAIToGame(gameId, {
       difficulty: difficulty || 'medium',
       name: name || undefined,
     });
+    console.log(`[REST:ADD_AI] gameId=${gameId} - addAIToGame returned gameState=${gameState ? `phase=${gameState.phase} version=${gameState.version}` : 'null'}`);
 
     const updatedGame = await getGame(gameId);
     const playerCount = updatedGame ? updatedGame.players.length : Math.min(4, game.players.length + 1);
@@ -238,21 +240,25 @@ router.post('/:gameId/ai', authenticateToken, async (req: Request, res: Response
     // If game started (gameState is not null), broadcast the state
     // joinGame now deals cards directly, so gameState is already in BIDDING phase
     if (gameState) {
+      console.log(`[REST:ADD_AI] gameId=${gameId} - game started, getting socket server`);
       const io = getSocketServer();
       
       if (io) {
+        console.log(`[REST:ADD_AI] gameId=${gameId} - broadcasting GAME_STATE_UPDATE phase=${gameState.phase} version=${gameState.version}`);
         // Broadcast the game state to all players in the room
         io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
           gameState,
           event: 'GAME_STARTED'
         });
-        console.log(`[ADD_AI] Game ${gameId} started, broadcasting state (phase: ${gameState.phase})`);
+        console.log(`[REST:ADD_AI] gameId=${gameId} - broadcast sent, triggering AI`);
         
         // Trigger AI if needed
         checkAndTriggerAI(gameId, gameState, io).catch((aiError: any) => {
-          console.error(`[ADD_AI] Error triggering AI for game ${gameId}:`, aiError);
+          console.error(`[REST:ADD_AI] Error triggering AI for game ${gameId}:`, aiError);
           // Don't fail the request - game started successfully
         });
+      } else {
+        console.log(`[REST:ADD_AI] gameId=${gameId} - WARNING: socket server not available!`);
       }
     }
 

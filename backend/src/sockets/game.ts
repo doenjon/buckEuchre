@@ -218,10 +218,12 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
       return;
     }
 
-    console.log(`[JOIN_GAME] User ${displayName} (${userId}) attempting to join game ${validated.gameId}`);
+    console.log(`[WS:JOIN_GAME] ENTRY userId=${userId} displayName=${displayName} gameId=${validated.gameId} socketId=${socket.id}`);
 
     // Add player to game (uses game service)
+    console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - calling joinGame()`);
     const gameState = await joinGame(validated.gameId, userId);
+    console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - joinGame() returned gameState=${gameState ? `phase=${gameState.phase} version=${gameState.version}` : 'null'}`);
 
     // Join socket room regardless of whether game has started
     socket.join(`game:${validated.gameId}`);
@@ -258,18 +260,25 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
     // Game has started or player is reconnecting
     // joinGame now deals cards directly, so gameState should already be in BIDDING phase
     // But handle DEALING phase for backwards compatibility (shouldn't happen anymore)
+    console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - checking phase=${gameState.phase}`);
     if (gameState.phase === 'DEALING') {
       // This shouldn't happen anymore since joinGame deals cards directly
       // But handle it just in case for safety
-      console.log(`[JOIN_GAME] WARNING: Game ${validated.gameId} in DEALING phase - this shouldn't happen. Dealing cards...`);
+      console.log(`[WS:JOIN_GAME] WARNING userId=${userId} gameId=${validated.gameId} - Game in DEALING phase! This shouldn't happen. Dealing cards...`);
       
+      console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - calling executeGameAction to deal`);
       const dealtState = await executeGameAction(validated.gameId, async (currentState) => {
+        console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - INSIDE executeGameAction currentPhase=${currentState.phase}`);
         if (currentState.phase !== 'DEALING') {
-          console.log(`[JOIN_GAME] Game ${validated.gameId} already dealt (phase: ${currentState.phase})`);
+          console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - already dealt (phase: ${currentState.phase}), returning current`);
           return currentState;
         }
-        return dealNewRound(currentState);
+        console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - dealing cards`);
+        const dealt = dealNewRound(currentState);
+        console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - dealt cards newPhase=${dealt.phase}`);
+        return dealt;
       });
+      console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - executeGameAction completed phase=${dealtState.phase}`);
       
       io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
         gameState: dealtState,

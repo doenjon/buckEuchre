@@ -53,21 +53,31 @@ export async function executeGameAction<T = GameState>(
   gameId: string,
   action: (currentState: GameState) => Promise<GameState> | GameState
 ): Promise<GameState> {
+  const callStack = new Error().stack?.split('\n').slice(2, 5).join(' | ') || 'unknown';
+  console.log(`[STATE:executeGameAction] ENTRY gameId=${gameId} stack=${callStack}`);
+  
   // Get or create queue for this game
   const currentQueue = gameActionQueues.get(gameId) || Promise.resolve();
+  const queueExists = gameActionQueues.has(gameId);
+  console.log(`[STATE:executeGameAction] gameId=${gameId} queueExists=${queueExists} activeGames.has=${activeGames.has(gameId)}`);
 
   // Chain this action to the queue
   const newQueue = currentQueue.then(async () => {
+    console.log(`[STATE:executeGameAction] EXECUTING gameId=${gameId} - action starting`);
     const state = activeGames.get(gameId);
     if (!state) {
+      console.error(`[STATE:executeGameAction] ERROR gameId=${gameId} - state not found in activeGames!`);
       throw new Error('Game not found in active games');
     }
+    console.log(`[STATE:executeGameAction] gameId=${gameId} currentPhase=${state.phase} version=${state.version} players=${state.players.length}`);
 
     // Execute action (pure function from game logic)
     const newState = await action(state);
+    console.log(`[STATE:executeGameAction] gameId=${gameId} action completed - newPhase=${newState.phase} newVersion=${newState.version}`);
 
     // Update in-memory state (SOURCE OF TRUTH)
     activeGames.set(gameId, newState);
+    console.log(`[STATE:executeGameAction] gameId=${gameId} state updated in memory`);
 
     // Persist to database as backup (fire-and-forget, async)
     // Use setImmediate to defer database write to next event loop tick
@@ -85,7 +95,9 @@ export async function executeGameAction<T = GameState>(
   gameActionQueues.set(gameId, newQueue.catch(() => undefined));
 
   // Wait for this action to complete and return the new state
-  return newQueue;
+  const result = await newQueue;
+  console.log(`[STATE:executeGameAction] EXIT gameId=${gameId} resultPhase=${result.phase} resultVersion=${result.version}`);
+  return result;
 }
 
 /**
@@ -100,23 +112,42 @@ export async function ensureGameStateInitialized(
   gameId: string,
   initializer: () => Promise<GameState> | GameState
 ): Promise<GameState> {
+  const callStack = new Error().stack?.split('\n').slice(2, 5).join(' | ') || 'unknown';
+  console.log(`[STATE:ensureGameStateInitialized] ENTRY gameId=${gameId} stack=${callStack}`);
+  
   const existing = activeGames.get(gameId);
-  if (existing) return existing;
+  if (existing) {
+    console.log(`[STATE:ensureGameStateInitialized] gameId=${gameId} - state already exists phase=${existing.phase}`);
+    return existing;
+  }
 
   const currentLock = gameInitLocks.get(gameId);
   if (currentLock) {
+    console.log(`[STATE:ensureGameStateInitialized] gameId=${gameId} - waiting for existing init lock`);
     await currentLock;
     const after = activeGames.get(gameId);
-    if (!after) throw new Error(`Game ${gameId} failed to initialize state`);
+    if (!after) {
+      console.error(`[STATE:ensureGameStateInitialized] ERROR gameId=${gameId} - lock completed but no state!`);
+      throw new Error(`Game ${gameId} failed to initialize state`);
+    }
+    console.log(`[STATE:ensureGameStateInitialized] gameId=${gameId} - got state from concurrent init phase=${after.phase}`);
     return after;
   }
 
+  console.log(`[STATE:ensureGameStateInitialized] gameId=${gameId} - creating new init lock`);
   const lock = (async () => {
     try {
       // Double-check after acquiring the lock.
-      if (activeGames.get(gameId)) return;
+      const doubleCheck = activeGames.get(gameId);
+      if (doubleCheck) {
+        console.log(`[STATE:ensureGameStateInitialized] gameId=${gameId} - double-check found existing state phase=${doubleCheck.phase}`);
+        return;
+      }
+      console.log(`[STATE:ensureGameStateInitialized] gameId=${gameId} - calling initializer`);
       const created = await initializer();
+      console.log(`[STATE:ensureGameStateInitialized] gameId=${gameId} - initializer returned phase=${created.phase} version=${created.version}`);
       activeGames.set(gameId, created);
+      console.log(`[STATE:ensureGameStateInitialized] gameId=${gameId} - state stored in activeGames`);
       // Persist as backup (fire-and-forget)
       setImmediate(() => {
         saveGameState(gameId, created).catch((err) =>
@@ -125,14 +156,20 @@ export async function ensureGameStateInitialized(
       });
     } finally {
       gameInitLocks.delete(gameId);
+      console.log(`[STATE:ensureGameStateInitialized] gameId=${gameId} - init lock released`);
     }
   })();
 
   gameInitLocks.set(gameId, lock);
+  console.log(`[STATE:ensureGameStateInitialized] gameId=${gameId} - waiting for init lock to complete`);
   await lock;
 
   const initialized = activeGames.get(gameId);
-  if (!initialized) throw new Error(`Game ${gameId} failed to initialize state`);
+  if (!initialized) {
+    console.error(`[STATE:ensureGameStateInitialized] ERROR gameId=${gameId} - lock completed but no state in activeGames!`);
+    throw new Error(`Game ${gameId} failed to initialize state`);
+  }
+  console.log(`[STATE:ensureGameStateInitialized] EXIT gameId=${gameId} phase=${initialized.phase} version=${initialized.version}`);
   return initialized;
 }
 
@@ -146,8 +183,13 @@ export async function executeGameActionWithInit(
   initializer: () => Promise<GameState> | GameState,
   action: (currentState: GameState) => Promise<GameState> | GameState
 ): Promise<GameState> {
+  const callStack = new Error().stack?.split('\n').slice(2, 5).join(' | ') || 'unknown';
+  console.log(`[STATE:executeGameActionWithInit] ENTRY gameId=${gameId} stack=${callStack}`);
   await ensureGameStateInitialized(gameId, initializer);
-  return executeGameAction(gameId, action);
+  console.log(`[STATE:executeGameActionWithInit] gameId=${gameId} - state initialized, calling executeGameAction`);
+  const result = await executeGameAction(gameId, action);
+  console.log(`[STATE:executeGameActionWithInit] EXIT gameId=${gameId} resultPhase=${result.phase}`);
+  return result;
 }
 
 /**
@@ -173,6 +215,8 @@ export function getActiveGameState(gameId: string): GameState | null {
  * @param state - The game state to store
  */
 export function setActiveGameState(gameId: string, state: GameState): void {
+  const callStack = new Error().stack?.split('\n').slice(2, 5).join(' | ') || 'unknown';
+  console.log(`[STATE:setActiveGameState] WARNING: Direct state mutation! gameId=${gameId} phase=${state.phase} version=${state.version} stack=${callStack}`);
   activeGames.set(gameId, state);
 }
 

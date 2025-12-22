@@ -2,9 +2,8 @@
  * Friends service for managing friendships
  */
 
-import { PrismaClient, Friendship, FriendshipStatus } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Friendship, FriendshipStatus } from '@prisma/client';
+import { prisma } from '../db/client';
 
 /**
  * Send a friend request

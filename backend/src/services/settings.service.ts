@@ -2,20 +2,8 @@
  * Settings service for managing user preferences
  */
 
-import { UserSettings, PrismaClient } from '@prisma/client';
-
-// Create Prisma client instance
-// Note: Using same pattern as stats.service.ts and friends.service.ts for consistency
-const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error'] : ['error'],
-});
-
-// Debug: Verify prisma is initialized
-if (!prisma) {
-  console.error('[settings.service] ERROR: prisma is undefined after initialization!');
-  throw new Error('Prisma client failed to initialize');
-}
-console.log('[settings.service] Prisma client initialized:', !!prisma, typeof prisma);
+import { UserSettings } from '@prisma/client';
+import { prisma } from '../db/client';
 
 export interface UpdateSettingsParams {
   showCardOverlay?: boolean;

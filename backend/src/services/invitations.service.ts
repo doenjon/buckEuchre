@@ -2,10 +2,9 @@
  * Game invitations service
  */
 
-import { PrismaClient, GameInvitation, InvitationStatus } from '@prisma/client';
+import { GameInvitation, InvitationStatus } from '@prisma/client';
+import { prisma } from '../db/client';
 import { areFriends } from './friends.service';
-
-const prisma = new PrismaClient();
 
 const INVITATION_EXPIRY_HOURS = 24;
 

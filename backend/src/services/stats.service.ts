@@ -2,9 +2,7 @@
  * Stats service for tracking and retrieving game statistics
  */
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db/client';
 
 export interface RoundStatsUpdate {
   userId: string;
