@@ -4,12 +4,13 @@
  */
 
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Bug } from 'lucide-react';
 import { getUserSettings, updateUserSettings } from '@/services/api';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { BugReportModal } from '@/components/BugReportModal';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showBugReport, setShowBugReport] = useState(false);
   const settingsStore = useSettingsStore();
 
   // Local state for important settings only
@@ -215,24 +217,43 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex gap-4 p-6 border-t border-white/10">
+        <div className="p-6 border-t border-white/10 space-y-3">
+          {/* Bug Report Button */}
           <Button
-            onClick={onClose}
+            onClick={() => setShowBugReport(true)}
             variant="outline"
-            className="flex-1 border-white/30 text-white hover:bg-white/20"
+            className="w-full border-orange-500/50 text-orange-300 hover:bg-orange-500/20 hover:border-orange-500"
           >
-            Cancel
+            <Bug className="h-4 w-4 mr-2" />
+            Report a Bug
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            variant="primary"
-            className="flex-1"
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
+
+          {/* Save/Cancel Buttons */}
+          <div className="flex gap-4">
+            <Button
+              onClick={onClose}
+              variant="outline"
+              className="flex-1 border-white/30 text-white hover:bg-white/20"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              variant="primary"
+              className="flex-1"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Bug Report Modal */}
+      <BugReportModal
+        isOpen={showBugReport}
+        onClose={() => setShowBugReport(false)}
+      />
     </div>
   );
 }

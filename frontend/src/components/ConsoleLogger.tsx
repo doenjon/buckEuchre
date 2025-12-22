@@ -5,8 +5,9 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { Copy, Check } from 'lucide-react';
+import { setConsoleMessagesGetter } from './BugReportModal';
 
-interface ConsoleMessage {
+export interface ConsoleMessage {
   timestamp: string;
   level: string;
   message: string;
@@ -20,6 +21,9 @@ export function ConsoleLogger() {
   const MAX_MESSAGES = 50;
 
   useEffect(() => {
+    // Expose messages getter for bug reports
+    setConsoleMessagesGetter(() => messagesRef.current);
+
     // Store original console methods
     const originalLog = console.log;
     const originalError = console.error;

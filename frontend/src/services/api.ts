@@ -707,3 +707,37 @@ export async function resetUserSettings(): Promise<UserSettings> {
 
   return response.json();
 }
+
+// ========== Bug Reports ==========
+
+export interface BugReportData {
+  description: string;
+  logs: string;
+  userAgent: string;
+  url: string;
+  timestamp: string;
+}
+
+/**
+ * Submit a bug report
+ */
+export async function submitBugReport(data: BugReportData): Promise<{ success: boolean }> {
+  const response = await fetch(`${API_URL}/api/bugs/report`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    let errorMessage = 'Failed to submit bug report';
+    try {
+      const error = await response.json();
+      errorMessage = error.message || error.details || errorMessage;
+    } catch {
+      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
