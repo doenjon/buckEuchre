@@ -87,23 +87,14 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
     setIsRematching(true);
 
     try {
-      // Leave the completed table before creating a new one (use API to ensure DB cleanup)
-      try {
-        await leaveGameAPI(gameState.gameId);
-      } catch (leaveError) {
-        // If leave fails, continue anyway - the game is already over
-        console.warn('Error leaving old game (continuing with rematch):', leaveError);
-      }
-      
-      // Also emit socket leave to clean up socket room
+      // Create rematch with the same 4 players from the completed game
+      // No need to leave the old game - it's already completed
+      const response = await createRematchGame(gameState.gameId);
+
+      // Leave the old game's socket room to avoid receiving stale events
       leaveGame(gameState.gameId);
 
-      // Create rematch with the same 4 players
-      const response = await createRematchGame(gameState.gameId);
-      
-      // Small delay to ensure the old game is cleaned up
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      // Navigate to the new game
       navigate(`/game/${response.gameId}`);
     } catch (error) {
       const message =
