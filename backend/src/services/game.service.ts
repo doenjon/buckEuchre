@@ -869,3 +869,33 @@ export async function getGame(gameId: string): Promise<GameWithPlayers | null> {
 
   return game;
 }
+
+/**
+ * Get round history for a game
+ *
+ * Returns all completed rounds with scores and round details.
+ *
+ * @param gameId - ID of the game
+ * @returns Array of rounds with score history
+ */
+export async function getRoundHistory(gameId: string) {
+  if (!gameId) {
+    throw new Error('Game ID is required');
+  }
+
+  const rounds = await prisma.round.findMany({
+    where: { gameId },
+    orderBy: { roundNumber: 'asc' },
+  });
+
+  return rounds.map(round => ({
+    roundNumber: round.roundNumber,
+    dealerPosition: round.dealerPosition,
+    bidderPosition: round.bidderPosition,
+    bid: round.bid,
+    trumpSuit: round.trumpSuit,
+    bidderMadeContract: round.bidderMadeContract,
+    scores: round.scores as Record<string, number>,
+    createdAt: round.createdAt.getTime(),
+  }));
+}
