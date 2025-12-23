@@ -371,12 +371,36 @@ export function applyFoldDecision(
         return player;
       }) as [Player, Player, Player, Player];
 
+      console.log('[SCORING] All non-bidders folded. Auto-scoring with bidder taking all 5 tricks:', {
+        isClubsTurnUp: state.isClubsTurnUp,
+        winningBidderPosition: winningBidder,
+        highestBid: state.highestBid,
+        playerStats: playersWithAutoTricks.map((p, i) => ({
+          position: i,
+          name: p.name,
+          tricksTaken: p.tricksTaken,
+          folded: p.folded,
+        })),
+      });
+
+      // TypeScript knows highestBid is not null due to check on line 360
       const scoreChanges = calculateRoundScores(
         playersWithAutoTricks,
         winningBidder,
-        state.highestBid,
+        state.highestBid as number,  // Safe cast - null check on line 360
         state.isClubsTurnUp
       );
+
+      console.log('[SCORING] Score changes for auto-win:', {
+        scoreChanges,
+        breakdown: playersWithAutoTricks.map((p, i) => ({
+          position: i,
+          name: p.name,
+          change: scoreChanges[i],
+          oldScore: p.score,
+          newScore: p.score + scoreChanges[i],
+        })),
+      });
 
       const scoredPlayers = playersWithAutoTricks.map((player, position) => ({
         ...player,
@@ -536,6 +560,20 @@ export function applyCardPlay(
  * @returns New game state with scores updated
  */
 export function finishRound(state: GameState): GameState {
+  // Log scoring details for debugging
+  console.log('[SCORING] Calculating round scores:', {
+    isClubsTurnUp: state.isClubsTurnUp,
+    winningBidderPosition: state.winningBidderPosition,
+    highestBid: state.highestBid,
+    playerStats: state.players.map((p, i) => ({
+      position: i,
+      name: p.name,
+      tricksTaken: p.tricksTaken,
+      folded: p.folded,
+      currentScore: p.score,
+    })),
+  });
+
   // Calculate score changes
   const scoreChanges = calculateRoundScores(
     state.players,
@@ -543,13 +581,27 @@ export function finishRound(state: GameState): GameState {
     state.highestBid!,
     state.isClubsTurnUp
   );
-  
+
+  console.log('[SCORING] Score changes calculated:', {
+    scoreChanges,
+    breakdown: state.players.map((p, i) => ({
+      position: i,
+      name: p.name,
+      tricksTaken: p.tricksTaken,
+      folded: p.folded,
+      change: scoreChanges[i],
+      oldScore: p.score,
+      newScore: p.score + scoreChanges[i],
+      isBidder: i === state.winningBidderPosition,
+    })),
+  });
+
   // Apply score changes
   const players = state.players.map((p, i) => ({
     ...p,
     score: p.score + scoreChanges[i],
   })) as [Player, Player, Player, Player];
-  
+
   // Check for winner
   const { winner, gameOver } = checkWinCondition(players);
   

@@ -126,6 +126,39 @@ describe('scoring.ts - Scoring Logic', () => {
       expect(scores[0]).toBe(-5); // Made contract
     });
 
+    it('should NOT buck non-bidders who stay and get 1 trick', () => {
+      // This test specifically addresses the reported bug:
+      // "when a player stays, gets 1 trick, and then still gets bucked"
+      const players = [
+        createPlayer(0, 3, false), // Bidder, bid 2, took 3 tricks (made bid)
+        createPlayer(1, 1, false), // Non-bidder who stayed, got 1 trick
+        createPlayer(2, 1, false), // Non-bidder who stayed, got 1 trick
+        createPlayer(3, 0, false), // Non-bidder who stayed, got 0 tricks (should be bucked)
+      ];
+
+      const scores = calculateRoundScores(players, 0, 2, false);
+      expect(scores[0]).toBe(-3); // Bidder made contract
+      expect(scores[1]).toBe(-1); // Non-bidder with 1 trick should get -1, NOT +5
+      expect(scores[2]).toBe(-1); // Non-bidder with 1 trick should get -1, NOT +5
+      expect(scores[3]).toBe(5);  // Non-bidder with 0 tricks gets bucked (correct)
+    });
+
+    it('should correctly score bidder who bids 2 but only gets 1 trick', () => {
+      // Bidder fails to make contract - should get bucked
+      const players = [
+        createPlayer(0, 1, false), // Bidder, bid 2, only got 1 trick (failed)
+        createPlayer(1, 2, false), // Non-bidder
+        createPlayer(2, 2, false), // Non-bidder
+        createPlayer(3, 0, false), // Non-bidder
+      ];
+
+      const scores = calculateRoundScores(players, 0, 2, false);
+      expect(scores[0]).toBe(5);  // Bidder failed contract (should be bucked)
+      expect(scores[1]).toBe(-2); // Non-bidder
+      expect(scores[2]).toBe(-2); // Non-bidder
+      expect(scores[3]).toBe(5);  // Non-bidder with 0 tricks
+    });
+
     describe('Clubs Turn-Up (No Bidder) Scenario', () => {
       it('should score all players as non-bidders when clubs is turned up', () => {
         const players = [
