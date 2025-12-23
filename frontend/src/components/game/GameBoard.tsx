@@ -18,7 +18,7 @@ import { GameNotification } from './GameNotification';
 import { SettingsModal } from './SettingsModal';
 import { useGame } from '@/hooks/useGame';
 import { useGameNotifications } from '@/hooks/useGameNotifications';
-import { createRematchGame, leaveGame as leaveGameAPI } from '@/services/api';
+import { createRematchGame } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { GAME_TIMEOUTS } from '@buck-euchre/shared';
 import type { GameState } from '@buck-euchre/shared';
