@@ -213,6 +213,8 @@ class AIRegistry {
       medium: 0,
       hard: 0,
       expert: 0,
+      master: 0,
+      grandmaster: 0,
     };
 
     for (const provider of this.providers.values()) {
