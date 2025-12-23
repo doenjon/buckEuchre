@@ -171,10 +171,10 @@ export async function checkAndTriggerAI(
 
     // Check if AI by name (fast check)
     let isAI = isAIPlayerByName(currentPlayer.name);
-    
-    // If name doesn't match pattern, check username from database (fallback for old games)
+
+    // If name doesn't match known AI names, check username from database (fallback for old games)
     if (!isAI) {
-      console.log(`[AI Trigger] Name "${currentPlayer.name}" doesn't match Bot pattern, checking database...`);
+      console.log(`[AI Trigger] Name "${currentPlayer.name}" doesn't match AI name list, checking database...`);
       isAI = await isAIPlayerAsync(currentPlayerId);
     }
     

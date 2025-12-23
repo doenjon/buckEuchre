@@ -14,24 +14,86 @@ export interface AIPlayerConfig {
 }
 
 /**
- * Default AI player names
+ * Default AI player names - fun and varied!
  */
 const AI_NAMES = [
-  'Bot Alice',
-  'Bot Bob',
-  'Bot Charlie',
-  'Bot Diana',
-  'Bot Eddie',
-  'Bot Fiona',
-  'Bot George',
-  'Bot Hannah',
+  'Pickles',
+  'Waffles',
+  'Noodles',
+  'Sprinkles',
+  'Giggles',
+  'Bubbles',
+  'Zippy',
+  'Dash',
+  'Flash',
+  'Spark',
+  'Zoom',
+  'Blitz',
+  'Whiskers',
+  'Paws',
+  'Mittens',
+  'Buttons',
+  'Patches',
+  'Ace',
+  'Rex',
+  'Jazz',
+  'Chip',
+  'Sky',
+  'Nova',
+  'Cookie',
+  'Muffin',
+  'Biscuit',
+  'Pepper',
+  'Ginger',
+  'Clover',
+  'Maple',
+  'River',
+  'Storm',
+  'Phoenix',
+  'Cosmo',
+  'Luna',
+  'Atlas',
+  'Echo',
+  'Pixel',
+  'Ziggy',
+  'Comet',
 ];
 
 /**
- * Get a random AI name
+ * Get a random AI name that's not currently in use
+ *
+ * @returns A unique AI name
  */
-function getRandomAIName(): string {
-  return AI_NAMES[Math.floor(Math.random() * AI_NAMES.length)];
+async function getRandomAIName(): Promise<string> {
+  // Get all currently active AI player names
+  const activeAIPlayers = await prisma.user.findMany({
+    where: {
+      username: {
+        startsWith: 'AI_',
+      },
+      isGuest: true,
+      gamePlayers: {
+        some: {
+          game: {
+            status: {
+              in: ['WAITING', 'IN_PROGRESS'],
+            },
+          },
+        },
+      },
+    },
+    select: {
+      displayName: true,
+    },
+  });
+
+  const usedNames = new Set(activeAIPlayers.map(p => p.displayName));
+  const availableNames = AI_NAMES.filter(name => !usedNames.has(name));
+
+  // If all names are in use, just pick a random one (very unlikely with 40 names)
+  const namesToChooseFrom = availableNames.length > 0 ? availableNames : AI_NAMES;
+
+  return namesToChooseFrom[Math.floor(Math.random() * namesToChooseFrom.length)];
 }
 
 /**
@@ -44,7 +106,7 @@ function getRandomAIName(): string {
  * @returns AI user record
  */
 export async function createAIPlayer(config?: Partial<AIPlayerConfig>): Promise<User> {
-  const name = config?.name || getRandomAIName();
+  const name = config?.name || await getRandomAIName();
   const difficulty = config?.difficulty || 'medium';
   
   // Create unique username for AI
@@ -124,13 +186,13 @@ export async function isAIPlayerAsync(userId: string): Promise<boolean> {
 
 /**
  * Check if a player name indicates an AI player (fast - checks name pattern)
- * AI players have display names like "Bot Alice", "Bot Bob", etc.
- * 
+ * AI players have display names from the AI_NAMES list.
+ *
  * @param playerName - Player display name from game state
  * @returns True if player name matches AI pattern, false otherwise
  */
 export function isAIPlayerByName(playerName: string): boolean {
-  return playerName.startsWith('Bot ');
+  return AI_NAMES.includes(playerName);
 }
 
 /**
