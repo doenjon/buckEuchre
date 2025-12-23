@@ -338,7 +338,7 @@ router.patch('/:gameId/ai/:playerId/difficulty', authenticateToken, async (req: 
     }
 
     // Validate game exists
-    const gameState = getActiveGameState(gameId);
+    const gameState = await getGameState(gameId);
     if (!gameState) {
       return res.status(404).json({
         error: 'Not found',
