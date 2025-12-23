@@ -3,11 +3,12 @@
  * @description Display player scores and game status
  */
 
-import { useEffect, useRef } from 'react';
-import type { Player, GamePhase } from '@buck-euchre/shared';
+import { useEffect, useRef, useState } from 'react';
+import type { Player, GamePhase, GameState } from '@buck-euchre/shared';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { getRoundHistory } from '@/services/api';
 
 export interface ScoreboardProps {
   players: Player[];
@@ -19,6 +20,7 @@ export interface ScoreboardProps {
   isClubsTurnUp?: boolean;
   className?: string;
   variant?: 'default' | 'compact' | 'mobile';
+  gameId?: string;
 }
 
 export function Scoreboard({
@@ -27,11 +29,16 @@ export function Scoreboard({
   phase,
   winningBidderPosition,
   className,
-  variant = 'default'
+  variant = 'default',
+  gameId
 }: ScoreboardProps) {
   const sortedPlayers = [...players].sort((a, b) => a.score - b.score);
   const leader = sortedPlayers[0];
   const previousScores = useRef<Map<string, number>>(new Map());
+  const [roundHistory, setRoundHistory] = useState<Array<{
+    roundNumber: number;
+    scores: Record<string, number>;
+  }>>([]);
 
   useEffect(() => {
     // Update previous scores after a delay to show animation
@@ -42,6 +49,19 @@ export function Scoreboard({
     }, 1000);
     return () => clearTimeout(timeout);
   }, [players]);
+
+  // Fetch round history for mobile variant
+  useEffect(() => {
+    if (variant === 'mobile' && gameId) {
+      getRoundHistory(gameId)
+        .then(response => {
+          setRoundHistory(response.rounds);
+        })
+        .catch(error => {
+          console.error('Failed to fetch round history:', error);
+        });
+    }
+  }, [variant, gameId]);
 
   const entries = players.map((player, index) => {
     const needsFoldDecision = (
@@ -68,33 +88,115 @@ export function Scoreboard({
   });
 
   if (variant === 'mobile') {
+    // Calculate score history for each player
+    const scoreHistory: Record<number, number[]> = {};
+
+    // Initialize with starting score (15)
+    players.forEach(player => {
+      scoreHistory[player.position] = [15];
+    });
+
+    // Build cumulative score history from round data
+    roundHistory.forEach(round => {
+      players.forEach(player => {
+        const scoreChange = round.scores[player.position.toString()] || 0;
+        const previousScore = scoreHistory[player.position][scoreHistory[player.position].length - 1];
+        scoreHistory[player.position].push(previousScore + scoreChange);
+      });
+    });
+
     return (
       <div
         className={cn(
-          'rounded-xl border border-white/10 bg-white/5 p-2 text-slate-100 shadow-md backdrop-blur',
+          'rounded-xl border border-white/10 bg-white/5 p-3 text-slate-100 shadow-md backdrop-blur',
           className
         )}
       >
-        <div className="grid grid-cols-4 gap-1.5" role="list" aria-label="Player scores">
-          {entries.map(({ player, index, hasFolded }) => (
-            <div
-              key={player.id}
-              className={cn(
-                'flex flex-col items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 p-1.5 text-center transition-colors duration-200',
-                hasFolded && 'opacity-50'
-              )}
-              role="listitem"
-              aria-label={`${player.name}, score ${player.score}`}
-            >
-              <span 
-                className="text-[11px] md:text-xs font-semibold truncate max-w-full px-0.5 text-white"
-                title={player.name || `Player ${index + 1}`}
-              >
-                {player.name || `P${index + 1}`}
-              </span>
-              <span className="text-base font-bold text-emerald-100">{player.score}</span>
-            </div>
-          ))}
+        <div className="mb-2 text-center text-xs font-semibold uppercase tracking-wider text-emerald-200/80">
+          Score History
+        </div>
+        <div className="max-h-[60vh] overflow-y-auto rounded-lg border border-white/10 bg-white/5">
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur">
+              <tr>
+                <th className="border-r border-white/10 px-2 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                  Rnd
+                </th>
+                {players.map((player, idx) => (
+                  <th
+                    key={player.id}
+                    className={cn(
+                      'px-2 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wider text-white',
+                      idx < players.length - 1 && 'border-r border-white/10'
+                    )}
+                    title={player.name}
+                  >
+                    <div className="truncate">{player.name || `P${player.position + 1}`}</div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {/* Starting scores */}
+              <tr className="border-t border-white/10">
+                <td className="border-r border-white/10 px-2 py-1.5 text-[10px] text-emerald-200/70">
+                  Start
+                </td>
+                {players.map((player, idx) => (
+                  <td
+                    key={player.id}
+                    className={cn(
+                      'px-2 py-1.5 text-center font-medium text-white/70',
+                      idx < players.length - 1 && 'border-r border-white/10'
+                    )}
+                  >
+                    15
+                  </td>
+                ))}
+              </tr>
+
+              {/* Round scores */}
+              {roundHistory.map((round, roundIdx) => (
+                <tr key={round.roundNumber} className="border-t border-white/10">
+                  <td className="border-r border-white/10 px-2 py-1.5 text-[10px] font-semibold text-emerald-200">
+                    {round.roundNumber}
+                  </td>
+                  {players.map((player, idx) => {
+                    const score = scoreHistory[player.position][roundIdx + 1];
+                    return (
+                      <td
+                        key={player.id}
+                        className={cn(
+                          'px-2 py-1.5 text-center font-semibold',
+                          idx < players.length - 1 && 'border-r border-white/10'
+                        )}
+                      >
+                        {score}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+
+              {/* Current score (highlighted) */}
+              <tr className="border-t-2 border-emerald-400/50 bg-emerald-500/10">
+                <td className="border-r border-white/10 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                  Now
+                </td>
+                {players.map((player, idx) => (
+                  <td
+                    key={player.id}
+                    className={cn(
+                      'px-2 py-1.5 text-center text-base font-bold text-emerald-100',
+                      idx < players.length - 1 && 'border-r border-white/10'
+                    )}
+                  >
+                    {player.score}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     );

@@ -7,7 +7,8 @@ import {
   getGame,
   getUserActiveGames,
   leaveGame,
-  createRematchGame
+  createRematchGame,
+  getRoundHistory
 } from '../services/game.service';
 import { addAIToGame } from '../services/ai-player.service';
 import { getSocketServer } from '../utils/socketManager';
@@ -155,6 +156,29 @@ router.post('/:gameId/rematch', authenticateToken, async (req: Request, res: Res
     res.status(statusCode).json({
       error: 'Server error',
       message: error.message || 'Failed to create rematch'
+    });
+  }
+});
+
+/**
+ * GET /api/games/:gameId/rounds
+ * Get round history for a game
+ * Requires authentication
+ */
+router.get('/:gameId/rounds', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { gameId } = req.params;
+
+    const rounds = await getRoundHistory(gameId);
+
+    res.status(200).json({
+      rounds
+    });
+  } catch (error) {
+    console.error('Error getting round history:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: 'Failed to get round history'
     });
   }
 });

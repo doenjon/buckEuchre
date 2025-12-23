@@ -302,6 +302,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                   winningBid={gameState.highestBid ?? undefined}
                   isClubsTurnUp={gameState.isClubsTurnUp}
                   variant="mobile"
+                  gameId={gameState.gameId}
                 />
               </div>
             </div>
