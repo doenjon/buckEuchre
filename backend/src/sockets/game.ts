@@ -883,9 +883,17 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
           console.error(`[PLAY_CARD] Invalid state for game ${validated.gameId} during transition:`, currentState);
           return;
         }
-        
+
+        // IMPORTANT: Update the timestamp so frontend accepts this state
+        // Display state was emitted with a newer timestamp, so we need to ensure
+        // this actual state (with empty trick) has an even newer timestamp
+        const stateWithUpdatedTimestamp = {
+          ...currentState,
+          updatedAt: Date.now()
+        };
+
         io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
-          gameState: currentState,
+          gameState: stateWithUpdatedTimestamp,
           event: 'CARD_PLAYED'
         });
         console.log(`[PLAY_CARD] Delayed transition after showing completed trick`, {
