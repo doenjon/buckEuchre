@@ -104,7 +104,6 @@ export function AddAIButton({ gameId, onAIAdded }: AddAIButtonProps) {
                 <Select
                   value={difficulty}
                   onValueChange={(value) => setDifficulty(value as AIDifficulty)}
-                  disabled={adding}
                 >
                   <SelectTrigger id="ai-difficulty" className="w-full bg-gray-800 border-gray-700 text-white">
                     <SelectValue />

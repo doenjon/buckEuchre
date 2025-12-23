@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import type { Player, GamePhase, GameState } from '@buck-euchre/shared';
+import type { Player, GamePhase } from '@buck-euchre/shared';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
