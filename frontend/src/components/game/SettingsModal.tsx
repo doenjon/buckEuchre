@@ -4,20 +4,48 @@
  */
 
 import { useEffect, useState } from 'react';
-import { X, Bug } from 'lucide-react';
-import { getUserSettings, updateUserSettings } from '@/services/api';
+import { X, Bug, Bot } from 'lucide-react';
+import { getUserSettings, updateUserSettings, updateAIDifficulty, type AIDifficulty } from '@/services/api';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { BugReportModal } from '@/components/BugReportModal';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import type { Player } from '@buck-euchre/shared';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  gameId?: string;
+  players?: Player[];
 }
 
-export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+const AI_NAMES = [
+  'Pickles', 'Waffles', 'Noodles', 'Sprinkles', 'Giggles', 'Bubbles',
+  'Zippy', 'Dash', 'Flash', 'Spark', 'Zoom', 'Blitz', 'Whiskers', 'Paws',
+  'Mittens', 'Buttons', 'Patches', 'Ace', 'Rex', 'Jazz', 'Chip', 'Sky',
+  'Nova', 'Cookie', 'Muffin', 'Biscuit', 'Pepper', 'Ginger', 'Clover',
+  'Maple', 'River', 'Storm', 'Phoenix', 'Cosmo', 'Luna', 'Atlas', 'Echo',
+  'Pixel', 'Ziggy', 'Comet'
+];
+
+const DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
+  easy: 'Easy (~100ms)',
+  medium: 'Medium (~300ms)',
+  hard: 'Hard (~1.5s)',
+  expert: 'Expert (~15s)',
+  master: 'Master (~30s)',
+  grandmaster: 'Grandmaster (~75s)',
+};
+
+export function SettingsModal({ isOpen, onClose, gameId, players }: SettingsModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -31,6 +59,15 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     autoSortHand: settingsStore.autoSortHand,
     soundEffects: settingsStore.soundEffects,
   });
+
+  // AI difficulty state (default to 'hard' for all AI players)
+  const [aiDifficulties, setAIDifficulties] = useState<Record<string, AIDifficulty>>({});
+
+  // Helper to check if player is AI
+  const isAIPlayer = (player: Player) => AI_NAMES.includes(player.name);
+
+  // Get AI players
+  const aiPlayers = players?.filter(isAIPlayer) || [];
 
   // Load settings when modal opens
   useEffect(() => {
@@ -88,6 +125,21 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       setError(err instanceof Error ? err.message : 'Failed to save settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleUpdateAIDifficulty = async (playerId: string, difficulty: AIDifficulty) => {
+    if (!gameId) return;
+
+    try {
+      setError('');
+      await updateAIDifficulty(gameId, playerId, difficulty);
+      setAIDifficulties({ ...aiDifficulties, [playerId]: difficulty });
+      setSuccess(`AI difficulty updated to ${DIFFICULTY_LABELS[difficulty]}!`);
+      setTimeout(() => setSuccess(''), 2000);
+    } catch (err) {
+      console.error('Error updating AI difficulty:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update AI difficulty');
     }
   };
 
@@ -214,6 +266,44 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               />
             </div>
           </div>
+
+          {/* AI Difficulty Settings */}
+          {aiPlayers.length > 0 && gameId && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide flex items-center gap-2">
+                <Bot className="h-4 w-4" />
+                AI Opponents
+              </h3>
+
+              {aiPlayers.map((player) => (
+                <div key={player.id} className="flex items-center justify-between">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor={`ai-${player.id}`} className="text-base text-white">
+                      {player.name}
+                    </Label>
+                    <p className="text-sm text-gray-400">
+                      Adjust thinking depth
+                    </p>
+                  </div>
+                  <Select
+                    value={aiDifficulties[player.id] || 'hard'}
+                    onValueChange={(value) => handleUpdateAIDifficulty(player.id, value as AIDifficulty)}
+                  >
+                    <SelectTrigger id={`ai-${player.id}`} className="w-44 bg-gray-800 border-gray-700 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      {Object.entries(DIFFICULTY_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key} className="text-white hover:bg-gray-700">
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
