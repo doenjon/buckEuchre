@@ -6,6 +6,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'expert' | 'master' | 'grandmaster';
+
 export interface UserSettings {
   showCardOverlay: boolean;
   showTooltips: boolean;
@@ -14,6 +16,8 @@ export interface UserSettings {
   animationSpeed: 'slow' | 'normal' | 'fast';
   soundEffects: boolean;
   showDebugConsole: boolean;
+  showAIHints: boolean;
+  aiHintDifficulty: AIDifficulty;
 }
 
 export interface SettingsActions {
@@ -32,6 +36,8 @@ const defaultSettings: UserSettings = {
   animationSpeed: 'normal',
   soundEffects: true,
   showDebugConsole: false,
+  showAIHints: true,
+  aiHintDifficulty: 'medium',
 };
 
 /**
@@ -67,6 +73,8 @@ export const useSettingsStore = create<SettingsStore>()(
         animationSpeed: state.animationSpeed,
         soundEffects: state.soundEffects,
         showDebugConsole: state.showDebugConsole,
+        showAIHints: state.showAIHints,
+        aiHintDifficulty: state.aiHintDifficulty,
       }),
     }
   )

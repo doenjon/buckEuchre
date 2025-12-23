@@ -11,6 +11,7 @@ import { GameState, AIAnalysisEvent } from '@buck-euchre/shared';
 import { isAIPlayerByName, isAIPlayerAsync } from '../services/ai-player.service';
 import { executeAITurn } from './executor';
 import { analyzeHand, getBestCard, analyzeBids, getBestBid, analyzeFoldDecision, getBestFoldDecision } from './analysis.service';
+import { getUserSettings, AIDifficulty } from '../services/settings.service';
 
 /**
  * Track last analysis sent to prevent duplicate sends
@@ -201,6 +202,21 @@ export async function checkAndTriggerAI(
 }
 
 /**
+ * Map AI difficulty to simulation count
+ */
+function difficultyToSimulations(difficulty: AIDifficulty): number {
+  const map: Record<AIDifficulty, number> = {
+    easy: 200,
+    medium: 500,
+    hard: 2000,
+    expert: 5000,
+    master: 15000,
+    grandmaster: 50000,
+  };
+  return map[difficulty] || 2000;
+}
+
+/**
  * Send AI analysis to human player
  *
  * Analyzes the player's options (cards, bids, or fold decision) and sends statistics
@@ -253,11 +269,37 @@ async function sendAIAnalysis(
       return;
     }
 
+    // Get the player's user ID to check their settings
+    const player = gameState.players[playerPosition];
+    if (!player) {
+      return;
+    }
+
+    // Check user settings to see if AI hints are enabled and get difficulty
+    let simulations = 2000; // default
+    try {
+      const userSettings = await getUserSettings(player.id);
+
+      if (!userSettings.showAIHints) {
+        console.log(`[AI Analysis] User ${player.id} has AI hints disabled, skipping analysis`);
+        return;
+      }
+
+      // Use user's configured difficulty
+      const difficulty = userSettings.aiHintDifficulty as AIDifficulty;
+      simulations = difficultyToSimulations(difficulty);
+
+      console.log(`[AI Analysis] Using ${difficulty} difficulty (${simulations} simulations) for player ${player.name}`);
+    } catch (err) {
+      console.error(`[AI Analysis] Error fetching user settings for ${player.id}:`, err);
+      console.log(`[AI Analysis] Continuing with default settings (2000 simulations)`);
+    }
+
     console.log(`[AI Analysis] Analyzing for player at position ${playerPosition} in phase ${gameState.phase}`);
 
-    // Run analysis with high quality (2000 simulations)
+    // Run analysis with user's configured quality
     const analysisConfig = {
-      simulations: 2000,
+      simulations,
       verbose: false,
     };
 
