@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { getUserSettings, updateUserSettings, resetUserSettings } from '@/services/api';
-import { useSettingsStore } from '@/stores/settingsStore';
+import { useSettingsStore, type AIDifficulty } from '@/stores/settingsStore';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Header } from '@/components/layout/Header';
@@ -34,6 +34,8 @@ export default function SettingsPage() {
     animationSpeed: settingsStore.animationSpeed,
     soundEffects: settingsStore.soundEffects,
     showDebugConsole: settingsStore.showDebugConsole,
+    showAIHints: settingsStore.showAIHints,
+    aiHintDifficulty: settingsStore.aiHintDifficulty as AIDifficulty,
   });
 
   useEffect(() => {
@@ -56,6 +58,8 @@ export default function SettingsPage() {
           animationSpeed: settings.animationSpeed,
           soundEffects: settings.soundEffects,
           showDebugConsole: settings.showDebugConsole,
+          showAIHints: settings.showAIHints ?? settingsStore.showAIHints,
+          aiHintDifficulty: (settings.aiHintDifficulty ?? settingsStore.aiHintDifficulty) as AIDifficulty,
         };
 
         setFormData(newSettings);
@@ -87,6 +91,8 @@ export default function SettingsPage() {
         animationSpeed: updatedSettings.animationSpeed,
         soundEffects: updatedSettings.soundEffects,
         showDebugConsole: updatedSettings.showDebugConsole,
+        showAIHints: updatedSettings.showAIHints ?? settingsStore.showAIHints,
+        aiHintDifficulty: (updatedSettings.aiHintDifficulty ?? settingsStore.aiHintDifficulty) as AIDifficulty,
       });
 
       setSuccess('Settings saved successfully!');
@@ -119,6 +125,8 @@ export default function SettingsPage() {
         animationSpeed: settings.animationSpeed,
         soundEffects: settings.soundEffects,
         showDebugConsole: settings.showDebugConsole,
+        showAIHints: settings.showAIHints ?? settingsStore.showAIHints,
+        aiHintDifficulty: (settings.aiHintDifficulty ?? settingsStore.aiHintDifficulty) as AIDifficulty,
       };
 
       setFormData(newSettings);

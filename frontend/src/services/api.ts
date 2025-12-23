@@ -686,6 +686,16 @@ export interface UserSettings {
   animationSpeed: 'slow' | 'normal' | 'fast';
   soundEffects: boolean;
   showDebugConsole: boolean;
+  /**
+   * Whether to show in-game AI analysis/hints overlays.
+   * Optional for backward compatibility with older servers.
+   */
+  showAIHints?: boolean;
+  /**
+   * Controls how deep/slow AI analysis should be.
+   * Optional for backward compatibility with older servers.
+   */
+  aiHintDifficulty?: AIDifficulty;
   createdAt: string;
   updatedAt: string;
 }
@@ -698,6 +708,8 @@ export interface UpdateSettingsData {
   animationSpeed?: 'slow' | 'normal' | 'fast';
   soundEffects?: boolean;
   showDebugConsole?: boolean;
+  showAIHints?: boolean;
+  aiHintDifficulty?: AIDifficulty;
 }
 
 /**

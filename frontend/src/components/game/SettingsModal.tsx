@@ -86,8 +86,8 @@ export function SettingsModal({ isOpen, onClose, gameId, players }: SettingsModa
         showTooltips: settings.showTooltips,
         autoSortHand: settings.autoSortHand,
         soundEffects: settings.soundEffects,
-        showAIHints: settings.showAIHints,
-        aiHintDifficulty: settings.aiHintDifficulty,
+        showAIHints: settings.showAIHints ?? settingsStore.showAIHints,
+        aiHintDifficulty: settings.aiHintDifficulty ?? settingsStore.aiHintDifficulty,
       };
       setFormData(newSettings);
       settingsStore.setSettings({
@@ -118,8 +118,8 @@ export function SettingsModal({ isOpen, onClose, gameId, players }: SettingsModa
         animationSpeed: updatedSettings.animationSpeed,
         soundEffects: updatedSettings.soundEffects,
         showDebugConsole: updatedSettings.showDebugConsole,
-        showAIHints: updatedSettings.showAIHints,
-        aiHintDifficulty: updatedSettings.aiHintDifficulty,
+        showAIHints: updatedSettings.showAIHints ?? settingsStore.showAIHints,
+        aiHintDifficulty: updatedSettings.aiHintDifficulty ?? settingsStore.aiHintDifficulty,
       });
       setSuccess('Settings saved!');
       setTimeout(() => {
