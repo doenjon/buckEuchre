@@ -63,6 +63,18 @@ export const ARENA_CONFIGS: PredefinedArenaConfig[] = [
     provider: 'ismcts',
     difficulty: 'expert',
   },
+  {
+    id: 'ismcts-master',
+    name: 'ISMCTS (Master)',
+    provider: 'ismcts',
+    difficulty: 'master',
+  },
+  {
+    id: 'ismcts-grandmaster',
+    name: 'ISMCTS (Grandmaster)',
+    provider: 'ismcts',
+    difficulty: 'grandmaster',
+  },
 
   // ISMCTS with custom exploration (more aggressive)
   {

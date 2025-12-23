@@ -318,4 +318,73 @@ router.post('/:gameId/ai', authenticateToken, async (req: Request, res: Response
   }
 });
 
+/**
+ * Update AI difficulty for a specific player
+ * PATCH /api/games/:gameId/ai/:playerId/difficulty
+ * Requires authentication
+ */
+router.patch('/:gameId/ai/:playerId/difficulty', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { gameId, playerId } = req.params;
+    const { difficulty } = req.body;
+
+    // Validate difficulty
+    const validDifficulties = ['easy', 'medium', 'hard', 'expert', 'master', 'grandmaster'];
+    if (!difficulty || !validDifficulties.includes(difficulty)) {
+      return res.status(400).json({
+        error: 'Bad request',
+        message: `Invalid difficulty. Must be one of: ${validDifficulties.join(', ')}`
+      });
+    }
+
+    // Validate game exists
+    const gameState = getActiveGameState(gameId);
+    if (!gameState) {
+      return res.status(404).json({
+        error: 'Not found',
+        message: 'Game not found'
+      });
+    }
+
+    // Validate player exists and is AI
+    const player = gameState.players.find((p: any) => p.id === playerId);
+    if (!player) {
+      return res.status(404).json({
+        error: 'Not found',
+        message: 'Player not found in game'
+      });
+    }
+
+    // Check if player is AI (import the check function)
+    const { isAIPlayerByName } = await import('../services/ai-player.service');
+    if (!isAIPlayerByName(player.name)) {
+      return res.status(400).json({
+        error: 'Bad request',
+        message: 'Player is not an AI'
+      });
+    }
+
+    // Update AI difficulty in provider cache
+    const { aiProviderCache } = await import('../ai/provider-cache');
+    await aiProviderCache.removeProvider(playerId);
+    await aiProviderCache.getProvider(playerId, difficulty);
+
+    console.log(`[REST:UPDATE_AI_DIFFICULTY] Updated AI ${player.name} (${playerId}) to ${difficulty} in game ${gameId}`);
+
+    res.status(200).json({
+      success: true,
+      message: `AI difficulty updated to ${difficulty}`,
+      playerId,
+      playerName: player.name,
+      difficulty
+    });
+  } catch (error: any) {
+    console.error('Error updating AI difficulty:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message || 'Failed to update AI difficulty'
+    });
+  }
+});
+
 export default router;

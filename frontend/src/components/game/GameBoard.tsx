@@ -704,6 +704,8 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       <SettingsModal
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
+        gameId={gameState.gameId}
+        players={gameState.players}
       />
 
       {/* Back to Lobby Button - Bottom Left */}

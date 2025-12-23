@@ -7,8 +7,10 @@ import { Card, Suit, BidAmount, GameState, PlayerPosition } from '@buck-euchre/s
 
 /**
  * AI difficulty levels
+ *
+ * Extended to include ultra-high difficulty levels for maximum thinking depth
  */
-export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
+export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'expert' | 'master' | 'grandmaster';
 
 /**
  * Configuration for an AI provider

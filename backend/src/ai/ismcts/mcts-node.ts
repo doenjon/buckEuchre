@@ -56,12 +56,18 @@ export class MCTSNode {
   untriedActions: Action[];
 
   /** Exploration constant for UCB1 */
-  private static readonly C = Math.sqrt(2); // Standard value
+  private explorationConstant: number;
 
-  constructor(parent: MCTSNode | null, action: Action | null, legalActions: Action[]) {
+  constructor(
+    parent: MCTSNode | null,
+    action: Action | null,
+    legalActions: Action[],
+    explorationConstant: number = Math.sqrt(2)
+  ) {
     this.parent = parent;
     this.action = action;
     this.untriedActions = [...legalActions];
+    this.explorationConstant = explorationConstant;
   }
 
   /**
@@ -105,7 +111,7 @@ export class MCTSNode {
     }
 
     const exploitation = this.averageValue;
-    const exploration = MCTSNode.C * Math.sqrt(Math.log(this.parent.visits) / this.visits);
+    const exploration = this.explorationConstant * Math.sqrt(Math.log(this.parent.visits) / this.visits);
 
     return exploitation + exploration;
   }
@@ -153,7 +159,7 @@ export class MCTSNode {
     }
 
     // Create child node
-    const child = new MCTSNode(this, action, legalActions);
+    const child = new MCTSNode(this, action, legalActions, this.explorationConstant);
     const key = serializeAction(action);
     this.children.set(key, child);
 

@@ -150,7 +150,8 @@ export class ISMCTSEngine {
     }
 
     // Create root node
-    const root = new MCTSNode(null, null, legalActions);
+    const explorationConstant = this.config.explorationConstant ?? Math.sqrt(2);
+    const root = new MCTSNode(null, null, legalActions, explorationConstant);
 
     // Run simulations
     for (let i = 0; i < this.config.simulations; i++) {
@@ -306,7 +307,8 @@ export class ISMCTSEngine {
       throw new Error('[ISMCTS] No legal actions available for analysis');
     }
 
-    const root = new MCTSNode(null, null, legalActions);
+    const explorationConstant = this.config.explorationConstant ?? Math.sqrt(2);
+    const root = new MCTSNode(null, null, legalActions, explorationConstant);
     let successfulSimulations = 0;
     let failedSimulations = 0;
 

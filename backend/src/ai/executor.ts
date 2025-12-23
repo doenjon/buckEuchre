@@ -21,7 +21,7 @@ import { canFold, canPlaceBid, canPlayCard } from '../game/validation';
 import { checkAndTriggerAI } from './trigger';
 import { scheduleAutoStartNextRound } from '../services/round.service';
 import { aiProviderCache } from './provider-cache';
-import type { AIProvider } from './types';
+import type { AIProvider, AIDifficulty } from './types';
 
 /**
  * Delay for a specified amount of time
@@ -57,15 +57,17 @@ function findPlayerPosition(gameState: GameState, playerId: string): PlayerPosit
  * Get AI provider for a player
  *
  * Uses cached provider if available, otherwise creates a new one.
- * Defaults to 'medium' difficulty for now.
+ * Difficulty can be configured via AI_DEFAULT_DIFFICULTY environment variable.
+ * Defaults to 'hard' (increased from 'medium' due to significant AI improvements).
  *
  * @param playerId - Player ID
  * @returns AI provider instance
  */
 async function getAIProvider(playerId: string): Promise<AIProvider> {
   // TODO: Get difficulty from player settings/database
-  // For now, default to 'medium'
-  return await aiProviderCache.getProvider(playerId, 'medium');
+  // For now, use environment variable or default to 'hard'
+  const defaultDifficulty = (process.env.AI_DEFAULT_DIFFICULTY as AIDifficulty) || 'hard';
+  return await aiProviderCache.getProvider(playerId, defaultDifficulty);
 }
 
 /**

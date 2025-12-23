@@ -341,6 +341,12 @@ export async function getGameState(gameId: string): Promise<GameState> {
 }
 
 /**
+ * AI difficulty levels
+ */
+export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'expert' | 'master' | 'grandmaster';
+
+
+ /**
  * Get round history for a game
  */
 export async function getRoundHistory(gameId: string): Promise<{
@@ -373,7 +379,7 @@ export async function getRoundHistory(gameId: string): Promise<{
  */
 export async function addAIToGame(
   gameId: string,
-  options?: { difficulty?: 'easy' | 'medium' | 'hard'; name?: string }
+  options?: { difficulty?: AIDifficulty; name?: string }
 ): Promise<AddAIPlayerResponse> {
   const response = await fetch(`${API_URL}/api/games/${gameId}/ai`, {
     method: 'POST',
@@ -384,6 +390,28 @@ export async function addAIToGame(
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || 'Failed to add AI player');
+  }
+
+  return response.json();
+}
+
+/**
+ * Update AI difficulty for a specific player
+ */
+export async function updateAIDifficulty(
+  gameId: string,
+  playerId: string,
+  difficulty: AIDifficulty
+): Promise<{ success: boolean; message: string; playerId: string; playerName: string; difficulty: string }> {
+  const response = await fetch(`${API_URL}/api/games/${gameId}/ai/${playerId}/difficulty`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ difficulty }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to update AI difficulty');
   }
 
   return response.json();
