@@ -48,6 +48,7 @@ import {
 } from '../services/stats.service';
 
 interface RoundCompletionPayload {
+  gameId: string;
   roundUpdates: RoundStatsUpdate[];
   gameUpdates?: GameStatsUpdate[];
 }
@@ -68,10 +69,12 @@ function countCardsPlayedByPlayer(state: GameState): Map<PlayerPosition, number>
 }
 
 function buildRoundCompletionPayload(
+  gameId: string,
   preScoreState: GameState,
   postScoreState: GameState
 ): RoundCompletionPayload | null {
   console.log('[STATS BUILD] Called with phases:', {
+    gameId,
     prePhase: preScoreState.phase,
     postPhase: postScoreState.phase,
     gameOver: postScoreState.gameOver,
@@ -142,7 +145,7 @@ function buildRoundCompletionPayload(
   }
 
   console.log('[STATS BUILD] Built payload with', roundUpdates.length, 'round updates:', roundUpdates);
-  const payload: RoundCompletionPayload = { roundUpdates };
+  const payload: RoundCompletionPayload = { gameId, roundUpdates };
 
   if (postScoreState.phase === 'GAME_OVER' && postScoreState.gameOver) {
     const winnerPosition = postScoreState.winner;
@@ -162,6 +165,7 @@ function buildRoundCompletionPayload(
 
 async function persistRoundCompletionStats(payload: RoundCompletionPayload): Promise<void> {
   console.log('[STATS PERSIST] Called with:', {
+    gameId: payload.gameId,
     roundUpdates: payload.roundUpdates.length,
     gameUpdates: payload.gameUpdates?.length || 0,
   });
@@ -171,12 +175,9 @@ async function persistRoundCompletionStats(payload: RoundCompletionPayload): Pro
     return;
   }
 
-  // Extract game ID from first player if available
-  const gameId = payload.roundUpdates[0]?.userId || 'unknown';
-  
   // Enqueue stats persistence (non-blocking, with retries)
   await statsQueue.enqueue({
-    gameId,
+    gameId: payload.gameId,
     roundNumber: Date.now(), // Use timestamp as unique identifier
     timestamp: Date.now(),
     updates: payload.roundUpdates,
@@ -579,7 +580,7 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
       const nextState = applyFoldDecision(currentState, player.position, validated.folded);
 
       if (nextState.phase === 'ROUND_OVER' || nextState.phase === 'GAME_OVER') {
-        const statsPayload = buildRoundCompletionPayload(currentState, nextState);
+        const statsPayload = buildRoundCompletionPayload(validated.gameId, currentState, nextState);
         if (statsPayload) {
           roundCompletionPayload = statsPayload;
         }
@@ -763,7 +764,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
           scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
         });
 
-        const statsPayload = buildRoundCompletionPayload(stateBeforeScoring, nextState);
+        const statsPayload = buildRoundCompletionPayload(validated.gameId, stateBeforeScoring, nextState);
         if (statsPayload) {
           roundCompletionPayload = statsPayload;
         }
