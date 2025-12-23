@@ -13,19 +13,31 @@ import { Action } from '../ismcts/mcts-node';
 
 /**
  * Map difficulty to simulation count
+ *
+ * Simulation counts have been dramatically increased for stronger play:
+ * - Easy: 5x increase (100 -> 500)
+ * - Medium: 4x increase (500 -> 2000)
+ * - Hard: 5x increase (2000 -> 10000)
+ * - Expert: 20x increase (5000 -> 100000)
+ * - Master: 40x increase (5000 -> 200000) - NEW
+ * - Grandmaster: 100x increase (5000 -> 500000) - NEW
  */
 function getSimulationCount(difficulty: AIDifficulty): number {
   switch (difficulty) {
     case 'easy':
-      return 100; // ~20ms
+      return 500; // ~100ms - Quick but competent
     case 'medium':
-      return 500; // ~75ms
+      return 2000; // ~300ms - Solid strategic play
     case 'hard':
-      return 2000; // ~250ms
+      return 10000; // ~1.5s - Strong tactical thinking
     case 'expert':
-      return 5000; // ~600ms
+      return 100000; // ~15s - Deep analysis, near-optimal play
+    case 'master':
+      return 200000; // ~30s - Extremely deep analysis, championship-level play
+    case 'grandmaster':
+      return 500000; // ~75s - Exhaustive analysis, theoretically optimal play
     default:
-      return 500;
+      return 2000;
   }
 }
 
@@ -253,11 +265,11 @@ export function createISMCTSAI(config: AIConfig): ISMCTSAIProvider {
 export const ISMCTSAIMetadata = {
   id: 'ismcts',
   name: 'ISMCTS AI',
-  version: '1.0.0',
+  version: '2.0.0',
   description:
     'Information Set Monte Carlo Tree Search - uses determinization and tree search for strong play',
   factory: createISMCTSAI,
-  supportedDifficulties: ['medium', 'hard', 'expert'] as AIDifficulty[],
+  supportedDifficulties: ['easy', 'medium', 'hard', 'expert', 'master', 'grandmaster'] as AIDifficulty[],
   isAsync: false,
   tags: ['mcts', 'tree-search', 'imperfect-information', 'strong'],
 };
