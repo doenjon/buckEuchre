@@ -37,13 +37,28 @@ export function calculateRoundScores(
 ): Record<number, number> {
   const scores: Record<number, number> = {};
 
+  // Validation: ensure bid is valid when not dirty clubs
+  if (!isClubsTurnUp && (bid === null || bid === undefined || bid < 2 || bid > 5)) {
+    throw new Error(`Invalid bid amount: ${bid}. Must be between 2 and 5.`);
+  }
+
+  // Validation: ensure winningBidderPosition is valid when not dirty clubs
+  if (!isClubsTurnUp && (winningBidderPosition === null || winningBidderPosition === undefined)) {
+    throw new Error('winningBidderPosition cannot be null for normal bidding');
+  }
+
   for (let i = 0; i < 4; i++) {
     const player = players[i];
 
+    // Check 1: Folded players always get 0
     if (player.folded === true) {
       // Folded players get 0 score change
       scores[i] = 0;
-    } else if (isClubsTurnUp === true) {
+      continue;
+    }
+
+    // Check 2: Dirty Clubs (clubs turn-up) - ALL players scored as non-bidders
+    if (isClubsTurnUp === true) {
       // DIRTY CLUBS: ALL players are scored as non-bidders
       // Win 1+ tricks to avoid getting bucked
       if (player.tricksTaken >= 1) {
@@ -53,7 +68,11 @@ export function calculateRoundScores(
         // Took no tricks: score INCREASES by 5 (bad - got set)
         scores[i] = 5;
       }
-    } else if (i === winningBidderPosition) {
+      continue;
+    }
+
+    // Check 3: Normal bidding - check if this player is the bidder
+    if (i === winningBidderPosition) {
       // NORMAL BIDDING: This player is the bidder
       const bidderTricks = player.tricksTaken;
       if (bidderTricks >= bid) {
@@ -63,15 +82,17 @@ export function calculateRoundScores(
         // Failed contract: score INCREASES by 5 (bad - got euchred)
         scores[i] = 5;
       }
+      continue;
+    }
+
+    // Check 4: Normal bidding - non-bidder who stayed in
+    // NORMAL BIDDING: Non-bidder who stayed in
+    if (player.tricksTaken >= 1) {
+      // Took tricks: score DECREASES (good)
+      scores[i] = -player.tricksTaken;
     } else {
-      // NORMAL BIDDING: Non-bidder who stayed in
-      if (player.tricksTaken >= 1) {
-        // Took tricks: score DECREASES (good)
-        scores[i] = -player.tricksTaken;
-      } else {
-        // Took no tricks: score INCREASES by 5 (bad - got set)
-        scores[i] = 5;
-      }
+      // Took no tricks: score INCREASES by 5 (bad - got set)
+      scores[i] = 5;
     }
   }
 
