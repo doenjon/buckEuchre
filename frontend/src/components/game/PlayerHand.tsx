@@ -84,7 +84,7 @@ export function PlayerHand({
   trumpSuit = null
 }: PlayerHandProps) {
   const { aiAnalysis, getCardAnalysis } = useGameStore();
-  const { showCardOverlay, autoSortHand } = useSettingsStore();
+  const { showCardOverlay, autoSortHand, showAIHints } = useSettingsStore();
   const sortedCardIds = useMemo(() => {
     if (!cards || cards.length === 0) {
       return [] as string[];
@@ -478,7 +478,7 @@ export function PlayerHand({
           const archOffset = normalizedDistance * normalizedDistance * 6; // 6px max offset
 
           const analysis = getCardAnalysis(card.id);
-          const showAnalysis = !disabled && aiAnalysis && analysis && showCardOverlay;
+          const showAnalysis = !disabled && aiAnalysis && analysis && showCardOverlay && showAIHints;
           const isPlaying = playingCardId === card.id;
 
           return (

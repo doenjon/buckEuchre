@@ -58,6 +58,8 @@ export function SettingsModal({ isOpen, onClose, gameId, players }: SettingsModa
     showTooltips: settingsStore.showTooltips,
     autoSortHand: settingsStore.autoSortHand,
     soundEffects: settingsStore.soundEffects,
+    showAIHints: settingsStore.showAIHints,
+    aiHintDifficulty: settingsStore.aiHintDifficulty,
   });
 
   // AI difficulty state (default to 'hard' for all AI players)
@@ -84,6 +86,8 @@ export function SettingsModal({ isOpen, onClose, gameId, players }: SettingsModa
         showTooltips: settings.showTooltips,
         autoSortHand: settings.autoSortHand,
         soundEffects: settings.soundEffects,
+        showAIHints: settings.showAIHints,
+        aiHintDifficulty: settings.aiHintDifficulty,
       };
       setFormData(newSettings);
       settingsStore.setSettings({
@@ -114,6 +118,8 @@ export function SettingsModal({ isOpen, onClose, gameId, players }: SettingsModa
         animationSpeed: updatedSettings.animationSpeed,
         soundEffects: updatedSettings.soundEffects,
         showDebugConsole: updatedSettings.showDebugConsole,
+        showAIHints: updatedSettings.showAIHints,
+        aiHintDifficulty: updatedSettings.aiHintDifficulty,
       });
       setSuccess('Settings saved!');
       setTimeout(() => {
@@ -265,6 +271,60 @@ export function SettingsModal({ isOpen, onClose, gameId, players }: SettingsModa
                 }
               />
             </div>
+          </div>
+
+          {/* AI Hint Settings */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide flex items-center gap-2">
+              <Bot className="h-4 w-4" />
+              AI Hints (Your Hand)
+            </h3>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5 flex-1">
+                <Label htmlFor="showAIHints" className="text-base text-white">
+                  Show AI Analysis
+                </Label>
+                <p className="text-sm text-gray-400">
+                  Display AI suggestions and win probabilities
+                </p>
+              </div>
+              <Switch
+                id="showAIHints"
+                checked={formData.showAIHints}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, showAIHints: checked })
+                }
+              />
+            </div>
+
+            {formData.showAIHints && (
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5 flex-1">
+                  <Label htmlFor="aiHintDifficulty" className="text-base text-white">
+                    Analysis Quality
+                  </Label>
+                  <p className="text-sm text-gray-400">
+                    Higher quality = slower but more accurate
+                  </p>
+                </div>
+                <Select
+                  value={formData.aiHintDifficulty}
+                  onValueChange={(value) => setFormData({ ...formData, aiHintDifficulty: value as AIDifficulty })}
+                >
+                  <SelectTrigger id="aiHintDifficulty" className="w-44 bg-gray-800 border-gray-700 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-700">
+                    {Object.entries(DIFFICULTY_LABELS).map(([key, label]) => (
+                      <SelectItem key={key} value={key} className="text-white hover:bg-gray-700">
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* AI Difficulty Settings */}

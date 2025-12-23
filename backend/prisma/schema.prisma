@@ -118,6 +118,10 @@ model UserSettings {
   // Debug settings
   showDebugConsole Boolean @default(false)
 
+  // AI hint settings
+  showAIHints      Boolean @default(true) // Show AI analysis overlays
+  aiHintDifficulty String  @default("medium") // "easy", "medium", "hard", "expert", "master", "grandmaster"
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

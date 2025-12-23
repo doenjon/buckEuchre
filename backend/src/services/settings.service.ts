@@ -5,6 +5,8 @@
 import { UserSettings } from '@prisma/client';
 import { prisma } from '../db/client';
 
+export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'expert' | 'master' | 'grandmaster';
+
 export interface UpdateSettingsParams {
   showCardOverlay?: boolean;
   showTooltips?: boolean;
@@ -13,6 +15,8 @@ export interface UpdateSettingsParams {
   animationSpeed?: 'slow' | 'normal' | 'fast';
   soundEffects?: boolean;
   showDebugConsole?: boolean;
+  showAIHints?: boolean;
+  aiHintDifficulty?: AIDifficulty;
 }
 
 /**
@@ -45,6 +49,8 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
         animationSpeed: 'normal',
         soundEffects: true,
         showDebugConsole: false,
+        showAIHints: true,
+        aiHintDifficulty: 'medium',
       }
     });
   }
@@ -74,6 +80,8 @@ export async function updateUserSettings(
     animationSpeed: 'slow' | 'normal' | 'fast';
     soundEffects: boolean;
     showDebugConsole: boolean;
+    showAIHints: boolean;
+    aiHintDifficulty: string;
   }> = {};
 
   if (updates.showCardOverlay !== undefined) cleanUpdates.showCardOverlay = updates.showCardOverlay;
@@ -83,6 +91,8 @@ export async function updateUserSettings(
   if (updates.animationSpeed !== undefined) cleanUpdates.animationSpeed = updates.animationSpeed;
   if (updates.soundEffects !== undefined) cleanUpdates.soundEffects = updates.soundEffects;
   if (updates.showDebugConsole !== undefined) cleanUpdates.showDebugConsole = updates.showDebugConsole;
+  if (updates.showAIHints !== undefined) cleanUpdates.showAIHints = updates.showAIHints;
+  if (updates.aiHintDifficulty !== undefined) cleanUpdates.aiHintDifficulty = updates.aiHintDifficulty;
 
   console.log('[updateUserSettings] Clean updates (no undefined):', cleanUpdates);
 
@@ -114,6 +124,8 @@ export async function updateUserSettings(
           animationSpeed: cleanUpdates.animationSpeed ?? 'normal',
           soundEffects: cleanUpdates.soundEffects ?? true,
           showDebugConsole: cleanUpdates.showDebugConsole ?? false,
+          showAIHints: cleanUpdates.showAIHints ?? true,
+          aiHintDifficulty: cleanUpdates.aiHintDifficulty ?? 'medium',
         }
       });
       console.log('[updateUserSettings] Created new settings for user', userId);
@@ -172,6 +184,8 @@ export async function resetUserSettings(userId: string): Promise<UserSettings> {
       animationSpeed: 'normal',
       soundEffects: true,
       showDebugConsole: false,
+      showAIHints: true,
+      aiHintDifficulty: 'medium',
     } as any, // Type assertion needed until Prisma client is regenerated
   });
 
