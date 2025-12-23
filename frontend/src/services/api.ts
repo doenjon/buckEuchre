@@ -341,6 +341,34 @@ export async function getGameState(gameId: string): Promise<GameState> {
 }
 
 /**
+ * Get round history for a game
+ */
+export async function getRoundHistory(gameId: string): Promise<{
+  rounds: Array<{
+    roundNumber: number;
+    dealerPosition: number;
+    bidderPosition: number;
+    bid: number;
+    trumpSuit: string;
+    bidderMadeContract: boolean;
+    scores: Record<string, number>;
+    createdAt: number;
+  }>;
+}> {
+  const response = await fetch(`${API_URL}/api/games/${gameId}/rounds`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to get round history');
+  }
+
+  return response.json();
+}
+
+/**
  * Add an AI player to a game
  */
 export async function addAIToGame(
