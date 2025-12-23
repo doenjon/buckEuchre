@@ -45,12 +45,18 @@ export function getPlayableCards(
   const hand = player.hand;
   const currentTrick = gameState.currentTrick;
 
-  // If player is leading the trick, all cards are playable
-  if (currentTrick.cards.length === 0) {
+  // Check if player has already played in this trick
+  const playerHasPlayedInTrick = currentTrick.cards.some(
+    pc => pc.playerPosition === playerPosition
+  );
+
+  // If player is leading the trick (hasn't played yet), all cards are playable
+  // This handles both empty tricks and display states showing completed tricks
+  if (currentTrick.cards.length === 0 || !playerHasPlayedInTrick) {
     return hand;
   }
 
-  // Follow suit rules apply
+  // Follow suit rules apply (player hasn't played yet but others have)
   const trumpSuit = gameState.trumpSuit;
   const ledCard = currentTrick.cards[0].card;
   const ledSuit: Suit = trumpSuit ? getEffectiveSuit(ledCard, trumpSuit) : ledCard.suit;
