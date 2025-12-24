@@ -91,8 +91,12 @@ export function emitFoldDecision(socket: Socket, payload: FoldDecisionPayload): 
 /**
  * Emit PLAY_CARD event
  */
-export function emitPlayCard(socket: Socket, payload: PlayCardPayload): void {
-  socket.emit('PLAY_CARD', payload);
+export function emitPlayCard(
+  socket: Socket,
+  payload: PlayCardPayload,
+  callback?: (response: { success: boolean; error?: string; reason?: string; message?: string }) => void
+): void {
+  socket.emit('PLAY_CARD', payload, callback);
 }
 
 /**
