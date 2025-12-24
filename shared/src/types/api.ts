@@ -208,6 +208,7 @@ export interface CardAnalysis {
   cardId: string;
   winProbability: number;  // 0-1 probability of winning the game if this card is played
   expectedTricks: number;  // Expected number of tricks if this card is played
+  expectedScore: number;  // Expected score change for this hand (negative is good)
   confidence: number;  // 0-1 confidence in the analysis
   visits: number;  // Number of MCTS simulations that explored this card
   rank: number;  // Rank among all cards (1 = best)
