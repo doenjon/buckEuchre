@@ -46,7 +46,15 @@ export default function SettingsPage() {
         };
 
         setFormData(newSettings);
-        settingsStore.setSettings(newSettings);
+        settingsStore.setSettings({
+          showCardOverlay: settings.showCardOverlay,
+          showTooltips: settings.showTooltips,
+          autoSortHand: settings.autoSortHand,
+          bidSpeed: settings.bidSpeed,
+          animationSpeed: settings.animationSpeed,
+          soundEffects: settings.soundEffects,
+          showDebugConsole: settings.showDebugConsole,
+        });
       } catch (err) {
         console.error('Error fetching settings:', err);
         setError(err instanceof Error ? err.message : 'Failed to load settings');
@@ -70,6 +78,9 @@ export default function SettingsPage() {
         showCardOverlay: updatedSettings.showCardOverlay,
         showTooltips: updatedSettings.showTooltips,
         autoSortHand: updatedSettings.autoSortHand,
+        bidSpeed: updatedSettings.bidSpeed,
+        animationSpeed: updatedSettings.animationSpeed,
+        soundEffects: updatedSettings.soundEffects,
         showDebugConsole: updatedSettings.showDebugConsole,
       });
 
@@ -103,7 +114,15 @@ export default function SettingsPage() {
       };
 
       setFormData(newSettings);
-      settingsStore.setSettings(newSettings);
+      settingsStore.setSettings({
+        showCardOverlay: settings.showCardOverlay,
+        showTooltips: settings.showTooltips,
+        autoSortHand: settings.autoSortHand,
+        bidSpeed: settings.bidSpeed,
+        animationSpeed: settings.animationSpeed,
+        soundEffects: settings.soundEffects,
+        showDebugConsole: settings.showDebugConsole,
+      });
 
       setSuccess('Settings reset to defaults!');
       setTimeout(() => setSuccess(''), 3000);

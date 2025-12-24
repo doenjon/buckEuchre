@@ -583,7 +583,7 @@ export async function declineInvitation(invitationId: string): Promise<any> {
  * Get global leaderboard
  */
 export async function getGlobalLeaderboard(
-  metric: 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' = 'gamesWon',
+  metric: 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' | 'totalRounds' | 'foldRate' | 'bucks' | 'tricksWon' | 'avgPointsPerGame' = 'gamesWon',
   limit: number = 50
 ): Promise<any> {
   const response = await fetch(`${API_URL}/api/leaderboard/global?metric=${metric}&limit=${limit}`, {
@@ -605,7 +605,7 @@ export async function getGlobalLeaderboard(
  * Get friends leaderboard
  */
 export async function getFriendsLeaderboard(
-  metric: 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' = 'gamesWon'
+  metric: 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' | 'totalRounds' | 'foldRate' | 'bucks' | 'tricksWon' | 'avgPointsPerGame' = 'gamesWon'
 ): Promise<any> {
   const response = await fetch(`${API_URL}/api/leaderboard/friends?metric=${metric}`, {
     method: 'GET',

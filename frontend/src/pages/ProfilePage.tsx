@@ -116,10 +116,11 @@ function BidBreakdownChart({
               borderRadius: '6px',
               fontSize: '12px'
             }}
-            formatter={(value: number, name: string) => {
-              if (name === 'successful') return [value, 'Successful'];
-              if (name === 'failed') return [value, 'Failed'];
-              return [value, name];
+            formatter={(value: number | undefined, name: string) => {
+              const val = value ?? 0;
+              if (name === 'successful') return [val, 'Successful'];
+              if (name === 'failed') return [val, 'Failed'];
+              return [val, name];
             }}
           />
           {/* Success bars (bottom, light blue) */}
@@ -129,7 +130,7 @@ function BidBreakdownChart({
             fill="#93c5fd"
             radius={[0, 0, 4, 4]}
           >
-            {chartData.map((entry, index) => (
+            {chartData.map((_, index) => (
               <Cell key={`successful-${index}`} fill="#93c5fd" />
             ))}
           </Bar>
@@ -140,7 +141,7 @@ function BidBreakdownChart({
             fill="#ef4444"
             radius={[4, 4, 0, 0]}
           >
-            {chartData.map((entry, index) => (
+            {chartData.map((_, index) => (
               <Cell key={`failed-${index}`} fill="#ef4444" />
             ))}
             <LabelList 
@@ -303,7 +304,7 @@ export default function ProfilePage() {
   const avgPointsPerGame = stats && stats.gamesPlayed > 0
     ? (stats.totalPoints / stats.gamesPlayed).toFixed(1)
     : '0.0';
-  const foldRate = stats && stats.timesCouldFold > 0
+  const foldRate = stats && stats.timesCouldFold && stats.timesCouldFold > 0
     ? ((stats.timesFolded || 0) / stats.timesCouldFold * 100).toFixed(1)
     : '0.0';
 
