@@ -22,6 +22,7 @@ import { checkAndTriggerAI } from './trigger';
 import { scheduleAutoStartNextRound } from '../services/round.service';
 import { aiProviderCache } from './provider-cache';
 import type { AIProvider } from './types';
+import { buildRoundCompletionPayload, persistRoundCompletionStats } from '../sockets/game';
 
 /**
  * Delay for a specified amount of time
@@ -491,7 +492,21 @@ async function executeAICardPlay(
     });
 
     if (finalState.tricks.length === 5) {
+      // Capture state before finishRound for stats
+      const stateBeforeScoring = { ...finalState };
+      
       finalState = await executeGameAction(gameId, (currentState) => finishRound(currentState));
+      
+      // Build and persist stats
+      console.log(`[AI] Round completed, building stats payload...`);
+      const statsPayload = buildRoundCompletionPayload(gameId, stateBeforeScoring, finalState);
+      if (statsPayload) {
+        console.log(`[AI] Stats payload built with ${statsPayload.roundUpdates.length} updates`);
+        void persistRoundCompletionStats(statsPayload);
+      } else {
+        console.log(`[AI] Stats payload returned null`);
+      }
+      
       io.to(`game:${gameId}`).emit('ROUND_COMPLETE', {
         roundNumber: finalState.round,
       });

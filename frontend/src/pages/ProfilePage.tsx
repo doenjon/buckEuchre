@@ -5,6 +5,155 @@ import { getMe } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Header } from '@/components/layout/Header';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
+
+interface BidBreakdownChartProps {
+  bids2: number;
+  bids3: number;
+  bids4: number;
+  bids5: number;
+  bids2Successful?: number;
+  bids2Failed?: number;
+  bids3Successful?: number;
+  bids3Failed?: number;
+  bids4Successful?: number;
+  bids4Failed?: number;
+  bids5Successful?: number;
+  bids5Failed?: number;
+}
+
+function BidBreakdownChart({ 
+  bids2, bids3, bids4, bids5,
+  bids2Successful = 0, bids2Failed = 0,
+  bids3Successful = 0, bids3Failed = 0,
+  bids4Successful = 0, bids4Failed = 0,
+  bids5Successful = 0, bids5Failed = 0
+}: BidBreakdownChartProps) {
+  // Prepare data for Recharts
+  const chartData = [
+    {
+      name: '2',
+      successful: Math.min(bids2Successful, bids2),
+      failed: Math.min(bids2Failed, bids2),
+      total: bids2,
+      successRate: bids2 > 0 ? ((Math.min(bids2Successful, bids2) / bids2) * 100).toFixed(0) : '0'
+    },
+    {
+      name: '3',
+      successful: Math.min(bids3Successful, bids3),
+      failed: Math.min(bids3Failed, bids3),
+      total: bids3,
+      successRate: bids3 > 0 ? ((Math.min(bids3Successful, bids3) / bids3) * 100).toFixed(0) : '0'
+    },
+    {
+      name: '4',
+      successful: Math.min(bids4Successful, bids4),
+      failed: Math.min(bids4Failed, bids4),
+      total: bids4,
+      successRate: bids4 > 0 ? ((Math.min(bids4Successful, bids4) / bids4) * 100).toFixed(0) : '0'
+    },
+    {
+      name: '5',
+      successful: Math.min(bids5Successful, bids5),
+      failed: Math.min(bids5Failed, bids5),
+      total: bids5,
+      successRate: bids5 > 0 ? ((Math.min(bids5Successful, bids5) / bids5) * 100).toFixed(0) : '0'
+    },
+  ];
+
+  const total = bids2 + bids3 + bids4 + bids5;
+
+  if (total === 0) {
+    return (
+      <div className="h-64 flex items-center justify-center">
+        <p className="text-sm text-gray-400">No bids yet</p>
+      </div>
+    );
+  }
+
+  // Custom label component for success rate above bars
+  const renderSuccessRateLabel = (props: any) => {
+    const { x, y, width, payload } = props;
+    const entry = chartData.find(d => d.name === payload);
+    if (!entry || entry.total === 0) return null;
+    
+    return (
+      <text
+        x={x + width / 2}
+        y={y - 8}
+        fill="#374151"
+        textAnchor="middle"
+        fontSize="12"
+        fontWeight="600"
+      >
+        {entry.successRate}%
+      </text>
+    );
+  };
+
+  return (
+    <div className="w-full h-64 relative min-w-0 overflow-hidden">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={chartData}
+          margin={{ top: 35, right: 10, left: 10, bottom: 25 }}
+        >
+          <XAxis 
+            dataKey="name" 
+            tick={{ fill: '#374151', fontSize: 12, fontWeight: 600 }}
+            tickLine={{ stroke: '#9ca3af' }}
+            label={{ value: 'Bid Amount', position: 'insideBottom', offset: -5, fill: '#6b7280', fontSize: 11 }}
+          />
+          <YAxis 
+            tick={{ fill: '#6b7280', fontSize: 11 }}
+            tickLine={{ stroke: '#9ca3af' }}
+            label={{ value: 'Bids', angle: -90, position: 'insideLeft', fill: '#6b7280', fontSize: 11 }}
+          />
+          <Tooltip 
+            contentStyle={{ 
+              backgroundColor: 'white', 
+              border: '1px solid #e5e7eb',
+              borderRadius: '6px',
+              fontSize: '12px'
+            }}
+            formatter={(value: number, name: string) => {
+              if (name === 'successful') return [value, 'Successful'];
+              if (name === 'failed') return [value, 'Failed'];
+              return [value, name];
+            }}
+          />
+          {/* Success bars (bottom, light blue) */}
+          <Bar 
+            dataKey="successful" 
+            stackId="a" 
+            fill="#93c5fd"
+            radius={[0, 0, 4, 4]}
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={`successful-${index}`} fill="#93c5fd" />
+            ))}
+          </Bar>
+          {/* Failed bars (top, red) */}
+          <Bar 
+            dataKey="failed" 
+            stackId="a" 
+            fill="#ef4444"
+            radius={[4, 4, 0, 0]}
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={`failed-${index}`} fill="#ef4444" />
+            ))}
+            <LabelList 
+              dataKey="total" 
+              content={renderSuccessRateLabel}
+              position="top"
+            />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 interface UserProfile {
   userId: string;
@@ -21,6 +170,22 @@ interface UserProfile {
     totalBids: number;
     successfulBids: number;
     totalTricksTaken: number;
+    bucks?: number;
+    bids2?: number;
+    bids3?: number;
+    bids4?: number;
+    bids5?: number;
+    bids2Successful?: number;
+    bids2Failed?: number;
+    bids3Successful?: number;
+    bids3Failed?: number;
+    bids4Successful?: number;
+    bids4Failed?: number;
+    bids5Successful?: number;
+    bids5Failed?: number;
+    timesFolded?: number;
+    timesCouldFold?: number;
+    totalRounds?: number;
   };
 }
 
@@ -62,6 +227,22 @@ export default function ProfilePage() {
             totalBids: data.stats.totalBids,
             successfulBids: data.stats.successfulBids,
             totalTricksTaken: data.stats.totalTricksTaken,
+            bucks: data.stats.bucks || 0,
+            bids2: data.stats.bids2 || 0,
+            bids3: data.stats.bids3 || 0,
+            bids4: data.stats.bids4 || 0,
+            bids5: data.stats.bids5 || 0,
+            bids2Successful: data.stats.bids2Successful || 0,
+            bids2Failed: data.stats.bids2Failed || 0,
+            bids3Successful: data.stats.bids3Successful || 0,
+            bids3Failed: data.stats.bids3Failed || 0,
+            bids4Successful: data.stats.bids4Successful || 0,
+            bids4Failed: data.stats.bids4Failed || 0,
+            bids5Successful: data.stats.bids5Successful || 0,
+            bids5Failed: data.stats.bids5Failed || 0,
+            timesFolded: data.stats.timesFolded || 0,
+            timesCouldFold: data.stats.timesCouldFold || 0,
+            totalRounds: data.stats.totalRounds || 0,
           } : undefined,
         };
         
@@ -122,6 +303,9 @@ export default function ProfilePage() {
   const avgPointsPerGame = stats && stats.gamesPlayed > 0
     ? (stats.totalPoints / stats.gamesPlayed).toFixed(1)
     : '0.0';
+  const foldRate = stats && stats.timesCouldFold > 0
+    ? ((stats.timesFolded || 0) / stats.timesCouldFold * 100).toFixed(1)
+    : '0.0';
 
   return (
     <>
@@ -179,176 +363,97 @@ export default function ProfilePage() {
         </Card>
 
         {/* Stats Section */}
-        <div className="mb-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Game Statistics</h3>
-          
-          {stats ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Games Played */}
-              <Card className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 font-medium">Games Played</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-1">{stats.gamesPlayed}</p>
-                  </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-2xl">🎮</span>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Win Rate */}
-              <Card className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 font-medium">Win Rate</p>
-                    <p className="text-3xl font-bold text-green-600 mt-1">{winRate}%</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {stats.gamesWon}W - {stats.gamesLost}L
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <span className="text-2xl">🏆</span>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Bid Success Rate */}
-              <Card className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 font-medium">Bid Success</p>
-                    <p className="text-3xl font-bold text-purple-600 mt-1">{bidSuccessRate}%</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {stats.successfulBids} / {stats.totalBids}
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                    <span className="text-2xl">🎯</span>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Average Points */}
-              <Card className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 font-medium">Avg Points/Game</p>
-                    <p className="text-3xl font-bold text-orange-600 mt-1">{avgPointsPerGame}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {stats.totalPoints} total
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                    <span className="text-2xl">⭐</span>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Total Tricks */}
-              <Card className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 font-medium">Tricks Taken</p>
-                    <p className="text-3xl font-bold text-blue-600 mt-1">{stats.totalTricksTaken}</p>
-                  </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-2xl">🃏</span>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Games Won */}
-              <Card className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 font-medium">Games Won</p>
-                    <p className="text-3xl font-bold text-green-600 mt-1">{stats.gamesWon}</p>
-                  </div>
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <span className="text-2xl">✅</span>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Games Lost */}
-              <Card className="p-5 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-md hover:shadow-lg transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-emerald-600 font-medium">Games Lost</p>
-                    <p className="text-3xl font-bold text-red-600 mt-1">{stats.gamesLost}</p>
-                  </div>
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                    <span className="text-2xl">❌</span>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Total Points */}
-              <Card className="p-5 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-md hover:shadow-lg transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-emerald-600 font-medium">Total Points</p>
-                    <p className="text-3xl font-bold text-emerald-700 mt-1">{stats.totalPoints}</p>
-                  </div>
-                  <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
-                    <span className="text-2xl">💎</span>
-                  </div>
-                </div>
-              </Card>
+        {stats ? (
+          <div className="space-y-8">
+            {/* Overview Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">Overview</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <Card className="p-3 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Games Played</p>
+                  <p className="text-xl font-bold text-gray-900">{stats.gamesPlayed}</p>
+                </Card>
+                <Card className="p-3 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Rounds</p>
+                  <p className="text-xl font-bold text-gray-900">{stats.totalRounds || 0}</p>
+                </Card>
+              </div>
             </div>
-          ) : (
-            <Card className="p-8 text-center bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
-              <div className="text-emerald-400 mb-4">
-                <span className="text-6xl">🎮</span>
-              </div>
-              <h4 className="text-lg font-semibold text-emerald-800 mb-2">No Stats Yet</h4>
-              <p className="text-emerald-700 mb-4">
-                Play some games to start tracking your statistics!
-              </p>
-              <Button onClick={() => navigate('/lobby')} variant="primary">
-                Play Now
-              </Button>
-            </Card>
-          )}
-        </div>
 
-        {/* Quick Actions */}
-        <Card className="p-6 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
-          <h3 className="text-xl font-bold text-emerald-800 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button 
-              onClick={() => navigate('/lobby')}
-              variant="primary"
-              className="py-6"
-            >
-              <div className="text-center">
-                <p className="text-lg font-semibold">Play Game</p>
-                <p className="text-sm opacity-90">Join or create a game</p>
+            {/* Performance Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">Performance</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <Card className="p-3 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Win Rate</p>
+                  <p className="text-xl font-bold text-green-600">{winRate}%</p>
+                  <p className="text-xs text-gray-500 mt-1">{stats.gamesWon}W - {stats.gamesLost}L</p>
+                </Card>
+                <Card className="p-3 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Tricks Taken</p>
+                  <p className="text-xl font-bold text-blue-600">{stats.totalTricksTaken}</p>
+                </Card>
+                <Card className="p-3 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Avg Points/Game</p>
+                  <p className="text-xl font-bold text-orange-600">{avgPointsPerGame}</p>
+                </Card>
+                <Card className="p-3 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Points</p>
+                  <p className="text-xl font-bold text-emerald-700">{stats.totalPoints}</p>
+                </Card>
+                <Card className="p-3 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Bucks</p>
+                  <p className="text-xl font-bold text-red-600">{stats.bucks || 0}</p>
+                  <p className="text-xs text-gray-500 mt-1">Times set</p>
+                </Card>
               </div>
-            </Button>
-            <Button 
-              onClick={() => navigate('/friends')}
-              variant="primary"
-              className="py-6"
-            >
-              <div className="text-center">
-                <p className="text-lg font-semibold">Friends</p>
-                <p className="text-sm opacity-90">Manage your friends</p>
+            </div>
+
+            {/* Bidding Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">Bidding</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <Card className="p-3 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Bid Success Rate</p>
+                  <p className="text-xl font-bold text-purple-600">{bidSuccessRate}%</p>
+                  <p className="text-xs text-gray-500 mt-1">{stats.successfulBids} / {stats.totalBids} successful</p>
+                </Card>
+                <Card className="p-3 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Fold Rate</p>
+                  <p className="text-xl font-bold text-purple-600">{foldRate}%</p>
+                  <p className="text-xs text-gray-500 mt-1">{stats.timesFolded || 0} / {stats.timesCouldFold || 0} folds</p>
+                </Card>
+                <Card className="p-3 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-sm hover:shadow-md transition-shadow col-span-2 w-full">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Bid Breakdown</p>
+                  <BidBreakdownChart 
+                    bids2={stats.bids2 || 0}
+                    bids3={stats.bids3 || 0}
+                    bids4={stats.bids4 || 0}
+                    bids5={stats.bids5 || 0}
+                    bids2Successful={stats.bids2Successful || 0}
+                    bids2Failed={stats.bids2Failed || 0}
+                    bids3Successful={stats.bids3Successful || 0}
+                    bids3Failed={stats.bids3Failed || 0}
+                    bids4Successful={stats.bids4Successful || 0}
+                    bids4Failed={stats.bids4Failed || 0}
+                    bids5Successful={stats.bids5Successful || 0}
+                    bids5Failed={stats.bids5Failed || 0}
+                  />
+                </Card>
               </div>
-            </Button>
-            <Button 
-              onClick={() => navigate('/leaderboard')}
-              variant="primary"
-              className="py-6"
-            >
-              <div className="text-center">
-                <p className="text-lg font-semibold">Leaderboard</p>
-                <p className="text-sm opacity-90">See top players</p>
-              </div>
-            </Button>
+            </div>
           </div>
-        </Card>
+        ) : (
+          <Card className="p-8 text-center bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
+            <h4 className="text-lg font-semibold text-emerald-800 mb-2">No Stats Yet</h4>
+            <p className="text-emerald-700 mb-4">
+              Play some games to start tracking your statistics!
+            </p>
+            <Button onClick={() => navigate('/lobby')} variant="primary">
+              Play Now
+            </Button>
+          </Card>
+        )}
       </div>
       </div>
     </>

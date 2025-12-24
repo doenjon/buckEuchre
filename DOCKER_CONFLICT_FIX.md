@@ -80,3 +80,4 @@ After deploying this fix to your docker compose environment:
 - `/Users/Jon/dev/BuckEuchre/backend/src/api/game.routes.ts` - Added error handling and fixed unhandled promise rejection
 
 
+

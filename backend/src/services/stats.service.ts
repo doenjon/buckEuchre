@@ -12,6 +12,8 @@ export interface RoundStatsUpdate {
   tricksWon: number;
   totalTricks: number;
   pointsEarned: number;
+  folded?: boolean;
+  couldFold?: boolean;
 }
 
 export interface GameStatsUpdate {
@@ -24,7 +26,7 @@ export interface GameStatsUpdate {
  * Update user stats after a round completes
  */
 export async function updateRoundStats(roundStats: RoundStatsUpdate): Promise<void> {
-  const { userId, wasBidder, bidAmount, bidSuccess, tricksWon, totalTricks, pointsEarned } = roundStats;
+  const { userId, wasBidder, bidAmount, bidSuccess, tricksWon, totalTricks, pointsEarned, folded, couldFold } = roundStats;
 
   console.log('[updateRoundStats] Called for user', userId, 'with stats:', {
     wasBidder,
@@ -55,10 +57,24 @@ export async function updateRoundStats(roundStats: RoundStatsUpdate): Promise<vo
 
     // Calculate updates
     const updates: any = {
+      totalRounds: stats.totalRounds + 1, // Increment for every round played
       totalTricks: stats.totalTricks + totalTricks,
       tricksWon: stats.tricksWon + tricksWon,
       totalPoints: stats.totalPoints + pointsEarned,
     };
+
+    // Track bucks: when pointsEarned === -5, player got bucked (scoreChange was +5)
+    if (pointsEarned === -5) {
+      updates.bucks = (stats.bucks || 0) + 1;
+    }
+
+    // Track fold stats
+    if (couldFold) {
+      updates.timesCouldFold = (stats.timesCouldFold || 0) + 1;
+      if (folded) {
+        updates.timesFolded = (stats.timesFolded || 0) + 1;
+      }
+    }
 
     // Update bidding stats if user was the bidder
     if (wasBidder && bidAmount !== undefined && bidSuccess !== undefined) {
@@ -73,6 +89,37 @@ export async function updateRoundStats(roundStats: RoundStatsUpdate): Promise<vo
       // Update highest bid
       if (bidAmount > stats.highestBid) {
         updates.highestBid = bidAmount;
+      }
+
+      // Track bid amounts separately with success/failure
+      if (bidAmount === 2) {
+        updates.bids2 = (stats.bids2 || 0) + 1;
+        if (bidSuccess) {
+          updates.bids2Successful = (stats.bids2Successful || 0) + 1;
+        } else {
+          updates.bids2Failed = (stats.bids2Failed || 0) + 1;
+        }
+      } else if (bidAmount === 3) {
+        updates.bids3 = (stats.bids3 || 0) + 1;
+        if (bidSuccess) {
+          updates.bids3Successful = (stats.bids3Successful || 0) + 1;
+        } else {
+          updates.bids3Failed = (stats.bids3Failed || 0) + 1;
+        }
+      } else if (bidAmount === 4) {
+        updates.bids4 = (stats.bids4 || 0) + 1;
+        if (bidSuccess) {
+          updates.bids4Successful = (stats.bids4Successful || 0) + 1;
+        } else {
+          updates.bids4Failed = (stats.bids4Failed || 0) + 1;
+        }
+      } else if (bidAmount === 5) {
+        updates.bids5 = (stats.bids5 || 0) + 1;
+        if (bidSuccess) {
+          updates.bids5Successful = (stats.bids5Successful || 0) + 1;
+        } else {
+          updates.bids5Failed = (stats.bids5Failed || 0) + 1;
+        }
       }
     }
 
@@ -198,13 +245,13 @@ export async function getComputedStats(userId: string) {
  * Get leaderboard by a specific metric
  */
 export async function getLeaderboard(
-  metric: 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate',
+  metric: 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' | 'totalRounds' | 'foldRate' | 'bucks' | 'tricksWon' | 'avgPointsPerGame',
   limit: number = 50
 ) {
   const allStats = await prisma.userStats.findMany({
     where: {
       gamesPlayed: {
-        gte: 5, // Require at least 5 games played
+        gte: 1, // Require at least 1 game played
       },
     },
     include: {
@@ -230,10 +277,20 @@ export async function getLeaderboard(
       ? (stat.successfulBids / stat.totalBids) * 100
       : 0;
 
+    const foldRate = stat.timesCouldFold > 0
+      ? (stat.timesFolded / stat.timesCouldFold) * 100
+      : 0;
+
+    const avgPointsPerGame = stat.gamesPlayed > 0
+      ? stat.totalPoints / stat.gamesPlayed
+      : 0;
+
     return {
       ...stat,
       winRate: Math.round(winRate * 10) / 10,
       bidSuccessRate: Math.round(bidSuccessRate * 10) / 10,
+      foldRate: Math.round(foldRate * 10) / 10,
+      avgPointsPerGame: Math.round(avgPointsPerGame * 10) / 10,
     };
   });
 
@@ -247,6 +304,42 @@ export async function getLeaderboard(
       return b.totalPoints - a.totalPoints;
     } else if (metric === 'bidSuccessRate') {
       return b.bidSuccessRate - a.bidSuccessRate;
+    } else if (metric === 'totalRounds') {
+      return b.totalRounds - a.totalRounds;
+    } else if (metric === 'foldRate') {
+      // Require at least 5 opportunities to fold for meaningful comparison
+      const aHasEnough = a.timesCouldFold >= 5;
+      const bHasEnough = b.timesCouldFold >= 5;
+      
+      // Players with less than 5 opportunities go to the end
+      if (!aHasEnough && !bHasEnough) {
+        // Both don't have enough - sort by foldRate among themselves (lower is better)
+        return Number(a.foldRate || 0) - Number(b.foldRate || 0);
+      }
+      if (!aHasEnough) return 1;
+      if (!bHasEnough) return -1;
+      
+      // Both have enough opportunities - sort ascending (lower is better)
+      return Number(a.foldRate) - Number(b.foldRate);
+    } else if (metric === 'bucks') {
+      return b.bucks - a.bucks;
+    } else if (metric === 'tricksWon') {
+      return b.tricksWon - a.tricksWon;
+    } else if (metric === 'avgPointsPerGame') {
+      // Require at least 5 games for meaningful comparison
+      const aHasEnough = a.gamesPlayed >= 5;
+      const bHasEnough = b.gamesPlayed >= 5;
+      
+      // Players with less than 5 games go to the end
+      if (!aHasEnough && !bHasEnough) {
+        // Both don't have enough - sort by avgPointsPerGame among themselves (higher is better)
+        return Number(b.avgPointsPerGame || 0) - Number(a.avgPointsPerGame || 0);
+      }
+      if (!aHasEnough) return 1;
+      if (!bHasEnough) return -1;
+      
+      // Both have enough games - sort descending (higher is better)
+      return Number(b.avgPointsPerGame) - Number(a.avgPointsPerGame);
     }
     return 0;
   });
@@ -260,7 +353,7 @@ export async function getLeaderboard(
  */
 export async function getFriendsLeaderboard(
   userId: string,
-  metric: 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate'
+  metric: 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' | 'totalRounds' | 'foldRate' | 'bucks' | 'tricksWon' | 'avgPointsPerGame'
 ) {
   // Get user's friends
   const friendships = await prisma.friendship.findMany({
@@ -309,10 +402,20 @@ export async function getFriendsLeaderboard(
       ? (stat.successfulBids / stat.totalBids) * 100
       : 0;
 
+    const foldRate = stat.timesCouldFold > 0
+      ? (stat.timesFolded / stat.timesCouldFold) * 100
+      : 0;
+
+    const avgPointsPerGame = stat.gamesPlayed > 0
+      ? stat.totalPoints / stat.gamesPlayed
+      : 0;
+
     return {
       ...stat,
       winRate: Math.round(winRate * 10) / 10,
       bidSuccessRate: Math.round(bidSuccessRate * 10) / 10,
+      foldRate: Math.round(foldRate * 10) / 10,
+      avgPointsPerGame: Math.round(avgPointsPerGame * 10) / 10,
     };
   });
 
@@ -321,17 +424,53 @@ export async function getFriendsLeaderboard(
     if (metric === 'gamesWon') {
       return b.gamesWon - a.gamesWon;
     } else if (metric === 'winRate') {
-      // Require at least 5 games for win rate comparison
-      if (a.gamesPlayed < 5) return 1;
-      if (b.gamesPlayed < 5) return -1;
+      // Require at least 1 game for win rate comparison
+      if (a.gamesPlayed < 1) return 1;
+      if (b.gamesPlayed < 1) return -1;
       return b.winRate - a.winRate;
     } else if (metric === 'totalPoints') {
       return b.totalPoints - a.totalPoints;
     } else if (metric === 'bidSuccessRate') {
-      // Require at least 5 bids for bid success rate comparison
-      if (a.totalBids < 5) return 1;
-      if (b.totalBids < 5) return -1;
+      // Require at least 1 bid for bid success rate comparison
+      if (a.totalBids < 1) return 1;
+      if (b.totalBids < 1) return -1;
       return b.bidSuccessRate - a.bidSuccessRate;
+    } else if (metric === 'totalRounds') {
+      return b.totalRounds - a.totalRounds;
+    } else if (metric === 'foldRate') {
+      // Require at least 5 opportunities to fold for meaningful comparison
+      const aHasEnough = a.timesCouldFold >= 5;
+      const bHasEnough = b.timesCouldFold >= 5;
+      
+      // Players with less than 5 opportunities go to the end
+      if (!aHasEnough && !bHasEnough) {
+        // Both don't have enough - sort by foldRate among themselves (lower is better)
+        return Number(a.foldRate || 0) - Number(b.foldRate || 0);
+      }
+      if (!aHasEnough) return 1;
+      if (!bHasEnough) return -1;
+      
+      // Both have enough opportunities - sort ascending (lower is better)
+      return Number(a.foldRate) - Number(b.foldRate);
+    } else if (metric === 'bucks') {
+      return b.bucks - a.bucks;
+    } else if (metric === 'tricksWon') {
+      return b.tricksWon - a.tricksWon;
+    } else if (metric === 'avgPointsPerGame') {
+      // Require at least 5 games for meaningful comparison
+      const aHasEnough = a.gamesPlayed >= 5;
+      const bHasEnough = b.gamesPlayed >= 5;
+      
+      // Players with less than 5 games go to the end
+      if (!aHasEnough && !bHasEnough) {
+        // Both don't have enough - sort by avgPointsPerGame among themselves (higher is better)
+        return Number(b.avgPointsPerGame || 0) - Number(a.avgPointsPerGame || 0);
+      }
+      if (!aHasEnough) return 1;
+      if (!bHasEnough) return -1;
+      
+      // Both have enough games - sort descending (higher is better)
+      return Number(b.avgPointsPerGame) - Number(a.avgPointsPerGame);
     }
     return 0;
   });

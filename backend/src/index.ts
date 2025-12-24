@@ -4,6 +4,7 @@
  */
 
 import dotenv from 'dotenv';
+import path from 'path';
 import { createAppServer } from './server';
 import { connectDatabase, disconnectDatabase } from './db/client';
 import { loadActiveGamesFromDatabase, persistAllActiveGames } from './services/state.service';
@@ -11,8 +12,13 @@ import { validateEnv } from './config/env';
 import { setupAIProviders } from './ai';
 import { initializeArenaConfigs } from './arena/arena.service';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from backend/.env explicitly (not from parent directory)
+dotenv.config({ path: path.join(process.cwd(), '.env') });
+
+// Debug: Log DATABASE_URL (without password)
+console.log('🔍 DATABASE_URL loaded:', process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@') || 'NOT SET');
+console.log('🔍 Current working directory:', process.cwd());
+console.log('🔍 .env file path:', path.join(process.cwd(), '.env'));
 
 // Validate environment variables before starting server
 const env = validateEnv();

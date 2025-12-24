@@ -149,7 +149,7 @@ export default function LoginPage() {
                   type="text"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                  className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                   placeholder="Enter your email or username"
                   required
                   disabled={loading}
@@ -165,7 +165,7 @@ export default function LoginPage() {
                   type="password"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                  className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                   placeholder="Enter your password"
                   required
                   disabled={loading}
@@ -195,7 +195,7 @@ export default function LoginPage() {
                   type="text"
                   value={regUsername}
                   onChange={(e) => setRegUsername(e.target.value)}
-                  className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                  className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                   placeholder="Choose a username"
                   required
                   disabled={loading}
@@ -216,7 +216,7 @@ export default function LoginPage() {
                   type="text"
                   value={regDisplayName}
                   onChange={(e) => setRegDisplayName(e.target.value)}
-                  className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                  className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                   placeholder="Your display name"
                   required
                   disabled={loading}
@@ -235,7 +235,7 @@ export default function LoginPage() {
                   type="email"
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                  className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                   placeholder="your@email.com"
                   disabled={loading}
                 />
@@ -251,7 +251,7 @@ export default function LoginPage() {
                   type="password"
                   value={regPassword}
                   onChange={(e) => setRegPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                  className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                   placeholder="Create a password"
                   required
                   disabled={loading}
@@ -268,7 +268,7 @@ export default function LoginPage() {
                   type="password"
                   value={regConfirmPassword}
                   onChange={(e) => setRegConfirmPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                  className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                   placeholder="Confirm your password"
                   required
                   disabled={loading}

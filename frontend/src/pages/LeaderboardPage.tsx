@@ -15,10 +15,15 @@ interface LeaderboardEntry {
   totalPoints: number;
   winRate: number;
   bidSuccessRate: number;
+  totalRounds?: number;
+  foldRate?: number;
+  bucks?: number;
+  tricksWon?: number;
+  avgPointsPerGame?: number;
 }
 
 type LeaderboardType = 'global' | 'friends';
-type SortBy = 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate';
+type SortBy = 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' | 'totalRounds' | 'foldRate' | 'bucks' | 'tricksWon' | 'avgPointsPerGame';
 
 export default function LeaderboardPage() {
   const [type, setType] = useState<LeaderboardType>('global');
@@ -51,9 +56,27 @@ export default function LeaderboardPage() {
       // Ensure data is an array (API functions should return arrays, but add safety check)
       const entriesArray = Array.isArray(data) ? data : (data.leaderboard || []);
       
-      console.log('[LeaderboardPage] Leaderboard data:', data, 'Extracted:', entriesArray);
+      // Transform entries to flatten the user object
+      const transformedEntries: LeaderboardEntry[] = entriesArray.map((entry: any) => ({
+        userId: entry.userId,
+        username: entry.user?.username || entry.username || '',
+        displayName: entry.user?.displayName || entry.displayName || '',
+        avatarUrl: entry.user?.avatarUrl || entry.avatarUrl,
+        gamesPlayed: entry.gamesPlayed || 0,
+        gamesWon: entry.gamesWon || 0,
+        totalPoints: entry.totalPoints || 0,
+        winRate: entry.winRate || 0,
+        bidSuccessRate: entry.bidSuccessRate || 0,
+        totalRounds: entry.totalRounds || 0,
+        foldRate: entry.foldRate || 0,
+        bucks: entry.bucks || 0,
+        tricksWon: entry.tricksWon || 0,
+        avgPointsPerGame: entry.avgPointsPerGame || 0,
+      }));
       
-      setEntries(entriesArray);
+      console.log('[LeaderboardPage] Leaderboard data:', data, 'Transformed:', transformedEntries);
+      
+      setEntries(transformedEntries);
     } catch (err) {
       console.error('[LeaderboardPage] Error loading leaderboard:', err);
       setError(err instanceof Error ? err.message : 'Failed to load leaderboard');
@@ -133,6 +156,11 @@ export default function LeaderboardPage() {
               <option value="winRate">📈 Win Rate</option>
               <option value="totalPoints">⭐ Total Points</option>
               <option value="bidSuccessRate">🎯 Bid Success</option>
+              <option value="totalRounds">🔄 Total Rounds</option>
+              <option value="foldRate">📉 Fold Rate</option>
+              <option value="bucks">💰 Bucks</option>
+              <option value="tricksWon">🃏 Tricks Won</option>
+              <option value="avgPointsPerGame">📊 Avg Points/Game</option>
             </select>
           </div>
         </div>
@@ -154,125 +182,49 @@ export default function LeaderboardPage() {
           </Card>
         ) : (
           <Card className="overflow-hidden bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
-            {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-emerald-50/80 border-b border-emerald-200">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-emerald-700 uppercase tracking-wider">
-                      Rank
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-emerald-700 uppercase tracking-wider">
-                      Player
-                    </th>
-                    <th className="px-6 py-4 text-center text-xs font-medium text-emerald-700 uppercase tracking-wider">
-                      Games
-                    </th>
-                    <th className="px-6 py-4 text-center text-xs font-medium text-emerald-700 uppercase tracking-wider">
-                      Wins
-                    </th>
-                    <th className="px-6 py-4 text-center text-xs font-medium text-emerald-700 uppercase tracking-wider">
-                      Win Rate
-                    </th>
-                    <th className="px-6 py-4 text-center text-xs font-medium text-emerald-700 uppercase tracking-wider">
-                      Points
-                    </th>
-                    <th className="px-6 py-4 text-center text-xs font-medium text-emerald-700 uppercase tracking-wider">
-                      Bid Success
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white/60 divide-y divide-emerald-100">
-                  {entries.map((entry, index) => {
-                    const rank = index + 1;
-                    const isCurrentUser = entry.userId === userId;
-                    
-                    return (
-                      <tr
-                        key={entry.userId}
-                        className={`hover:bg-emerald-50/50 transition-colors ${
-                          isCurrentUser ? 'bg-emerald-100/60' : ''
-                        }`}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-2xl font-bold">
-                            {getRankEmoji(rank)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-3">
-                            {/* Avatar */}
-                            {entry.avatarUrl ? (
-                              <img
-                                src={entry.avatarUrl}
-                                alt={entry.displayName || entry.username || 'User'}
-                                className="w-10 h-10 rounded-full"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-                                <span className="text-sm font-bold text-white">
-                                  {(entry.displayName || entry.username || 'U').charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                            )}
-                            <div>
-                              <div className="flex items-center space-x-2">
-                                <p className="font-semibold text-emerald-900">
-                                  {entry.displayName || entry.username || 'User'}
-                                </p>
-                                {isCurrentUser && (
-                                  <span className="px-2 py-0.5 bg-emerald-200 text-emerald-800 text-xs font-medium rounded">
-                                    You
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-sm text-emerald-600">@{entry.username}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-emerald-900">
-                          {entry.gamesPlayed}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className="text-sm font-semibold text-emerald-700">
-                            {entry.gamesWon}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className="text-sm font-semibold text-emerald-600">
-                            {entry.winRate.toFixed(1)}%
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className="text-sm font-semibold text-emerald-700">
-                            {entry.totalPoints.toLocaleString()}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className="text-sm font-semibold text-emerald-600">
-                            {entry.bidSuccessRate.toFixed(1)}%
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Cards */}
-            <div className="md:hidden divide-y divide-emerald-100">
+            <div className="divide-y divide-emerald-100/50">
               {entries.map((entry, index) => {
                 const rank = index + 1;
                 const isCurrentUser = entry.userId === userId;
                 
+                // Get the relevant metric value based on sortBy
+                const getMetricValue = () => {
+                  switch (sortBy) {
+                    case 'gamesWon':
+                      return { label: 'Wins', value: entry.gamesWon, unit: '' };
+                    case 'winRate':
+                      return { label: 'Win Rate', value: entry.winRate.toFixed(1), unit: '%' };
+                    case 'totalPoints':
+                      return { label: 'Points', value: entry.totalPoints.toLocaleString(), unit: '' };
+                    case 'bidSuccessRate':
+                      return { label: 'Bid Success', value: entry.bidSuccessRate.toFixed(1), unit: '%' };
+                    case 'totalRounds':
+                      return { label: 'Rounds', value: (entry.totalRounds || 0).toLocaleString(), unit: '' };
+                    case 'foldRate':
+                      return { label: 'Fold Rate', value: (entry.foldRate || 0).toFixed(1), unit: '%' };
+                    case 'bucks':
+                      return { label: 'Bucks', value: (entry.bucks || 0).toLocaleString(), unit: '' };
+                    case 'tricksWon':
+                      return { label: 'Tricks Won', value: (entry.tricksWon || 0).toLocaleString(), unit: '' };
+                    case 'avgPointsPerGame':
+                      return { label: 'Avg Points/Game', value: (entry.avgPointsPerGame || 0).toFixed(1), unit: '' };
+                    default:
+                      return { label: 'Wins', value: entry.gamesWon, unit: '' };
+                  }
+                };
+                
+                const metric = getMetricValue();
+                
                 return (
                   <div
                     key={entry.userId}
-                    className={`p-4 ${isCurrentUser ? 'bg-emerald-100/60' : ''}`}
+                    className={`flex items-center justify-between px-4 py-2 hover:bg-emerald-50/30 transition-colors ${
+                      isCurrentUser ? 'bg-emerald-100/40' : ''
+                    }`}
                   >
-                    <div className="flex items-center space-x-3 mb-3">
-                      <span className="text-2xl font-bold w-10">
+                    {/* Left: Rank + User */}
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="text-lg font-bold text-emerald-700 flex-shrink-0">
                         {getRankEmoji(rank)}
                       </span>
                       
@@ -281,45 +233,38 @@ export default function LeaderboardPage() {
                         <img
                           src={entry.avatarUrl}
                           alt={entry.displayName || entry.username || 'User'}
-                          className="w-12 h-12 rounded-full"
+                          className="w-8 h-8 rounded-full flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-                          <span className="text-lg font-bold text-white">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold text-white">
                             {(entry.displayName || entry.username || 'U').charAt(0).toUpperCase()}
                           </span>
                         </div>
                       )}
-
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <p className="font-semibold text-emerald-900">{entry.displayName || entry.username || 'User'}</p>
+                      
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-emerald-900 truncate">
+                            {entry.displayName || entry.username || 'User'}
+                          </p>
                           {isCurrentUser && (
-                            <span className="px-2 py-0.5 bg-emerald-200 text-emerald-800 text-xs font-medium rounded">
+                            <span className="px-1.5 py-0.5 bg-emerald-200 text-emerald-800 text-xs font-medium rounded flex-shrink-0">
                               You
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-emerald-600">@{entry.username}</p>
+                        <p className="text-xs text-emerald-600 truncate">@{entry.username}</p>
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <p className="text-emerald-600">Games</p>
-                        <p className="font-semibold text-emerald-900">{entry.gamesPlayed}</p>
-                      </div>
-                      <div>
-                        <p className="text-emerald-600">Wins</p>
-                        <p className="font-semibold text-emerald-700">{entry.gamesWon}</p>
-                      </div>
-                      <div>
-                        <p className="text-emerald-600">Win Rate</p>
-                        <p className="font-semibold text-emerald-700">{entry.winRate.toFixed(1)}%</p>
-                      </div>
-                      <div>
-                        <p className="text-emerald-600">Points</p>
-                        <p className="font-semibold text-emerald-700">{entry.totalPoints.toLocaleString()}</p>
+                    
+                    {/* Right: Metric Value */}
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                      <div className="text-right">
+                        <p className="text-xs text-emerald-600 uppercase tracking-wide">{metric.label}</p>
+                        <p className="text-lg font-bold text-emerald-700">
+                          {metric.value}{metric.unit}
+                        </p>
                       </div>
                     </div>
                   </div>

@@ -21,16 +21,16 @@ router.get('/global', optionalAuth, async (req: Request, res: Response) => {
     );
 
     // Validate metric
-    const validMetrics = ['gamesWon', 'winRate', 'totalPoints', 'bidSuccessRate'];
+    const validMetrics = ['gamesWon', 'winRate', 'totalPoints', 'bidSuccessRate', 'totalRounds', 'foldRate', 'bucks', 'tricksWon', 'avgPointsPerGame'];
     if (!validMetrics.includes(metric)) {
       return res.status(400).json({
         error: 'Bad request',
-        message: 'Invalid metric. Must be one of: gamesWon, winRate, totalPoints, bidSuccessRate',
+        message: 'Invalid metric. Must be one of: gamesWon, winRate, totalPoints, bidSuccessRate, totalRounds, foldRate, bucks, tricksWon, avgPointsPerGame',
       });
     }
 
     const leaderboard = await getLeaderboard(
-      metric as 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate',
+      metric as 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' | 'totalRounds' | 'foldRate' | 'bucks' | 'tricksWon' | 'avgPointsPerGame',
       limit
     );
 
@@ -61,17 +61,17 @@ router.get('/friends', authenticateToken, async (req: Request, res: Response) =>
     const metric = (req.query.metric as string) || 'gamesWon';
 
     // Validate metric
-    const validMetrics = ['gamesWon', 'winRate', 'totalPoints', 'bidSuccessRate'];
+    const validMetrics = ['gamesWon', 'winRate', 'totalPoints', 'bidSuccessRate', 'totalRounds', 'foldRate', 'bucks', 'tricksWon', 'avgPointsPerGame'];
     if (!validMetrics.includes(metric)) {
       return res.status(400).json({
         error: 'Bad request',
-        message: 'Invalid metric. Must be one of: gamesWon, winRate, totalPoints, bidSuccessRate',
+        message: 'Invalid metric. Must be one of: gamesWon, winRate, totalPoints, bidSuccessRate, totalRounds, foldRate, bucks, tricksWon, avgPointsPerGame',
       });
     }
 
     const leaderboard = await getFriendsLeaderboard(
       userId,
-      metric as 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate'
+      metric as 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' | 'totalRounds' | 'foldRate' | 'bucks' | 'tricksWon' | 'avgPointsPerGame'
     );
 
     res.status(200).json({

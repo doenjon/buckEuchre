@@ -69,8 +69,27 @@ export default function FriendsPage() {
       ]);
       
       // API returns { friends: [...] }, extract the array
-      const friendsArray = Array.isArray(friendsData) ? friendsData : (friendsData.friends || []);
-      const requestsArray = Array.isArray(requestsData) ? requestsData : (requestsData.requests || []);
+      const rawFriendsArray = Array.isArray(friendsData) ? friendsData : (friendsData.friends || []);
+      const rawRequestsArray = Array.isArray(requestsData) ? requestsData : (requestsData.requests || []);
+      
+      // Transform friends: backend returns nested friend object, frontend expects flat properties
+      const friendsArray: Friend[] = rawFriendsArray.map((f: any) => ({
+        friendshipId: f.friendshipId || f.id || '',
+        userId: f.friend?.id || f.userId || '',
+        username: f.friend?.username || f.username || '',
+        displayName: f.friend?.displayName || f.displayName || f.friend?.username || 'Unknown',
+        avatarUrl: f.friend?.avatarUrl || f.avatarUrl,
+      }));
+      
+      // Transform requests: backend returns nested requester object, frontend expects flat sender* properties
+      const requestsArray: FriendRequest[] = rawRequestsArray.map((req: any) => ({
+        id: req.id,
+        senderId: req.requester?.id || req.senderId || '',
+        senderUsername: req.requester?.username || req.senderUsername || '',
+        senderDisplayName: req.requester?.displayName || req.senderDisplayName || req.requester?.username || 'Unknown',
+        senderAvatarUrl: req.requester?.avatarUrl || req.senderAvatarUrl,
+        createdAt: req.createdAt,
+      }));
       
       console.log('[FriendsPage] Friends data:', friendsData, 'Extracted:', friendsArray);
       console.log('[FriendsPage] Requests data:', requestsData, 'Extracted:', requestsArray);
@@ -252,44 +271,42 @@ export default function FriendsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {friends.map((friend) => (
                   <Card key={friend.friendshipId} className="p-4 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-md hover:shadow-lg transition-shadow">
-                    <div className="flex items-center space-x-3">
-                      {/* Avatar */}
-                      {friend.avatarUrl ? (
-                        <img
-                          src={friend.avatarUrl}
-                          alt={friend.displayName}
-                          className="w-12 h-12 rounded-full"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-                          <span className="text-lg font-bold text-white">
-                            {friend.displayName.charAt(0).toUpperCase()}
-                          </span>
+                    <div className="flex items-center justify-between space-x-3">
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        {/* Avatar */}
+                        {friend.avatarUrl ? (
+                          <img
+                            src={friend.avatarUrl}
+                            alt={friend.displayName || friend.username || 'User'}
+                            className="w-12 h-12 rounded-full"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+                            <span className="text-lg font-bold text-white">
+                              {(friend.displayName || friend.username || '?').charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-emerald-900 truncate">
+                            {friend.displayName || friend.username || 'Unknown User'}
+                          </p>
+                          <p className="text-sm text-emerald-600 truncate">
+                            @{friend.username || 'unknown'}
+                          </p>
                         </div>
-                      )}
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-emerald-900 truncate">{friend.displayName}</p>
-                        <p className="text-sm text-emerald-600 truncate">@{friend.username}</p>
                       </div>
-                    </div>
 
-                    {/* Actions */}
-                    <div className="mt-4 flex space-x-2">
-                      <Button
-                        onClick={() => {/* TODO: Implement invite to game */}}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-sm py-2"
-                      >
-                        Invite
-                      </Button>
-                      <Button
+                      {/* Remove Button */}
+                      <button
                         onClick={() => handleRemoveFriend(friend.userId, friend.friendshipId)}
                         disabled={actionLoading === friend.userId}
-                        className="bg-red-600 hover:bg-red-700 text-sm py-2 px-3"
+                        className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-md text-sm py-2 px-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                       >
                         {actionLoading === friend.userId ? '...' : 'Remove'}
-                      </Button>
+                      </button>
                     </div>
                   </Card>
                 ))}
@@ -321,23 +338,23 @@ export default function FriendsPage() {
                         {request.senderAvatarUrl ? (
                           <img
                             src={request.senderAvatarUrl}
-                            alt={request.senderDisplayName}
+                            alt={request.senderDisplayName || 'User'}
                             className="w-12 h-12 rounded-full"
                           />
                         ) : (
                           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
                             <span className="text-lg font-bold text-white">
-                              {request.senderDisplayName.charAt(0).toUpperCase()}
+                              {(request.senderDisplayName || request.senderUsername || '?').charAt(0).toUpperCase()}
                             </span>
                           </div>
                         )}
 
                         {/* Info */}
                         <div className="flex-1">
-                          <p className="font-semibold text-emerald-900">{request.senderDisplayName}</p>
-                          <p className="text-sm text-emerald-600">@{request.senderUsername}</p>
+                          <p className="font-semibold text-emerald-900">{request.senderDisplayName || request.senderUsername || 'Unknown User'}</p>
+                          <p className="text-sm text-emerald-600">@{request.senderUsername || 'unknown'}</p>
                           <p className="text-xs text-emerald-500 mt-1">
-                            {new Date(request.createdAt).toLocaleDateString()}
+                            {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : ''}
                           </p>
                         </div>
                       </div>
@@ -403,21 +420,25 @@ export default function FriendsPage() {
                       {user.avatarUrl ? (
                         <img
                           src={user.avatarUrl}
-                          alt={user.displayName}
+                          alt={user.displayName || user.username || 'User'}
                           className="w-12 h-12 rounded-full"
                         />
                       ) : (
                         <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
                           <span className="text-lg font-bold text-white">
-                            {user.displayName.charAt(0).toUpperCase()}
+                            {(user.displayName || user.username || '?').charAt(0).toUpperCase()}
                           </span>
                         </div>
                       )}
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-emerald-900 truncate">{user.displayName}</p>
-                        <p className="text-sm text-emerald-600 truncate">@{user.username}</p>
+                        <p className="font-semibold text-emerald-900 truncate">
+                          {user.displayName || user.username || 'Unknown User'}
+                        </p>
+                        <p className="text-sm text-emerald-600 truncate">
+                          @{user.username || 'unknown'}
+                        </p>
                       </div>
                     </div>
 

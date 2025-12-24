@@ -1,6 +1,3 @@
-// This is your Prisma schema file
-// Learn more: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,39 +7,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// =============================================================================
-// User Accounts & Authentication
-// =============================================================================
-
-// User model - Persistent user accounts
 model User {
-  id           String  @id @default(uuid())
-  email        String? @unique
-  username     String  @unique
-  passwordHash String? // null for OAuth users and guests
-  displayName  String
-  avatarUrl    String?
-
-  // OAuth fields (for future OAuth integration)
-  oauthProvider String? // 'google', 'apple', 'github', etc.
-  oauthId       String?
-
-  // Account metadata
-  emailVerified Boolean  @default(false)
-  isGuest       Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  lastLoginAt   DateTime @default(now())
-
-  // Relations
-  sessions               Session[]
-  gamePlayers            GamePlayer[]
-  gamesCreated           Game[]           @relation("GameCreator")
-  stats                  UserStats?
-  settings               UserSettings?
-  sentFriendRequests     Friendship[]     @relation("Requester")
+  id                     String           @id @default(uuid())
+  email                  String?          @unique
+  username               String           @unique
+  passwordHash           String?
+  displayName            String
+  avatarUrl              String?
+  oauthProvider          String?
+  oauthId                String?
+  emailVerified          Boolean          @default(false)
+  isGuest                Boolean          @default(false)
+  createdAt              DateTime         @default(now())
+  lastLoginAt            DateTime         @default(now())
   receivedFriendRequests Friendship[]     @relation("Receiver")
-  sentInvitations        GameInvitation[] @relation("Inviter")
+  sentFriendRequests     Friendship[]     @relation("Requester")
+  gamesCreated           Game[]           @relation("GameCreator")
   receivedInvitations    GameInvitation[] @relation("Invitee")
+  sentInvitations        GameInvitation[] @relation("Inviter")
+  gamePlayers            GamePlayer[]
+  sessions               Session[]
+  settings               UserSettings?
+  stats                  UserStats?
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -50,120 +36,100 @@ model User {
   @@index([createdAt])
 }
 
-// Session model - JWT sessions with expiration tracking
 model Session {
   id           String   @id @default(uuid())
   userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   token        String   @unique
   expiresAt    DateTime
   createdAt    DateTime @default(now())
   lastActiveAt DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
   @@index([token])
 }
 
-// User statistics - Comprehensive game stats
 model UserStats {
-  id     String @id @default(uuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Game counts
-  gamesPlayed Int @default(0)
-  gamesWon    Int @default(0)
-  gamesLost   Int @default(0)
-
-  // Bidding stats
-  totalBids      Int @default(0)
-  successfulBids Int @default(0)
-  failedBids     Int @default(0)
-  highestBid     Int @default(0)
-
-  // Trick stats
-  totalTricks Int @default(0)
-  tricksWon   Int @default(0)
-
-  // Points
-  totalPoints  Int @default(0)
-  highestScore Int @default(0)
-
-  // Timestamps
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  gamesPlayed    Int      @default(0)
+  gamesWon       Int      @default(0)
+  gamesLost      Int      @default(0)
+  totalBids      Int      @default(0)
+  successfulBids Int      @default(0)
+  failedBids     Int      @default(0)
+  highestBid     Int      @default(0)
+  bids2          Int      @default(0)
+  bids3          Int      @default(0)
+  bids4          Int      @default(0)
+  bids5          Int      @default(0)
+  bids2Successful Int     @default(0)
+  bids2Failed     Int     @default(0)
+  bids3Successful Int     @default(0)
+  bids3Failed     Int     @default(0)
+  bids4Successful Int     @default(0)
+  bids4Failed     Int     @default(0)
+  bids5Successful Int     @default(0)
+  bids5Failed     Int     @default(0)
+  totalTricks    Int      @default(0)
+  tricksWon      Int      @default(0)
+  totalPoints    Int      @default(0)
+  highestScore   Int      @default(0)
+  bucks          Int      @default(0)
+  timesFolded    Int      @default(0)
+  timesCouldFold Int      @default(0)
+  totalRounds    Int      @default(0)
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([gamesWon])
   @@index([gamesPlayed])
 }
 
-// User settings/preferences
 model UserSettings {
-  id     String @id @default(uuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Display settings
-  showCardOverlay Boolean @default(true) // Show trump, bid info overlay
-  showTooltips    Boolean @default(true) // Show hints and tooltips
-  autoSortHand    Boolean @default(true) // Auto-sort cards in hand
-
-  // Animation settings
-  bidSpeed      String @default("normal") // "slow", "normal", "fast"
-  animationSpeed String @default("normal") // "slow", "normal", "fast"
-
-  // Audio settings
-  soundEffects Boolean @default(true)
-
-  // Debug settings
-  showDebugConsole Boolean @default(false)
-
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  showCardOverlay  Boolean  @default(true)
+  showTooltips     Boolean  @default(true)
+  autoSortHand     Boolean  @default(true)
+  bidSpeed         String   @default("normal")
+  animationSpeed   String   @default("normal")
+  soundEffects     Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  showDebugConsole Boolean  @default(false)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
-// =============================================================================
-// Social Features
-// =============================================================================
-
-// Friendship model - Friends system
 model Friendship {
   id          String           @id @default(uuid())
   requesterId String
-  requester   User             @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
   receiverId  String
-  receiver    User             @relation("Receiver", fields: [receiverId], references: [id], onDelete: Cascade)
   status      FriendshipStatus @default(PENDING)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+  receiver    User             @relation("Receiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  requester   User             @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
 
   @@unique([requesterId, receiverId])
   @@index([requesterId, status])
   @@index([receiverId, status])
 }
 
-enum FriendshipStatus {
-  PENDING
-  ACCEPTED
-  DECLINED
-  BLOCKED
-}
-
-// Game invitation model - Invite friends to games
 model GameInvitation {
   id        String           @id @default(uuid())
   gameId    String
-  game      Game             @relation(fields: [gameId], references: [id], onDelete: Cascade)
   inviterId String
-  inviter   User             @relation("Inviter", fields: [inviterId], references: [id], onDelete: Cascade)
   inviteeId String
-  invitee   User             @relation("Invitee", fields: [inviteeId], references: [id], onDelete: Cascade)
   status    InvitationStatus @default(PENDING)
   createdAt DateTime         @default(now())
   expiresAt DateTime
+  game      Game             @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  invitee   User             @relation("Invitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+  inviter   User             @relation("Inviter", fields: [inviterId], references: [id], onDelete: Cascade)
 
   @@unique([gameId, inviteeId])
   @@index([inviteeId, status])
@@ -171,60 +137,32 @@ model GameInvitation {
   @@index([expiresAt])
 }
 
-enum InvitationStatus {
-  PENDING
-  ACCEPTED
-  DECLINED
-  EXPIRED
-}
-
-// =============================================================================
-// Game Models
-// =============================================================================
-
-// Game record
 model Game {
-  id        String     @id @default(uuid())
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  status    GameStatus @default(WAITING)
-
-  // Relations
+  id          String           @id @default(uuid())
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  status      GameStatus       @default(WAITING)
   creatorId   String
   creator     User             @relation("GameCreator", fields: [creatorId], references: [id])
+  invitations GameInvitation[]
   players     GamePlayer[]
   gameState   GameState?
   rounds      Round[]
-  invitations GameInvitation[]
 
   @@index([status, createdAt])
   @@index([creatorId])
 }
 
-enum GameStatus {
-  WAITING // Waiting for players
-  IN_PROGRESS // Game active
-  COMPLETED // Game finished
-  ABANDONED // Players left, game inactive
-}
-
-// Junction table for players in games
 model GamePlayer {
-  id       String @id @default(uuid())
-  position Int // 0-3
-
-  // Relations
-  gameId String
-  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
-
-  userId String? // nullable for guest players
-  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  // Guest player info (when userId is null)
+  id        String   @id @default(uuid())
+  position  Int
+  gameId    String
+  userId    String?
   guestName String?
-
-  joinedAt DateTime @default(now())
-  score    Int      @default(0)
+  joinedAt  DateTime @default(now())
+  score     Int      @default(0)
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id])
 
   @@unique([gameId, position])
   @@unique([gameId, userId])
@@ -232,69 +170,50 @@ model GamePlayer {
   @@index([userId])
 }
 
-// Persisted game state (for recovery after server restart)
 model GameState {
-  id     String @id @default(uuid())
-  gameId String @unique
-  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
-
-  // Serialized game state (JSON)
-  state Json
-
+  id        String   @id @default(uuid())
+  gameId    String   @unique
+  state     Json
   updatedAt DateTime @updatedAt
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@index([gameId])
 }
 
-// Round history (for statistics)
 model Round {
-  id     String @id @default(uuid())
-  gameId String
-  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
-
+  id                 String   @id @default(uuid())
+  gameId             String
   roundNumber        Int
   dealerPosition     Int
   bidderPosition     Int
   bid                Int
   trumpSuit          String
   bidderMadeContract Boolean
-
-  // Scores this round
-  scores Json // Record<position, score>
-
-  // Tricks data (optional, for replay feature)
-  tricks Json? // Array<Trick>
-
-  createdAt DateTime @default(now())
+  scores             Json
+  tricks             Json?
+  createdAt          DateTime @default(now())
+  game               Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@unique([gameId, roundNumber])
   @@index([gameId])
 }
 
-// =============================================================================
-// AI Arena Models
-// =============================================================================
-
-// AI configuration for arena battles
 model ArenaConfig {
-  id          String   @id // e.g., 'rule-easy', 'ismcts-medium'
-  name        String   // Display name
-  provider    String   // 'rule-based', 'ismcts'
-  difficulty  String   // 'easy', 'medium', 'hard', 'expert'
-  paramsJson  Json?    // Custom parameters
-  eloRating   Float    @default(1500.0) // ELO rating
-  gamesPlayed Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
+  id           String             @id
+  name         String
+  provider     String
+  difficulty   String
+  paramsJson   Json?
+  eloRating    Float              @default(1500.0)
+  gamesPlayed  Int                @default(0)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
   participants ArenaParticipant[]
 
   @@index([eloRating])
   @@index([gamesPlayed])
 }
 
-// Arena match record
 model ArenaMatch {
   id           String             @id @default(uuid())
   status       ArenaMatchStatus   @default(IN_PROGRESS)
@@ -305,27 +224,46 @@ model ArenaMatch {
   @@index([status, createdAt])
 }
 
-enum ArenaMatchStatus {
-  IN_PROGRESS
-  COMPLETED
-  ERROR
-}
-
-// Participant in an arena match
 model ArenaParticipant {
-  id       String @id @default(uuid())
-  matchId  String
-  match    ArenaMatch  @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  configId String
-  config   ArenaConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
-
-  position     Int   // 0-3
-  finalScore   Int   // Final score at end of match
-  eloRatingBefore Float // ELO before match
-  eloRatingAfter  Float // ELO after match
-  eloChange    Float // Change in ELO
+  id              String      @id @default(uuid())
+  matchId         String
+  configId        String
+  position        Int
+  finalScore      Int
+  eloRatingBefore Float
+  eloRatingAfter  Float
+  eloChange       Float
+  config          ArenaConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  match           ArenaMatch  @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
   @@unique([matchId, position])
   @@index([matchId])
   @@index([configId])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum GameStatus {
+  WAITING
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum ArenaMatchStatus {
+  IN_PROGRESS
+  COMPLETED
+  ERROR
 }

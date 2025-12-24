@@ -68,7 +68,7 @@ function countCardsPlayedByPlayer(state: GameState): Map<PlayerPosition, number>
   return counts;
 }
 
-function buildRoundCompletionPayload(
+export function buildRoundCompletionPayload(
   gameId: string,
   preScoreState: GameState,
   postScoreState: GameState
@@ -91,14 +91,17 @@ function buildRoundCompletionPayload(
 
   const bidderPosition = preScoreState.winningBidderPosition;
   const highestBid = preScoreState.highestBid;
+  const isClubsTurnUp = preScoreState.isClubsTurnUp; // Check if this is Dirty Clubs (no actual bidding)
   const cardsPlayedLookup = countCardsPlayedByPlayer(postScoreState);
 
   const roundUpdates: RoundStatsUpdate[] = postScoreState.players
     .map((player, index) => {
       const userId = player.id;
       if (!userId) {
+        console.log(`[STATS BUILD] Player ${index} (${player.name}) has no userId, skipping stats`);
         return null;
       }
+      console.log(`[STATS BUILD] Processing stats for player ${index} (${player.name}), userId: ${userId}`);
 
       const cardsPlayed = cardsPlayedLookup.get(player.position) || 0;
       const autoWinTricks =
@@ -122,15 +125,24 @@ function buildRoundCompletionPayload(
       // pointsEarned should include both positive and negative outcomes
       const pointsEarned = -scoreChange;
       
+      // Track fold stats: player could fold if they weren't the bidder/dealer and it wasn't Dirty Clubs
+      const couldFold = !wasBidder && !isClubsTurnUp;
+      const folded = player.folded === true;
+      
       const update: RoundStatsUpdate = {
         userId,
         wasBidder,
         tricksWon: player.tricksTaken,
         totalTricks,
         pointsEarned,
+        folded,
+        couldFold,
       };
 
-      if (wasBidder && typeof highestBid === 'number') {
+      // Only track bidAmount if this was a real bid (not Dirty Clubs)
+      // In Dirty Clubs, winningBidderPosition and highestBid are set for scoring purposes,
+      // but there was no actual bidding, so we shouldn't count it as a bid
+      if (wasBidder && typeof highestBid === 'number' && !isClubsTurnUp) {
         update.bidAmount = highestBid;
         update.bidSuccess = player.tricksTaken >= highestBid;
       }
@@ -140,7 +152,12 @@ function buildRoundCompletionPayload(
     .filter((update): update is RoundStatsUpdate => update !== null);
 
   if (roundUpdates.length === 0) {
-    console.log('[STATS BUILD] Returning null - no round updates');
+    console.log('[STATS BUILD] Returning null - no round updates. Players:', postScoreState.players.map((p, i) => ({
+      index: i,
+      name: p.name,
+      id: p.id,
+      hasId: !!p.id
+    })));
     return null;
   }
 
@@ -163,7 +180,7 @@ function buildRoundCompletionPayload(
   return payload;
 }
 
-async function persistRoundCompletionStats(payload: RoundCompletionPayload): Promise<void> {
+export async function persistRoundCompletionStats(payload: RoundCompletionPayload): Promise<void> {
   console.log('[STATS PERSIST] Called with:', {
     gameId: payload.gameId,
     roundUpdates: payload.roundUpdates.length,
@@ -748,7 +765,8 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       if (nextState.phase === 'ROUND_OVER') {
         console.log(`[PLAY_CARD] ROUND_OVER detected! About to call finishRound...`);
         // Finish round and calculate scores
-        const stateBeforeScoring = nextState;
+        // Capture state BEFORE finishRound (scores not yet calculated)
+        const stateBeforeScoring = { ...nextState };
         console.log(`[PLAY_CARD] State before finishRound:`, {
           round: stateBeforeScoring.round,
           phase: stateBeforeScoring.phase,
@@ -764,7 +782,9 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
           scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
         });
 
+        console.log(`[PLAY_CARD] Building stats payload...`);
         const statsPayload = buildRoundCompletionPayload(validated.gameId, stateBeforeScoring, nextState);
+        console.log(`[PLAY_CARD] Stats payload result:`, statsPayload ? `payload with ${statsPayload.roundUpdates.length} updates` : 'null');
         if (statsPayload) {
           roundCompletionPayload = statsPayload;
         }

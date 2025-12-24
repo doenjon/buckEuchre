@@ -51,6 +51,7 @@ export class StatsQueue {
 
     this.queue.set(key, taskWithRetries);
     console.log(`[Stats Queue] Enqueued ${key} with ${task.updates.length} round updates and ${task.gameUpdates?.length || 0} game updates`);
+    console.log(`[Stats Queue] Round updates:`, task.updates.map(u => ({ userId: u.userId, tricksWon: u.tricksWon, wasBidder: u.wasBidder })));
     
     // Process immediately (but don't block)
     setImmediate(() => this.process(key));
@@ -126,23 +127,50 @@ export class StatsQueue {
     tx: any,
     update: RoundStatsUpdate
   ): Promise<void> {
-    const { userId, wasBidder, bidAmount, bidSuccess, tricksWon, totalTricks, pointsEarned } = update;
+    const { userId, wasBidder, bidAmount, bidSuccess, tricksWon, totalTricks, pointsEarned, folded, couldFold } = update;
 
-    // Get current stats
-    const stats = await tx.userStats.findUnique({
+    console.log(`[Stats Queue] Updating round stats for user ${userId}:`, { tricksWon, totalTricks, pointsEarned, wasBidder, folded, couldFold });
+
+    // Get current stats, create if they don't exist
+    let stats = await tx.userStats.findUnique({
       where: { userId },
     });
 
     if (!stats) {
-      throw new Error(`Stats not found for user ${userId}`);
+      console.log(`[Stats Queue] Stats not found for user ${userId}, creating new stats record`);
+      try {
+        stats = await tx.userStats.create({
+          data: {
+            userId,
+          },
+        });
+        console.log(`[Stats Queue] Created stats record for user ${userId}`);
+      } catch (error) {
+        console.error(`[Stats Queue] Failed to create stats for user ${userId}:`, error);
+        throw error;
+      }
     }
 
     // Calculate updates
     const updates: any = {
+      totalRounds: stats.totalRounds + 1, // Increment for every round played
       totalTricks: stats.totalTricks + totalTricks,
       tricksWon: stats.tricksWon + tricksWon,
       totalPoints: stats.totalPoints + pointsEarned,
     };
+
+    // Track bucks: when pointsEarned === -5, player got bucked (scoreChange was +5)
+    if (pointsEarned === -5) {
+      updates.bucks = (stats.bucks || 0) + 1;
+    }
+
+    // Track fold stats
+    if (couldFold) {
+      updates.timesCouldFold = (stats.timesCouldFold || 0) + 1;
+      if (folded) {
+        updates.timesFolded = (stats.timesFolded || 0) + 1;
+      }
+    }
 
     // Update bidding stats if user was the bidder
     if (wasBidder && bidAmount !== undefined && bidSuccess !== undefined) {
@@ -157,6 +185,37 @@ export class StatsQueue {
       // Update highest bid
       if (bidAmount > stats.highestBid) {
         updates.highestBid = bidAmount;
+      }
+
+      // Track bid amounts separately with success/failure
+      if (bidAmount === 2) {
+        updates.bids2 = (stats.bids2 || 0) + 1;
+        if (bidSuccess) {
+          updates.bids2Successful = (stats.bids2Successful || 0) + 1;
+        } else {
+          updates.bids2Failed = (stats.bids2Failed || 0) + 1;
+        }
+      } else if (bidAmount === 3) {
+        updates.bids3 = (stats.bids3 || 0) + 1;
+        if (bidSuccess) {
+          updates.bids3Successful = (stats.bids3Successful || 0) + 1;
+        } else {
+          updates.bids3Failed = (stats.bids3Failed || 0) + 1;
+        }
+      } else if (bidAmount === 4) {
+        updates.bids4 = (stats.bids4 || 0) + 1;
+        if (bidSuccess) {
+          updates.bids4Successful = (stats.bids4Successful || 0) + 1;
+        } else {
+          updates.bids4Failed = (stats.bids4Failed || 0) + 1;
+        }
+      } else if (bidAmount === 5) {
+        updates.bids5 = (stats.bids5 || 0) + 1;
+        if (bidSuccess) {
+          updates.bids5Successful = (stats.bids5Successful || 0) + 1;
+        } else {
+          updates.bids5Failed = (stats.bids5Failed || 0) + 1;
+        }
       }
     }
 
@@ -181,13 +240,26 @@ export class StatsQueue {
   ): Promise<void> {
     const { userId, won, finalScore } = update;
 
-    // Get current stats
-    const stats = await tx.userStats.findUnique({
+    console.log(`[Stats Queue] Updating game stats for user ${userId}:`, { won, finalScore });
+
+    // Get current stats, create if they don't exist
+    let stats = await tx.userStats.findUnique({
       where: { userId },
     });
 
     if (!stats) {
-      throw new Error(`Stats not found for user ${userId}`);
+      console.log(`[Stats Queue] Stats not found for user ${userId}, creating new stats record`);
+      try {
+        stats = await tx.userStats.create({
+          data: {
+            userId,
+          },
+        });
+        console.log(`[Stats Queue] Created stats record for user ${userId}`);
+      } catch (error) {
+        console.error(`[Stats Queue] Failed to create stats for user ${userId}:`, error);
+        throw error;
+      }
     }
 
     // Calculate updates
