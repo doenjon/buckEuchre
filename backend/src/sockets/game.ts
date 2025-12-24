@@ -217,7 +217,7 @@ export function registerGameHandlers(io: Server, socket: Socket): void {
   socket.on('PLACE_BID', (payload) => handlePlaceBid(io, socket, payload));
   socket.on('DECLARE_TRUMP', (payload) => handleDeclareTrump(io, socket, payload));
   socket.on('FOLD_DECISION', (payload) => handleFoldDecision(io, socket, payload));
-  socket.on('PLAY_CARD', (payload) => handlePlayCard(io, socket, payload));
+  socket.on('PLAY_CARD', (payload, callback) => handlePlayCard(io, socket, payload, callback));
   socket.on('START_NEXT_ROUND', (payload) => {
     // DEBUG BREAKPOINT HERE - This should pause in debugger
     const debugBreakpoint = true; // Set breakpoint on this line
@@ -647,7 +647,7 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
 /**
  * Handle PLAY_CARD event
  */
-async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Promise<void> {
+async function handlePlayCard(io: Server, socket: Socket, payload: unknown, callback?: (response: any) => void): Promise<void> {
   const startTime = Date.now();
   const logPrefix = `[PLAY_CARD:${startTime}]`;
   console.log(`${logPrefix} ========== PLAY_CARD HANDLER START ==========`);
@@ -665,6 +665,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
         code: 'AUTHENTICATION_REQUIRED',
         message: 'Authentication required to play card'
       });
+      callback?.({ success: false, error: 'AUTHENTICATION_REQUIRED' });
       return;
     }
 
@@ -848,6 +849,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
         playerPosition: illegalPlayerPosition,
         reason: illegalReason,
       });
+      callback?.({ success: false, error: 'ILLEGAL_PLAY', reason: illegalReason });
       return;
     }
 
@@ -981,6 +983,9 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
     
     const duration = Date.now() - startTime;
     console.log(`${logPrefix} ========== PLAY_CARD HANDLER SUCCESS (${duration}ms) ==========`);
+
+    // Send acknowledgment to client
+    callback?.({ success: true });
   } catch (error: any) {
     const duration = Date.now() - startTime;
     console.error(`${logPrefix} ========== PLAY_CARD HANDLER ERROR (${duration}ms) ==========`);
@@ -995,6 +1000,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       code: 'PLAY_CARD_FAILED',
       message: error.message || 'Failed to play card'
     });
+    callback?.({ success: false, error: 'PLAY_CARD_FAILED', message: error.message });
   }
 }
 

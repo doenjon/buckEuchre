@@ -259,9 +259,19 @@ export function useSocket() {
 
   const playCard = useCallback((gameId: string, cardId: string) => {
     if (socketRef.current) {
-      emitPlayCard(socketRef.current, { gameId, cardId });
+      emitPlayCard(socketRef.current, { gameId, cardId }, (response) => {
+        if (!response.success) {
+          console.error('[playCard] Server rejected card play:', response);
+          // Show error notification to user
+          const message = response.reason || response.message || 'Card play failed';
+          setNotification(`Card play rejected: ${message}`);
+          setTimeout(() => setNotification(null), 3000);
+        } else {
+          console.log('[playCard] Server acknowledged card play');
+        }
+      });
     }
-  }, []);
+  }, [setNotification]);
 
   const startNextRound = useCallback((gameId: string) => {
     if (socketRef.current) {
