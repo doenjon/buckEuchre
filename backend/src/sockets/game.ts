@@ -617,7 +617,7 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
     checkAndTriggerAI(validated.gameId, newState, io);
 
     if (roundCompletionPayload) {
-      void persistRoundCompletionStats(roundCompletionPayload);
+      await persistRoundCompletionStats(roundCompletionPayload);
     }
 
     if (newState.phase === 'ROUND_OVER' || newState.phase === 'GAME_OVER') {
@@ -852,7 +852,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
     }
 
     if (roundCompletionPayload) {
-      void persistRoundCompletionStats(roundCompletionPayload);
+      await persistRoundCompletionStats(roundCompletionPayload);
     }
 
     console.log(`${logPrefix} Step 5: Handling trick completion and broadcasts...`);
