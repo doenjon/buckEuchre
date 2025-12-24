@@ -113,6 +113,15 @@ export interface GameState {
   // Round State
   round: number;          // Current round number (starts at 1)
   dealerPosition: PlayerPosition; // Current dealer (0-3)
+  /**
+   * Whether scoring for the current round has been applied to player scores.
+   *
+   * Important: The round end flow historically transitions to `ROUND_OVER` before
+   * `finishRound()` applies score changes. Some callers also call `finishRound()`
+   * explicitly. This flag makes scoring idempotent so score changes can't be
+   * applied twice (e.g. a +5 buck becoming +10).
+   */
+  scoresCalculated: boolean;
   
   // Blind/Kitty State (for information only - not used in play)
   blind: Card[];          // 4 cards in the blind

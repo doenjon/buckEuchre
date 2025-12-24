@@ -62,6 +62,7 @@ export function initializeGame(playerIds: [string, string, string, string]): Gam
     
     round: 0,
     dealerPosition,
+    scoresCalculated: false,
     
     blind: [],
     turnUpCard: null,
@@ -121,6 +122,7 @@ export function dealNewRound(state: GameState): GameState {
     return withVersion(state, {
       phase: 'PLAYING',
       round: state.round + 1,
+      scoresCalculated: false,
 
       players: activePlayers,
 
@@ -151,6 +153,7 @@ export function dealNewRound(state: GameState): GameState {
   return withVersion(state, {
     phase: 'BIDDING',
     round: state.round + 1,
+    scoresCalculated: false,
 
     players,
 
@@ -412,6 +415,7 @@ export function applyFoldDecision(
       const updates: Partial<GameState> = {
         phase: gameOver ? 'GAME_OVER' : 'ROUND_OVER',
         players: scoredPlayers,
+        scoresCalculated: true,
         currentPlayerPosition: null,
         currentTrick: {
           number: 1,
@@ -511,6 +515,7 @@ export function applyCardPlay(
     if (newTricks.length === 5) {
       return withVersion(state, {
         phase: 'ROUND_OVER',
+        scoresCalculated: false,
         players: updatedPlayers,
         tricks: newTricks,
         currentTrick: newCurrentTrick,
@@ -560,6 +565,17 @@ export function applyCardPlay(
  * @returns New game state with scores updated
  */
 export function finishRound(state: GameState): GameState {
+  // Idempotency guard: prevent applying score changes twice for the same round.
+  // This fixes rare +10 "in one hand" bugs (double-applied +5 buck/euchre).
+  if (state.scoresCalculated) {
+    console.warn('[SCORING] finishRound called but scores already calculated; returning state as-is.', {
+      round: state.round,
+      phase: state.phase,
+      scores: state.players.map(p => ({ name: p.name, score: p.score })),
+    });
+    return state;
+  }
+
   // Log scoring details for debugging
   console.log('[SCORING] Calculating round scores:', {
     isClubsTurnUp: state.isClubsTurnUp,
@@ -609,6 +625,7 @@ export function finishRound(state: GameState): GameState {
     return withVersion(state, {
       phase: 'GAME_OVER',
       players,
+      scoresCalculated: true,
       winner,
       gameOver: true,
     });
@@ -619,6 +636,7 @@ export function finishRound(state: GameState): GameState {
   return withVersion(state, {
     phase: 'ROUND_OVER',
     players,
+    scoresCalculated: true,
   });
 }
 
@@ -647,6 +665,7 @@ export function startNextRound(state: GameState): GameState {
   return withVersion(state, {
     phase: 'DEALING',
     dealerPosition: newDealerPosition,
+    scoresCalculated: false,
     
     // Clear all round-specific state
     players,
