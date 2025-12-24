@@ -116,11 +116,12 @@ function BidBreakdownChart({
               borderRadius: '6px',
               fontSize: '12px'
             }}
-            formatter={(value: number | undefined, name: string) => {
+            formatter={(value: number | undefined, name: string | undefined) => {
               const val = value ?? 0;
-              if (name === 'successful') return [val, 'Successful'];
-              if (name === 'failed') return [val, 'Failed'];
-              return [val, name];
+              const nameStr = name ?? '';
+              if (nameStr === 'successful') return [val, 'Successful'];
+              if (nameStr === 'failed') return [val, 'Failed'];
+              return [val, nameStr];
             }}
           />
           {/* Success bars (bottom, light blue) */}
