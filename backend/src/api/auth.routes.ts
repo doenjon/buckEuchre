@@ -39,10 +39,13 @@ const LoginSchema = z.object({
  */
 router.post('/register', async (req: Request, res: Response) => {
   try {
+    console.log('[REGISTER] Starting registration request');
+    
     // Validate request body
     const validation = RegisterSchema.safeParse(req.body);
 
     if (!validation.success) {
+      console.log('[REGISTER] Validation failed:', validation.error.errors);
       return res.status(400).json({
         error: 'Invalid request',
         message: validation.error.errors[0].message,
@@ -51,6 +54,7 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     const { email, username, password, displayName } = validation.data;
+    console.log('[REGISTER] Creating user:', { username, email: email ? 'provided' : 'not provided' });
 
     // Create user
     const { user, token, session } = await createUser({
@@ -61,7 +65,10 @@ router.post('/register', async (req: Request, res: Response) => {
       isGuest: false,
     });
 
-    res.status(201).json({
+    console.log('[REGISTER] User created successfully:', { userId: user.id, username: user.username });
+
+    // Send response
+    const responseData = {
       userId: user.id,
       username: user.username,
       displayName: user.displayName,
@@ -69,12 +76,22 @@ router.post('/register', async (req: Request, res: Response) => {
       token,
       expiresAt: session.expiresAt.getTime(),
       isGuest: false,
-    });
+    };
+
+    console.log('[REGISTER] Sending success response');
+    res.status(201).json(responseData);
+    console.log('[REGISTER] Response sent successfully');
   } catch (error) {
-    console.error('Error registering user:', error);
+    console.error('[REGISTER] Error registering user:', error);
+    console.error('[REGISTER] Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
 
     if (error instanceof Error) {
       if (error.message === 'Username already taken' || error.message === 'Email already registered') {
+        console.log('[REGISTER] Conflict error:', error.message);
         return res.status(409).json({
           error: 'Conflict',
           message: error.message,
@@ -82,6 +99,7 @@ router.post('/register', async (req: Request, res: Response) => {
       }
     }
 
+    console.log('[REGISTER] Sending 500 error response');
     res.status(500).json({
       error: 'Server error',
       message: 'Failed to register user',
