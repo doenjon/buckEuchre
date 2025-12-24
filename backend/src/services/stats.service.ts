@@ -349,7 +349,7 @@ export async function getLeaderboard(
       // Require at least 5 games for meaningful comparison
       const aHasEnough = a.gamesPlayed >= 5;
       const bHasEnough = b.gamesPlayed >= 5;
-      
+
       // Players with less than 5 games go to the end
       if (!aHasEnough && !bHasEnough) {
         // Both don't have enough - sort by avgPointsPerGame among themselves (higher is better)
@@ -357,7 +357,7 @@ export async function getLeaderboard(
       }
       if (!aHasEnough) return 1;
       if (!bHasEnough) return -1;
-      
+
       // Both have enough games - sort descending (higher is better)
       return Number(b.avgPointsPerGame) - Number(a.avgPointsPerGame);
     }
@@ -493,7 +493,7 @@ export async function getFriendsLeaderboard(
       // Require at least 5 games for meaningful comparison
       const aHasEnough = a.gamesPlayed >= 5;
       const bHasEnough = b.gamesPlayed >= 5;
-      
+
       // Players with less than 5 games go to the end
       if (!aHasEnough && !bHasEnough) {
         // Both don't have enough - sort by avgPointsPerGame among themselves (higher is better)
@@ -501,7 +501,7 @@ export async function getFriendsLeaderboard(
       }
       if (!aHasEnough) return 1;
       if (!bHasEnough) return -1;
-      
+
       // Both have enough games - sort descending (higher is better)
       return Number(b.avgPointsPerGame) - Number(a.avgPointsPerGame);
     }
