@@ -8,13 +8,6 @@ import { Card } from '@/components/ui/card';
 import { Header } from '@/components/layout/Header';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -30,9 +23,6 @@ export default function SettingsPage() {
     showCardOverlay: settingsStore.showCardOverlay,
     showTooltips: settingsStore.showTooltips,
     autoSortHand: settingsStore.autoSortHand,
-    bidSpeed: settingsStore.bidSpeed,
-    animationSpeed: settingsStore.animationSpeed,
-    soundEffects: settingsStore.soundEffects,
     showDebugConsole: settingsStore.showDebugConsole,
   });
 
@@ -52,9 +42,6 @@ export default function SettingsPage() {
           showCardOverlay: settings.showCardOverlay,
           showTooltips: settings.showTooltips,
           autoSortHand: settings.autoSortHand,
-          bidSpeed: settings.bidSpeed,
-          animationSpeed: settings.animationSpeed,
-          soundEffects: settings.soundEffects,
           showDebugConsole: settings.showDebugConsole,
         };
 
@@ -83,9 +70,6 @@ export default function SettingsPage() {
         showCardOverlay: updatedSettings.showCardOverlay,
         showTooltips: updatedSettings.showTooltips,
         autoSortHand: updatedSettings.autoSortHand,
-        bidSpeed: updatedSettings.bidSpeed,
-        animationSpeed: updatedSettings.animationSpeed,
-        soundEffects: updatedSettings.soundEffects,
         showDebugConsole: updatedSettings.showDebugConsole,
       });
 
@@ -115,9 +99,6 @@ export default function SettingsPage() {
         showCardOverlay: settings.showCardOverlay,
         showTooltips: settings.showTooltips,
         autoSortHand: settings.autoSortHand,
-        bidSpeed: settings.bidSpeed,
-        animationSpeed: settings.animationSpeed,
-        soundEffects: settings.soundEffects,
         showDebugConsole: settings.showDebugConsole,
       };
 
@@ -225,88 +206,6 @@ export default function SettingsPage() {
                   checked={formData.autoSortHand}
                   onCheckedChange={(checked) =>
                     setFormData({ ...formData, autoSortHand: checked })
-                  }
-                />
-              </div>
-            </div>
-          </Card>
-
-          {/* Animation Settings */}
-          <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
-            <h2 className="text-xl font-semibold text-emerald-800 mb-4">Animation</h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="bidSpeed" className="text-base">
-                    Bid Speed
-                  </Label>
-                  <p className="text-sm text-emerald-600">
-                    Speed of bidding animations
-                  </p>
-                </div>
-                <Select
-                  value={formData.bidSpeed}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, bidSpeed: value as 'slow' | 'normal' | 'fast' })
-                  }
-                >
-                  <SelectTrigger id="bidSpeed" className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="slow">Slow</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="fast">Fast</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="animationSpeed" className="text-base">
-                    Animation Speed
-                  </Label>
-                  <p className="text-sm text-emerald-600">
-                    Speed of card animations and transitions
-                  </p>
-                </div>
-                <Select
-                  value={formData.animationSpeed}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, animationSpeed: value as 'slow' | 'normal' | 'fast' })
-                  }
-                >
-                  <SelectTrigger id="animationSpeed" className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="slow">Slow</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="fast">Fast</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </Card>
-
-          {/* Audio Settings */}
-          <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
-            <h2 className="text-xl font-semibold text-emerald-800 mb-4">Audio</h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="soundEffects" className="text-base">
-                    Sound Effects
-                  </Label>
-                  <p className="text-sm text-emerald-600">
-                    Play sounds for game actions
-                  </p>
-                </div>
-                <Switch
-                  id="soundEffects"
-                  checked={formData.soundEffects}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, soundEffects: checked })
                   }
                 />
               </div>
