@@ -119,7 +119,7 @@ export function CurrentTrick({
                 }}
               >
                 <div className={`
-                  px-3 py-1.5 rounded-lg font-semibold text-sm
+                  px-4 py-2 rounded-lg font-semibold text-base
                   ${isFolding
                     ? 'bg-slate-600/20 text-slate-400 border border-slate-500/50'
                     : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/50'}
@@ -188,7 +188,7 @@ export function CurrentTrick({
             }}
           >
             <div className={`
-              px-3 py-1.5 rounded-lg font-semibold text-sm
+              px-4 py-2 rounded-lg font-semibold text-base
               ${isFolding
                 ? 'bg-slate-600/20 text-slate-400 border border-slate-500/50'
                 : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/50'}

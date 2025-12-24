@@ -25,7 +25,7 @@ export interface SettingsActions {
 export type SettingsStore = UserSettings & SettingsActions;
 
 const defaultSettings: UserSettings = {
-  showCardOverlay: true,
+  showCardOverlay: false,
   showTooltips: true,
   autoSortHand: true,
   bidSpeed: 'normal',

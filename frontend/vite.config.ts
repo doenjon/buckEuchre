@@ -87,7 +87,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true
       },
       devOptions: {
-        enabled: true // Enable PWA in development for testing
+        enabled: false // Disable PWA in development to prevent service worker caching
       }
     })
   ],

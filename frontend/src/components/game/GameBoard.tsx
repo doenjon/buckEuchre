@@ -3,7 +3,7 @@
  * @description Main game board component
  */
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, RotateCcw, LogOut, Trophy, X, Settings } from 'lucide-react';
 import { Scoreboard } from './Scoreboard';
@@ -18,7 +18,7 @@ import { GameNotification } from './GameNotification';
 import { SettingsModal } from './SettingsModal';
 import { useGame } from '@/hooks/useGame';
 import { useGameNotifications } from '@/hooks/useGameNotifications';
-import { createRematchGame, leaveGame as leaveGameAPI } from '@/services/api';
+import { createRematchGame } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { GAME_TIMEOUTS } from '@buck-euchre/shared';
 import type { GameState } from '@buck-euchre/shared';
@@ -39,9 +39,58 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
   const [nextHandCountdown, setNextHandCountdown] = useState<number | null>(null);
   const [showScoreboard, setShowScoreboard] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [scoreHistory, setScoreHistory] = useState<Array<{ round: number; scoresByPlayerId: Record<string, number> }>>([]);
+  const lastGameIdRef = useRef<string | null>(null);
 
   // Setup game notifications
   useGameNotifications(gameState, myPosition);
+
+  // Initialize per-game score history (round 0 = all 15s)
+  useEffect(() => {
+    if (lastGameIdRef.current !== gameState.gameId) {
+      lastGameIdRef.current = gameState.gameId;
+
+      const startingScores: Record<string, number> = {};
+      gameState.players.forEach((p) => {
+        startingScores[p.id] = 15;
+      });
+
+      setScoreHistory([{ round: 0, scoresByPlayerId: startingScores }]);
+    }
+  }, [gameState.gameId, gameState.players]);
+
+  // Record scores ONLY when a round is over, so we show every completed round and never show in-progress rounds.
+  useEffect(() => {
+    if (gameState.phase !== 'ROUND_OVER') {
+      return;
+    }
+
+    const roundNumber = gameState.round;
+    const scoresByPlayerId: Record<string, number> = {};
+    gameState.players.forEach((p) => {
+      scoresByPlayerId[p.id] = p.score;
+    });
+
+    setScoreHistory((prev) => {
+      const existing = prev.find((r) => r.round === roundNumber);
+      if (existing) {
+        return prev.map((r) => (r.round === roundNumber ? { round: roundNumber, scoresByPlayerId } : r));
+      }
+
+      // If we somehow jumped (reconnect), fill missing rounds by carrying forward the last known scores.
+      const lastRoundInHistory = prev.length ? Math.max(...prev.map((r) => r.round)) : 0;
+      const lastScores =
+        prev.find((r) => r.round === lastRoundInHistory)?.scoresByPlayerId ?? scoresByPlayerId;
+
+      const filled: Array<{ round: number; scoresByPlayerId: Record<string, number> }> = [...prev];
+      for (let r = lastRoundInHistory + 1; r < roundNumber; r++) {
+        filled.push({ round: r, scoresByPlayerId: { ...lastScores } });
+      }
+      filled.push({ round: roundNumber, scoresByPlayerId });
+
+      return filled.sort((a, b) => a.round - b.round);
+    });
+  }, [gameState.phase, gameState.round, gameState.players]);
 
   useEffect(() => {
     if (phase === 'ROUND_OVER' && !gameState.gameOver) {
@@ -297,6 +346,8 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                   players={players}
                   currentPlayerPosition={activePosition}
                   phase={phase}
+                  round={gameState.round}
+                  scoreHistory={scoreHistory}
                   trumpSuit={gameState.trumpSuit}
                   winningBidderPosition={gameState.winningBidderPosition}
                   winningBid={gameState.highestBid ?? undefined}
@@ -326,7 +377,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                     )}
                   </div>
                 )}
-                {gameState.winningBidderPosition !== null && gameState.highestBid !== null && (
+                {gameState.winningBidderPosition !== null && gameState.highestBid !== null && !gameState.isClubsTurnUp && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">BID:</span>
                     <span className="text-lg font-bold text-white">{gameState.highestBid}</span>
@@ -334,6 +385,15 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                     <span className="text-base font-medium text-white">
                       {players.find(p => p.position === gameState.winningBidderPosition)?.name || `P${gameState.winningBidderPosition}`}
                     </span>
+                  </div>
+                )}
+                {gameState.isClubsTurnUp && gameState.dealerPosition !== null && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">BIDDER:</span>
+                    <span className="text-base font-medium text-white">
+                      {players.find(p => p.position === gameState.dealerPosition)?.name || `P${gameState.dealerPosition}`}
+                    </span>
+                    <span className="text-sm text-emerald-200/70">(Dealer - Dirty Clubs)</span>
                   </div>
                 )}
                 {phase === 'BIDDING' && (
@@ -349,6 +409,8 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
             players={players}
             currentPlayerPosition={activePosition}
             phase={phase}
+            round={gameState.round}
+            scoreHistory={scoreHistory}
             trumpSuit={gameState.trumpSuit}
             winningBidderPosition={gameState.winningBidderPosition}
             winningBid={gameState.highestBid ?? undefined}
@@ -378,7 +440,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                       )}
                     </div>
                   )}
-                  {gameState.winningBidderPosition !== null && gameState.highestBid !== null && (
+                  {gameState.winningBidderPosition !== null && gameState.highestBid !== null && !gameState.isClubsTurnUp && (
                     <>
                       {gameState.trumpSuit && <span className="text-emerald-200/50">•</span>}
                       <div className="flex items-center gap-1">
@@ -393,7 +455,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                   )}
                   {phase === 'BIDDING' && (
                     <>
-                      {(gameState.trumpSuit || (gameState.winningBidderPosition !== null && gameState.highestBid !== null)) && <span className="text-emerald-200/50">•</span>}
+                      {(gameState.trumpSuit || (gameState.winningBidderPosition !== null && gameState.highestBid !== null && !gameState.isClubsTurnUp)) && <span className="text-emerald-200/50">•</span>}
                       <div className="flex items-center gap-1">
                         <span className="text-emerald-300 font-semibold">PHASE:</span>
                         <span className="text-white font-medium text-sm">Bidding</span>
@@ -721,7 +783,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
           ) : (
             <>
               <LogOut className="h-3 w-3 mr-1" />
-              <span className="text-xs">Lobby</span>
+              <span className="text-xs">EXIT</span>
             </>
           )}
         </Button>

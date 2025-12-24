@@ -9,10 +9,22 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
+interface ScoreHistoryRow {
+  round: number;
+  scoresByPlayerId: Record<string, number>;
+}
+
 export interface ScoreboardProps {
   players: Player[];
   currentPlayerPosition: number | null;
   phase: GamePhase;
+  round?: number;
+  /**
+   * Completed-round cumulative scores (round 0..N). This should ONLY include
+   * rounds that are finished (i.e. recorded when the game is in ROUND_OVER).
+   * This is tracked in `GameBoard` so it persists on mobile when the popup unmounts.
+   */
+  scoreHistory?: ScoreHistoryRow[];
   trumpSuit?: string | null;
   winningBidderPosition?: number | null;
   winningBid?: number | null;
@@ -25,6 +37,8 @@ export function Scoreboard({
   players,
   currentPlayerPosition,
   phase,
+  round = 1,
+  scoreHistory = [],
   winningBidderPosition,
   className,
   variant = 'default'
@@ -68,6 +82,13 @@ export function Scoreboard({
   });
 
   if (variant === 'mobile') {
+    // Create table with rounds as rows and players as columns.
+    // IMPORTANT: We intentionally do NOT show the in-progress round here; only completed rounds.
+    const allRounds = [...scoreHistory].sort((a, b) => a.round - b.round);
+
+    // Sort players by position for consistent column order
+    const sortedByPosition = [...players].sort((a, b) => a.position - b.position);
+
     return (
       <div
         className={cn(
@@ -75,27 +96,86 @@ export function Scoreboard({
           className
         )}
       >
-        <div className="grid grid-cols-4 gap-1.5" role="list" aria-label="Player scores">
-          {entries.map(({ player, index, hasFolded }) => (
-            <div
-              key={player.id}
-              className={cn(
-                'flex flex-col items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 p-1.5 text-center transition-colors duration-200',
-                hasFolded && 'opacity-50'
-              )}
-              role="listitem"
-              aria-label={`${player.name}, score ${player.score}`}
-            >
-              <span 
-                className="text-[11px] md:text-xs font-semibold truncate max-w-full px-0.5 text-white"
-                title={player.name || `Player ${index + 1}`}
+        {allRounds.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="px-2 py-1.5 text-left font-semibold text-emerald-200/80">Round</th>
+                  {sortedByPosition.map((player) => (
+                    <th 
+                      key={player.id}
+                      className="px-2 py-1.5 text-center font-semibold text-white truncate max-w-[60px]"
+                      title={player.name || `Player ${player.position + 1}`}
+                    >
+                      {player.name || `P${player.position + 1}`}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {allRounds.map((roundScore, roundIndex) => {
+                  // Get previous round to detect bucks (score increase of 5)
+                  const previousRound = roundIndex > 0 ? allRounds[roundIndex - 1] : null;
+                  
+                  return (
+                    <tr 
+                      key={roundScore.round}
+                      className={cn(
+                        "border-b border-white/5",
+                        phase === 'ROUND_OVER' && roundScore.round === round && "bg-emerald-500/10"
+                      )}
+                    >
+                      <td className="px-2 py-1.5 text-emerald-200/70 font-medium">
+                        {roundScore.round}
+                      </td>
+                      {sortedByPosition.map((player) => {
+                        const score = roundScore.scoresByPlayerId[player.id] ?? player.score;
+                        // Check if this player got bucked (score increased by 5 from previous round)
+                        const previousScore = previousRound?.scoresByPlayerId[player.id];
+                        const gotBucked = previousScore !== undefined && score === previousScore + 5;
+                        
+                        return (
+                          <td 
+                            key={player.id}
+                            className={cn(
+                              "px-2 py-1.5 text-center font-bold",
+                              gotBucked ? "text-red-400" : "text-emerald-100"
+                            )}
+                          >
+                            {score}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 gap-1.5" role="list" aria-label="Player scores">
+            {entries.map(({ player, index, hasFolded }) => (
+              <div
+                key={player.id}
+                className={cn(
+                  'flex flex-col items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 p-1.5 text-center transition-colors duration-200',
+                  hasFolded && 'opacity-50'
+                )}
+                role="listitem"
+                aria-label={`${player.name}, score ${player.score}`}
               >
-                {player.name || `P${index + 1}`}
-              </span>
-              <span className="text-base font-bold text-emerald-100">{player.score}</span>
-            </div>
-          ))}
-        </div>
+                <span 
+                  className="text-[11px] md:text-xs font-semibold truncate max-w-full px-0.5 text-white"
+                  title={player.name || `Player ${index + 1}`}
+                >
+                  {player.name || `P${index + 1}`}
+                </span>
+                <span className="text-base font-bold text-emerald-100">{player.score}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }

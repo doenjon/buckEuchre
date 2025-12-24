@@ -38,7 +38,7 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
     settings = await prisma.userSettings.create({
       data: {
         userId,
-        showCardOverlay: true,
+        showCardOverlay: false,
         showTooltips: true,
         autoSortHand: true,
         bidSpeed: 'normal',
@@ -107,7 +107,7 @@ export async function updateUserSettings(
           userId,
           ...cleanUpdates,
           // Fill in defaults for any missing required fields
-          showCardOverlay: cleanUpdates.showCardOverlay ?? true,
+          showCardOverlay: cleanUpdates.showCardOverlay ?? false,
           showTooltips: cleanUpdates.showTooltips ?? true,
           autoSortHand: cleanUpdates.autoSortHand ?? true,
           bidSpeed: cleanUpdates.bidSpeed ?? 'normal',
@@ -165,7 +165,7 @@ export async function resetUserSettings(userId: string): Promise<UserSettings> {
   const settings = await prisma.userSettings.update({
     where: { userId },
     data: {
-      showCardOverlay: true,
+      showCardOverlay: false,
       showTooltips: true,
       autoSortHand: true,
       bidSpeed: 'normal',
