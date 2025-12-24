@@ -17,15 +17,15 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variantStyles = {
       default:
-        'border border-white/15 bg-white/10 text-slate-800 shadow-[0_12px_35px_-18px_rgba(16,185,129,0.6)] hover:bg-white/15 hover:text-slate-900',
+        'border border-white/15 bg-white/10 text-white shadow-[0_12px_35px_-18px_rgba(16,185,129,0.6)] hover:bg-white/15',
       primary:
         'bg-emerald-400 text-slate-900 shadow-[0_18px_45px_-20px_rgba(16,185,129,0.85)] hover:bg-emerald-300',
       secondary:
         'bg-white text-slate-900 shadow-[0_12px_35px_-18px_rgba(148,163,184,0.5)] hover:bg-emerald-50',
       danger:
         'bg-rose-500 text-white shadow-[0_18px_45px_-20px_rgba(244,63,94,0.75)] hover:bg-rose-400',
-      ghost: 'text-emerald-700 hover:bg-white/10 hover:text-emerald-800',
-      outline: 'border border-white/30 text-slate-800 hover:bg-white/10 hover:text-slate-900',
+      ghost: 'text-emerald-100 hover:bg-white/10 hover:text-white',
+      outline: 'border border-white/30 text-white hover:bg-white/10',
     } as const;
 
     const sizeStyles = {

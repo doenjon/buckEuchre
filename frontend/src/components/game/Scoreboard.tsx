@@ -204,7 +204,7 @@ export function Scoreboard({
             <div
               key={player.id}
               className={cn(
-                'flex flex-col gap-1 rounded-2xl border border-white/10 bg-white/5 p-2 text-[11px] text-slate-700 transition-colors duration-200',
+                'flex flex-col gap-1 rounded-2xl border border-white/10 bg-white/5 p-2 text-[11px] text-white/90 transition-colors duration-200',
                 isCurrentTurn && 'ring-1 ring-emerald-400/70 bg-emerald-500/10 shadow-[0_18px_40px_-20px_rgba(16,185,129,0.8)]',
                 hasFolded && 'opacity-60'
               )}
@@ -343,7 +343,7 @@ export function Scoreboard({
         <div className="mt-4 border-t border-white/5 pt-4 sm:mt-5 sm:pt-5">
           <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.3em] text-emerald-200/80 sm:text-xs">
             <span className="truncate pr-2">Game phase</span>
-            <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold text-slate-800">
+            <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold text-white">
               {phase.replace(/_/g, ' ')}
             </span>
           </div>

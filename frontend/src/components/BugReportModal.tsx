@@ -168,7 +168,7 @@ export function BugReportModal({ isOpen, onClose }: BugReportModalProps) {
           <Button
             onClick={onClose}
             variant="outline"
-            className="flex-1 border-white/30 hover:bg-white/20"
+            className="flex-1 border-white/30 text-white hover:bg-white/20"
             disabled={submitting}
           >
             Cancel
