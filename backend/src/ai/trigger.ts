@@ -255,9 +255,9 @@ async function sendAIAnalysis(
 
     console.log(`[AI Analysis] Analyzing for player at position ${playerPosition} in phase ${gameState.phase}`);
 
-    // Run analysis with high quality (2000 simulations)
+    // Run analysis with high quality (10000 simulations)
     const analysisConfig = {
-      simulations: 2000,
+      simulations: 10000,
       verbose: false,
     };
 
