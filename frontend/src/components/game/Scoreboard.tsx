@@ -92,14 +92,15 @@ export function Scoreboard({
     return (
       <div
         className={cn(
-          'rounded-xl border border-white/10 bg-white/5 p-2 text-slate-100 shadow-md backdrop-blur',
+          'rounded-xl border border-white/10 bg-white/5 p-2 text-slate-100 shadow-md backdrop-blur flex flex-col min-h-0 h-full',
           className
         )}
       >
         {allRounds.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="h-full overflow-x-auto overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-slate-950/95 backdrop-blur z-10">
                 <tr className="border-b border-white/10">
                   <th className="px-2 py-1.5 text-left font-semibold text-emerald-200/80">Round</th>
                   {sortedByPosition.map((player) => (
@@ -152,6 +153,7 @@ export function Scoreboard({
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-4 gap-1.5" role="list" aria-label="Player scores">

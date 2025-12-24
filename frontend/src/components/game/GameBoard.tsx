@@ -325,11 +325,11 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
               onClick={() => setShowScoreboard(false)}
             >
               <div 
-                className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-slate-950 p-3 text-slate-100 shadow-lg" 
+                className="pointer-events-auto w-full max-w-sm max-h-[80vh] rounded-2xl border border-white/10 bg-slate-950 p-3 text-slate-100 shadow-lg overflow-hidden flex flex-col" 
                 style={{ opacity: 1, filter: 'none' }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-2 flex-shrink-0">
                   <h2 className="text-base font-semibold text-white">Table Tally</h2>
                   <Button
                     type="button"
@@ -342,18 +342,20 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                     <X className="h-3 w-3" />
                   </Button>
                 </div>
-                <Scoreboard
-                  players={players}
-                  currentPlayerPosition={activePosition}
-                  phase={phase}
-                  round={gameState.round}
-                  scoreHistory={scoreHistory}
-                  trumpSuit={gameState.trumpSuit}
-                  winningBidderPosition={gameState.winningBidderPosition}
-                  winningBid={gameState.highestBid ?? undefined}
-                  isClubsTurnUp={gameState.isClubsTurnUp}
-                  variant="mobile"
-                />
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <Scoreboard
+                    players={players}
+                    currentPlayerPosition={activePosition}
+                    phase={phase}
+                    round={gameState.round}
+                    scoreHistory={scoreHistory}
+                    trumpSuit={gameState.trumpSuit}
+                    winningBidderPosition={gameState.winningBidderPosition}
+                    winningBid={gameState.highestBid ?? undefined}
+                    isClubsTurnUp={gameState.isClubsTurnUp}
+                    variant="mobile"
+                  />
+                </div>
               </div>
             </div>
           )}

@@ -45,8 +45,19 @@ export function getPlayableCards(
   const hand = player.hand;
   const currentTrick = gameState.currentTrick;
 
+  // Count active (non-folded) players
+  const activePlayers = gameState.players.filter(p => p.folded !== true);
+  const activePlayerCount = activePlayers.length;
+
   // If player is leading the trick, all cards are playable
-  if (currentTrick.cards.length === 0) {
+  // Check: empty trick OR player is the lead player for this trick OR
+  // trick is complete (display state) and it's player's turn (they lead next trick)
+  const isTrickComplete = currentTrick.cards.length === activePlayerCount;
+  const isLeading = currentTrick.cards.length === 0 || 
+                    currentTrick.leadPlayerPosition === playerPosition ||
+                    (isTrickComplete && gameState.currentPlayerPosition === playerPosition);
+  
+  if (isLeading) {
     return hand;
   }
 
@@ -94,8 +105,17 @@ export function canPlayCard(
       return { valid: false, reason: 'You have folded' };
     }
     
-    // Must be a follow-suit violation
+    // Must be a follow-suit violation (unless trick is complete and player is leading next)
     const currentTrick = gameState.currentTrick;
+    const activePlayers = gameState.players.filter(p => p.folded !== true);
+    const activePlayerCount = activePlayers.length;
+    const isTrickComplete = currentTrick.cards.length === activePlayerCount;
+    
+    // If trick is complete and it's player's turn, they should be able to lead
+    if (isTrickComplete && gameState.currentPlayerPosition === playerPosition) {
+      return { valid: false, reason: 'Trick is complete, you should be able to lead' };
+    }
+    
     if (currentTrick.cards.length > 0) {
       const trumpSuit = gameState.trumpSuit;
       const ledCard = currentTrick.cards[0].card;
