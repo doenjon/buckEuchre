@@ -235,8 +235,8 @@ export async function getComputedStats(userId: string) {
     ? (stats.tricksWon / stats.totalTricks) * 100
     : 0;
 
-  const averagePoints = stats.totalRounds > 0
-    ? stats.totalPoints / stats.totalRounds
+  const averagePoints = stats.gamesPlayed > 0
+    ? stats.totalPoints / stats.gamesPlayed
     : 0;
 
   return {
@@ -301,8 +301,8 @@ export async function getLeaderboard(
       ? (stat.timesFolded / stat.timesCouldFold) * 100
       : 0;
 
-    const avgPointsPerGame = stat.totalRounds > 0
-      ? stat.totalPoints / stat.totalRounds
+    const avgPointsPerGame = stat.gamesPlayed > 0
+      ? stat.totalPoints / stat.gamesPlayed
       : 0;
 
     return {
@@ -346,11 +346,11 @@ export async function getLeaderboard(
     } else if (metric === 'tricksWon') {
       return b.tricksWon - a.tricksWon;
     } else if (metric === 'avgPointsPerGame') {
-      // Require at least 10 rounds for meaningful comparison
-      const aHasEnough = a.totalRounds >= 10;
-      const bHasEnough = b.totalRounds >= 10;
+      // Require at least 5 games for meaningful comparison
+      const aHasEnough = a.gamesPlayed >= 5;
+      const bHasEnough = b.gamesPlayed >= 5;
 
-      // Players with less than 10 rounds go to the end
+      // Players with less than 5 games go to the end
       if (!aHasEnough && !bHasEnough) {
         // Both don't have enough - sort by avgPointsPerGame among themselves (higher is better)
         return Number(b.avgPointsPerGame || 0) - Number(a.avgPointsPerGame || 0);
@@ -358,7 +358,7 @@ export async function getLeaderboard(
       if (!aHasEnough) return 1;
       if (!bHasEnough) return -1;
 
-      // Both have enough rounds - sort descending (higher is better)
+      // Both have enough games - sort descending (higher is better)
       return Number(b.avgPointsPerGame) - Number(a.avgPointsPerGame);
     }
     return 0;
@@ -439,8 +439,8 @@ export async function getFriendsLeaderboard(
       ? (stat.timesFolded / stat.timesCouldFold) * 100
       : 0;
 
-    const avgPointsPerGame = stat.totalRounds > 0
-      ? stat.totalPoints / stat.totalRounds
+    const avgPointsPerGame = stat.gamesPlayed > 0
+      ? stat.totalPoints / stat.gamesPlayed
       : 0;
 
     return {
@@ -490,11 +490,11 @@ export async function getFriendsLeaderboard(
     } else if (metric === 'tricksWon') {
       return b.tricksWon - a.tricksWon;
     } else if (metric === 'avgPointsPerGame') {
-      // Require at least 10 rounds for meaningful comparison
-      const aHasEnough = a.totalRounds >= 10;
-      const bHasEnough = b.totalRounds >= 10;
+      // Require at least 5 games for meaningful comparison
+      const aHasEnough = a.gamesPlayed >= 5;
+      const bHasEnough = b.gamesPlayed >= 5;
 
-      // Players with less than 10 rounds go to the end
+      // Players with less than 5 games go to the end
       if (!aHasEnough && !bHasEnough) {
         // Both don't have enough - sort by avgPointsPerGame among themselves (higher is better)
         return Number(b.avgPointsPerGame || 0) - Number(a.avgPointsPerGame || 0);
@@ -502,7 +502,7 @@ export async function getFriendsLeaderboard(
       if (!aHasEnough) return 1;
       if (!bHasEnough) return -1;
 
-      // Both have enough rounds - sort descending (higher is better)
+      // Both have enough games - sort descending (higher is better)
       return Number(b.avgPointsPerGame) - Number(a.avgPointsPerGame);
     }
     return 0;
