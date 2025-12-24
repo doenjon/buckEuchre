@@ -181,9 +181,15 @@ export async function checkAndTriggerAI(
     console.log(`[AI Trigger] Current acting player: ${currentPlayer.name} (${currentPlayerId}), isAI: ${isAI}`);
 
     if (!isAI) {
-      // Current player is human, send AI analysis
-      console.log(`[AI Trigger] Current player ${currentPlayer.name} is human, sending AI analysis`);
-      await sendAIAnalysis(gameId, gameState, currentPlayer.position, io);
+      // Current player is human, send AI analysis.
+      // IMPORTANT: Don't await analysis here — it can be expensive (MCTS simulations) and will
+      // block the event loop, causing noticeable lag after actions like PLAY_CARD.
+      console.log(`[AI Trigger] Current player ${currentPlayer.name} is human, scheduling AI analysis`);
+      setTimeout(() => {
+        sendAIAnalysis(gameId, gameState, currentPlayer.position, io).catch(err => {
+          console.error(`[AI Trigger] Error sending AI analysis:`, err);
+        });
+      }, 0);
       return;
     }
 

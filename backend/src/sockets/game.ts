@@ -928,7 +928,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
         
         // Trigger AI after delay completes (only if round is still in progress)
         if (currentState.phase === 'PLAYING') {
-          await checkAndTriggerAI(validated.gameId, currentState, io);
+          void checkAndTriggerAI(validated.gameId, currentState, io);
         }
       });
     } else {
@@ -946,7 +946,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown): Pro
       });
       
       // Trigger AI immediately if trick not complete
-      await checkAndTriggerAI(validated.gameId, finalState, io);
+      void checkAndTriggerAI(validated.gameId, finalState, io);
     }
 
     console.log(`${logPrefix} Step 6: Checking for round completion...`);
