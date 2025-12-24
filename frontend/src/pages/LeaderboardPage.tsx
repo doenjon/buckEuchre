@@ -20,6 +20,8 @@ interface LeaderboardEntry {
   bucks?: number;
   tricksWon?: number;
   avgPointsPerGame?: number;
+  timesCouldFold?: number;
+  totalBids?: number;
 }
 
 type LeaderboardType = 'global' | 'friends';
@@ -72,6 +74,8 @@ export default function LeaderboardPage() {
         bucks: entry.bucks || 0,
         tricksWon: entry.tricksWon || 0,
         avgPointsPerGame: entry.avgPointsPerGame || 0,
+        timesCouldFold: entry.timesCouldFold || 0,
+        totalBids: entry.totalBids || 0,
       }));
       
       console.log('[LeaderboardPage] Leaderboard data:', data, 'Transformed:', transformedEntries);
@@ -215,11 +219,33 @@ export default function LeaderboardPage() {
                 
                 const metric = getMetricValue();
                 
+                // Check if player has insufficient data for the current metric
+                const hasLowData = () => {
+                  switch (sortBy) {
+                    case 'avgPointsPerGame':
+                      return entry.gamesPlayed < 5;
+                    case 'foldRate':
+                      return (entry.timesCouldFold || 0) < 5;
+                    case 'winRate':
+                      return entry.gamesPlayed < 5;
+                    case 'bidSuccessRate':
+                      return (entry.totalBids || 0) < 5;
+                    default:
+                      return false;
+                  }
+                };
+                
+                const isLowData = hasLowData();
+                
                 return (
                   <div
                     key={entry.userId}
-                    className={`flex items-center justify-between px-4 py-2 hover:bg-emerald-50/30 transition-colors ${
-                      isCurrentUser ? 'bg-emerald-100/40' : ''
+                    className={`flex items-center justify-between px-4 py-2 transition-colors ${
+                      isLowData 
+                        ? 'bg-gray-100/50 opacity-75' 
+                        : isCurrentUser 
+                          ? 'bg-emerald-100/40 hover:bg-emerald-50/30' 
+                          : 'hover:bg-emerald-50/30'
                     }`}
                   >
                     {/* Left: Rank + User */}
@@ -245,24 +271,41 @@ export default function LeaderboardPage() {
                       
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-emerald-900 truncate">
+                          <p className={`font-medium truncate ${
+                            isLowData ? 'text-gray-600' : 'text-emerald-900'
+                          }`}>
                             {entry.displayName || entry.username || 'User'}
                           </p>
-                          {isCurrentUser && (
+                          {isLowData && (
+                            <span className="px-1.5 py-0.5 bg-gray-300 text-gray-700 text-xs font-medium rounded flex-shrink-0" title="Low data: May not be statistically significant">
+                              ⚠️ Low Data
+                            </span>
+                          )}
+                          {isCurrentUser && !isLowData && (
                             <span className="px-1.5 py-0.5 bg-emerald-200 text-emerald-800 text-xs font-medium rounded flex-shrink-0">
                               You
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-emerald-600 truncate">@{entry.username}</p>
+                        <p className={`text-xs truncate ${
+                          isLowData ? 'text-gray-500' : 'text-emerald-600'
+                        }`}>
+                          @{entry.username}
+                        </p>
                       </div>
                     </div>
                     
                     {/* Right: Metric Value */}
                     <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                       <div className="text-right">
-                        <p className="text-xs text-emerald-600 uppercase tracking-wide">{metric.label}</p>
-                        <p className="text-lg font-bold text-emerald-700">
+                        <p className={`text-xs uppercase tracking-wide ${
+                          isLowData ? 'text-gray-500' : 'text-emerald-600'
+                        }`}>
+                          {metric.label}
+                        </p>
+                        <p className={`text-lg font-bold ${
+                          isLowData ? 'text-gray-600' : 'text-emerald-700'
+                        }`}>
                           {metric.value}{metric.unit}
                         </p>
                       </div>
@@ -274,20 +317,6 @@ export default function LeaderboardPage() {
           </Card>
         )}
 
-        {/* Info Card */}
-        <Card className="mt-6 p-4 bg-emerald-50/80 border-emerald-200/50 backdrop-blur-sm shadow-md">
-          <div className="flex items-start space-x-3">
-            <span className="text-2xl">ℹ️</span>
-            <div className="flex-1">
-              <p className="text-sm text-emerald-800">
-                <strong>Leaderboard Updates:</strong> Rankings are updated in real-time as games complete. 
-                {type === 'friends' 
-                  ? ' Only your friends are shown here.' 
-                  : ' All players are included in the global leaderboard.'}
-              </p>
-            </div>
-          </div>
-        </Card>
       </div>
       </div>
     </>
