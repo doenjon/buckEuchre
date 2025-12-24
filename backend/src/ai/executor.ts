@@ -594,7 +594,7 @@ async function executeAICardPlay(
       
       // Trigger AI after delay completes (only if round is still in progress)
       if (currentState.phase === 'PLAYING') {
-        await checkAndTriggerAI(gameId, currentState, io);
+        void checkAndTriggerAI(gameId, currentState, io);
       }
     });
   } else {
