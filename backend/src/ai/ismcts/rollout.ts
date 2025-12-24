@@ -17,18 +17,21 @@ import {
 import { canPlayCard } from '../../game/validation';
 import { getEffectiveSuit } from '../../game/deck';
 import { getRankValue } from '../../game/cards';
+import type { AICharacter } from './ismcts-engine';
 
 /**
  * Fast heuristic for bidding
  *
  * Counts trump cards and bids based on strength.
  * Simpler than main decision-engine for speed.
+ * Character affects bidding aggressiveness.
  */
 function fastBid(
   hand: Card[],
   turnUpCard: Card,
   currentBid: number | null,
-  trumpSuit: Suit
+  trumpSuit: Suit,
+  character?: AICharacter
 ): BidAmount {
   const trumpCards = hand.filter(c => getEffectiveSuit(c, trumpSuit) === trumpSuit);
   const trumpCount = trumpCards.length;
@@ -38,14 +41,23 @@ function fastBid(
     c => c.rank === 'JACK' || c.rank === 'ACE' || c.rank === 'KING'
   ).length;
 
-  // Simple bidding logic
+  // Apply character aggressiveness modifier (default 1.0 = balanced)
+  const aggressiveness = character?.biddingAggressiveness ?? 1.0;
+  
+  // Adjust thresholds based on aggressiveness
+  // Aggressive: lower thresholds (bids more often)
+  // Conservative: higher thresholds (bids less often)
+  const adjustedTrumpCount = trumpCount * aggressiveness;
+  const adjustedHighTrumpCount = highTrumpCount * aggressiveness;
+
+  // Simple bidding logic with character adjustment
   let desiredBid = 0;
 
-  if (trumpCount >= 4 && highTrumpCount >= 2) {
+  if (adjustedTrumpCount >= 4 && adjustedHighTrumpCount >= 2) {
     desiredBid = 4;
-  } else if (trumpCount >= 3 && highTrumpCount >= 1) {
+  } else if (adjustedTrumpCount >= 3 && adjustedHighTrumpCount >= 1) {
     desiredBid = 3;
-  } else if (trumpCount >= 2) {
+  } else if (adjustedTrumpCount >= 2) {
     desiredBid = 2;
   }
 
@@ -82,8 +94,14 @@ function fastTrumpDeclaration(hand: Card[]): Suit {
  * Fast heuristic for fold decision
  *
  * Folds if weak trump holding.
+ * Character affects fold threshold.
  */
-function fastFoldDecision(hand: Card[], trumpSuit: Suit, isClubs: boolean): boolean {
+function fastFoldDecision(
+  hand: Card[],
+  trumpSuit: Suit,
+  isClubs: boolean,
+  character?: AICharacter
+): boolean {
   if (isClubs) return false; // Can't fold on clubs
 
   const trumpCards = hand.filter(c => getEffectiveSuit(c, trumpSuit) === trumpSuit);
@@ -97,16 +115,26 @@ function fastFoldDecision(hand: Card[], trumpSuit: Suit, isClubs: boolean): bool
   // Stay if we have high trump
   if (highTrumpCount > 0) return false;
 
-  // Fold if <2 trumps
-  return trumpCount < 2;
+  // Apply character fold threshold modifier (default 1.0 = balanced)
+  // Higher threshold = fold less (stay more), lower = fold more
+  const foldThreshold = character?.foldThreshold ?? 1.0;
+  const adjustedThreshold = Math.max(1, Math.floor(2 * foldThreshold));
+
+  // Fold if below adjusted threshold
+  return trumpCount < adjustedThreshold;
 }
 
 /**
  * Fast heuristic for card play
  *
  * Simple strategy: lead high, follow low.
+ * Character affects risk-taking in card selection.
  */
-function fastCardPlay(gameState: GameState, playerPosition: PlayerPosition): Card {
+function fastCardPlay(
+  gameState: GameState,
+  playerPosition: PlayerPosition,
+  character?: AICharacter
+): Card {
   const player = gameState.players[playerPosition];
   const trumpSuit = gameState.trumpSuit!;
   const isLeading = gameState.currentTrick.cards.length === 0;
@@ -125,6 +153,9 @@ function fastCardPlay(gameState: GameState, playerPosition: PlayerPosition): Car
     return legalCards[0];
   }
 
+  // Apply character risk-taking modifier (default 1.0 = balanced)
+  const riskTaking = character?.riskTaking ?? 1.0;
+
   // Score each card
   const scoredCards = legalCards.map(card => {
     const effectiveSuit = getEffectiveSuit(card, trumpSuit);
@@ -133,10 +164,12 @@ function fastCardPlay(gameState: GameState, playerPosition: PlayerPosition): Car
     let score = rankValue;
     if (isLeading) {
       // When leading, prefer high cards
-      score = rankValue * 10;
+      // Risk-taking affects how much we value high cards
+      score = rankValue * 10 * riskTaking;
     } else {
       // When following, prefer low cards
-      score = 100 - rankValue * 10;
+      // Risk-taking makes us less likely to play low (more likely to challenge)
+      score = (100 - rankValue * 10) / riskTaking;
     }
 
     return { card, score };
@@ -156,9 +189,14 @@ function fastCardPlay(gameState: GameState, playerPosition: PlayerPosition): Car
  *
  * @param state - Current game state (will be cloned)
  * @param playerPosition - Player whose perspective to evaluate from
+ * @param character - Optional character traits for varied play styles
  * @returns Score change for this hand only (range: -5 to +5)
  */
-export function rollout(state: GameState, playerPosition: PlayerPosition): number {
+export function rollout(
+  state: GameState,
+  playerPosition: PlayerPosition,
+  character?: AICharacter
+): number {
   // Clone state to avoid mutations
   let currentState = JSON.parse(JSON.stringify(state)) as GameState;
 
@@ -193,7 +231,9 @@ export function rollout(state: GameState, playerPosition: PlayerPosition): numbe
           bidder.hand,
           currentState.turnUpCard,
           currentState.highestBid,
-          currentState.turnUpCard.suit
+          currentState.turnUpCard.suit,
+          // Only apply character if this is the player we're evaluating for
+          bidder.position === playerPosition ? character : undefined
         );
 
         currentState = applyBid(currentState, bidder.position, bid);
@@ -232,7 +272,9 @@ export function rollout(state: GameState, playerPosition: PlayerPosition): numbe
           const shouldFold = fastFoldDecision(
             player.hand,
             currentState.trumpSuit,
-            currentState.isClubsTurnUp
+            currentState.isClubsTurnUp,
+            // Only apply character if this is the player we're evaluating for
+            player.position === playerPosition ? character : undefined
           );
 
           currentState = applyFoldDecision(currentState, player.position, shouldFold);
@@ -271,7 +313,12 @@ export function rollout(state: GameState, playerPosition: PlayerPosition): numbe
         }
 
         // Use fastCardPlay to select which card, but get the actual card object from legalCards
-        const selectedCard = fastCardPlay(currentState, player.position);
+        const selectedCard = fastCardPlay(
+          currentState,
+          player.position,
+          // Only apply character if this is the player we're evaluating for
+          player.position === playerPosition ? character : undefined
+        );
         // Find the card by ID in legalCards to ensure we have the correct reference from current state
         const cardToPlay = legalCards.find(c => c.id === selectedCard.id);
         
@@ -347,9 +394,14 @@ export function evaluateTerminalState(scoreChange: number): number {
  *
  * @param state - Current game state
  * @param playerPosition - Player to evaluate from
+ * @param character - Optional character traits for varied play styles
  * @returns Normalized value (0-1, higher is better)
  */
-export function simulate(state: GameState, playerPosition: PlayerPosition): number {
-  const scoreChange = rollout(state, playerPosition);
+export function simulate(
+  state: GameState,
+  playerPosition: PlayerPosition,
+  character?: AICharacter
+): number {
+  const scoreChange = rollout(state, playerPosition, character);
   return evaluateTerminalState(scoreChange);
 }

@@ -64,6 +64,7 @@ export async function updateRoundStats(roundStats: RoundStatsUpdate): Promise<vo
     };
 
     // Track bucks: when pointsEarned === -5, player got bucked (scoreChange was +5)
+    // This is consistent: negative pointsEarned means you got bucked
     if (pointsEarned === -5) {
       updates.bucks = (stats.bucks || 0) + 1;
     }
@@ -77,7 +78,13 @@ export async function updateRoundStats(roundStats: RoundStatsUpdate): Promise<vo
     }
 
     // Update bidding stats if user was the bidder
+    // totalBids = total number of times you were the winning bidder (denominator)
+    //   - Only counts actual bids (not Dirty Clubs, where there's no bidding)
+    // successfulBids = number of times you made your bid (numerator)
+    //   - Only counts when you successfully made your bid
     if (wasBidder && bidAmount !== undefined && bidSuccess !== undefined) {
+      // Only increment totalBids when there was an actual bid (not Dirty Clubs)
+      // bidAmount is only set when !isClubsTurnUp, so this excludes Dirty Clubs
       updates.totalBids = stats.totalBids + 1;
       
       if (bidSuccess) {
@@ -93,7 +100,7 @@ export async function updateRoundStats(roundStats: RoundStatsUpdate): Promise<vo
 
       // Track bid amounts separately with success/failure
       if (bidAmount === 2) {
-        updates.bids2 = (stats.bids2 || 0) + 1;
+          updates.bids2 = (stats.bids2 || 0) + 1;
         if (bidSuccess) {
           updates.bids2Successful = (stats.bids2Successful || 0) + 1;
         } else {
@@ -253,6 +260,14 @@ export async function getLeaderboard(
       gamesPlayed: {
         gte: 1, // Require at least 1 game played
       },
+      user: {
+        // Filter out AI players (usernames starting with "AI_")
+        username: {
+          not: {
+            startsWith: 'AI_',
+          },
+        },
+      },
     },
     include: {
       user: {
@@ -267,8 +282,13 @@ export async function getLeaderboard(
     },
   });
 
+  // Filter out AI players (safety check - also filtered in query above)
+  const nonAIStats = allStats.filter(stat => 
+    stat.user && !stat.user.username.startsWith('AI_')
+  );
+
   // Calculate computed metrics
-  const statsWithMetrics = allStats.map(stat => {
+  const statsWithMetrics = nonAIStats.map(stat => {
     const winRate = stat.gamesPlayed > 0 
       ? (stat.gamesWon / stat.gamesPlayed) * 100 
       : 0;
@@ -379,6 +399,14 @@ export async function getFriendsLeaderboard(
       userId: {
         in: friendIds,
       },
+      user: {
+        // Filter out AI players (usernames starting with "AI_")
+        username: {
+          not: {
+            startsWith: 'AI_',
+          },
+        },
+      },
     },
     include: {
       user: {
@@ -392,8 +420,13 @@ export async function getFriendsLeaderboard(
     },
   });
 
+  // Filter out AI players (safety check - also filtered in query above)
+  const nonAIStats = stats.filter(stat => 
+    stat.user && !stat.user.username.startsWith('AI_')
+  );
+
   // Calculate computed metrics
-  const statsWithMetrics = stats.map(stat => {
+  const statsWithMetrics = nonAIStats.map(stat => {
     const winRate = stat.gamesPlayed > 0 
       ? (stat.gamesWon / stat.gamesPlayed) * 100 
       : 0;

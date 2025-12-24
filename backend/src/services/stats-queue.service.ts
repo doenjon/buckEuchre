@@ -160,6 +160,7 @@ export class StatsQueue {
     };
 
     // Track bucks: when pointsEarned === -5, player got bucked (scoreChange was +5)
+    // This is consistent: negative pointsEarned means you got bucked
     if (pointsEarned === -5) {
       updates.bucks = (stats.bucks || 0) + 1;
     }
@@ -173,7 +174,13 @@ export class StatsQueue {
     }
 
     // Update bidding stats if user was the bidder
+    // totalBids = total number of times you were the winning bidder (denominator)
+    //   - Only counts actual bids (not Dirty Clubs, where there's no bidding)
+    // successfulBids = number of times you made your bid (numerator)
+    //   - Only counts when you successfully made your bid
     if (wasBidder && bidAmount !== undefined && bidSuccess !== undefined) {
+      // Only increment totalBids when there was an actual bid (not Dirty Clubs)
+      // bidAmount is only set when !isClubsTurnUp, so this excludes Dirty Clubs
       updates.totalBids = stats.totalBids + 1;
       
       if (bidSuccess) {

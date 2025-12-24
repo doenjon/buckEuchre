@@ -25,6 +25,23 @@ export interface ISMCTSConfig {
 
   /** Enable verbose logging */
   verbose?: boolean;
+
+  /** Character/personality traits for varied play styles */
+  character?: AICharacter;
+}
+
+/**
+ * AI Character traits that affect play style
+ */
+export interface AICharacter {
+  /** Bidding aggressiveness (0.5 = conservative, 1.0 = balanced, 1.5 = aggressive) */
+  biddingAggressiveness?: number;
+
+  /** Risk-taking in card play (0.5 = safe, 1.0 = balanced, 1.5 = risky) */
+  riskTaking?: number;
+
+  /** Fold threshold modifier (0.5 = fold more, 1.0 = balanced, 1.5 = fold less) */
+  foldThreshold?: number;
 }
 
 /**
@@ -230,7 +247,7 @@ export class ISMCTSEngine {
     if (this.isTerminal(state)) {
       value = this.evaluateState(state, playerPosition);
     } else {
-      value = simulate(state, playerPosition);
+      value = simulate(state, playerPosition, this.config.character);
     }
 
     // BACKPROPAGATION: Update statistics up to root
@@ -286,7 +303,7 @@ export class ISMCTSEngine {
     // Note: The state passed in might not have scores calculated yet
     // For now, just use the simulate() function which handles this correctly
     // This should rarely be called since we usually run rollouts instead
-    return simulate(state, playerPosition);
+    return simulate(state, playerPosition, this.config.character);
   }
 
   /**

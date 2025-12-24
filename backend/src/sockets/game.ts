@@ -119,10 +119,11 @@ export function buildRoundCompletionPayload(
       const wasBidder = bidderPosition !== null && player.position === bidderPosition;
       const scoreChange = scoreChanges[index];
       
-      // In Buck Euchre, lower scores are better (race to 0)
-      // Score changes are NEGATIVE when good (score decreases)
-      // Score changes are POSITIVE when bad (got euchred, score increases)
-      // pointsEarned should include both positive and negative outcomes
+      // For stats/leaderboards: higher is better, but negative values are allowed (for bucks)
+      // pointsEarned = -scoreChange means:
+      //   - If you won 5 tricks: scoreChange = -5, so pointsEarned = 5 (positive = good)
+      //   - If you got bucked: scoreChange = +5, so pointsEarned = -5 (negative = bad)
+      // This is consistent: higher is better, negative represents bucks
       const pointsEarned = -scoreChange;
       
       // Track fold stats: player could fold if they weren't the bidder/dealer and it wasn't Dirty Clubs

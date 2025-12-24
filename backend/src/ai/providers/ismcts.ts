@@ -8,25 +8,25 @@
 
 import { Card, Suit, BidAmount, GameState, PlayerPosition } from '@buck-euchre/shared';
 import { AIProvider, AIConfig, AIDifficulty, AIAnalysis } from '../types';
-import { ISMCTSEngine, ISMCTSConfig } from '../ismcts/ismcts-engine';
+import { ISMCTSEngine, ISMCTSConfig, AICharacter } from '../ismcts/ismcts-engine';
 import { Action } from '../ismcts/mcts-node';
+import { getCharacterPreset } from '../character';
 
 /**
  * Map difficulty to simulation count
+ * 
+ * Default is 5000 iterations. Can be overridden via customIterations parameter.
+ * Difficulty-based values are kept for backward compatibility but default is now 5000.
  */
-function getSimulationCount(difficulty: AIDifficulty): number {
-  switch (difficulty) {
-    case 'easy':
-      return 100; // ~20ms
-    case 'medium':
-      return 500; // ~75ms
-    case 'hard':
-      return 2000; // ~250ms
-    case 'expert':
-      return 5000; // ~600ms
-    default:
-      return 500;
+function getSimulationCount(difficulty: AIDifficulty, customIterations?: number): number {
+  // If custom iterations provided, use that
+  if (customIterations !== undefined && customIterations > 0) {
+    return customIterations;
   }
+  
+  // Default to 5000 iterations as requested
+  // Difficulty-based values kept for reference but not used by default
+  return 5000;
 }
 
 /**
@@ -47,17 +47,34 @@ export class ISMCTSAIProvider implements AIProvider {
 
   initialize(config: AIConfig): void {
     this.config = config;
-    this.simulations = getSimulationCount(config.difficulty);
+    
+    // Get iterations from params, or use default 5000
+    const customIterations = config.params?.iterations;
+    this.simulations = getSimulationCount(config.difficulty, customIterations);
+
+    // Get character from params (can be a preset name string or a character object)
+    let character: AICharacter | undefined;
+    if (config.params?.character) {
+      if (typeof config.params.character === 'string') {
+        // It's a preset name, get the preset
+        character = getCharacterPreset(config.params.character);
+      } else {
+        // It's already a character object
+        character = config.params.character as AICharacter;
+      }
+    }
 
     const ismctsConfig: ISMCTSConfig = {
       simulations: this.simulations,
       verbose: config.params?.verbose || false,
+      character,
     };
 
     this.engine = new ISMCTSEngine(ismctsConfig);
 
+    const characterInfo = character ? ` (character: ${JSON.stringify(character)})` : '';
     console.log(
-      `[ISMCTS AI] Initialized with difficulty: ${config.difficulty} (${this.simulations} simulations)`
+      `[ISMCTS AI] Initialized with difficulty: ${config.difficulty} (${this.simulations} simulations)${characterInfo}`
     );
   }
 
