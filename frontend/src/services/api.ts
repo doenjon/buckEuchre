@@ -498,8 +498,12 @@ export async function searchUsers(query: string): Promise<any> {
   }
 
   const data = await response.json();
-  // API returns { users: [...] }, return the array
-  return data.users || [];
+  // API returns { users: [...] }, map id to userId for frontend
+  const users = data.users || [];
+  return users.map((user: any) => ({
+    ...user,
+    userId: user.id,
+  }));
 }
 
 // ========== Game Invitations ==========
