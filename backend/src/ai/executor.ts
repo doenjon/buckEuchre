@@ -571,8 +571,16 @@ async function executeAICardPlay(
         return;
       }
       
+      // IMPORTANT: Ensure clients accept this transition.
+      // The "display state" is emitted with a newer updatedAt, so if we emit the real
+      // state with an older timestamp the frontend may treat it as stale and ignore it.
+      const stateWithUpdatedTimestamp = {
+        ...currentState,
+        updatedAt: Date.now(),
+      };
+      
       io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
-        gameState: currentState,
+        gameState: stateWithUpdatedTimestamp,
         event: 'CARD_PLAYED',
         data: play,
       });
