@@ -105,6 +105,7 @@ export async function analyzeHand(
           cardId: card.id,
           winProbability: 0,
           expectedTricks: 0,
+          expectedScore: 5, // Worst case
           confidence: 0,
           visits: 0,
           rank: player.hand.length,
@@ -136,6 +137,7 @@ export async function analyzeHand(
         cardId: card.id,
         winProbability,
         expectedTricks,
+        expectedScore: expectedScoreChange,
         confidence,
         visits: stats.visits,
         rank: 0, // Will be set after sorting

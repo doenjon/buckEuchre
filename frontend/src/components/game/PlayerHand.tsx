@@ -526,10 +526,12 @@ export function PlayerHand({
                         <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best card">⭐</span>
                       )}
                       <span
-                        className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
-                        title={`Expected tricks: ${analysis.expectedTricks.toFixed(1)}`}
+                        className={`drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] ${
+                          analysis.expectedScore < 0 ? 'text-green-300' : analysis.expectedScore > 0 ? 'text-red-300' : 'text-yellow-300'
+                        }`}
+                        title={`Expected score change: ${analysis.expectedScore.toFixed(1)} (negative is good)`}
                       >
-                        {analysis.expectedTricks.toFixed(1)}🃏
+                        {analysis.expectedScore > 0 ? '+' : ''}{analysis.expectedScore.toFixed(1)}
                       </span>
                     </div>
                     <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="MCTS visits (exploration count)">
