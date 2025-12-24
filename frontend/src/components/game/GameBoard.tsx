@@ -742,7 +742,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                     type="button"
                     size="lg"
                     variant="outline"
-                    className="w-full sm:w-auto min-w-[160px] md:min-w-[180px] justify-center border-white/40 bg-white/10 text-slate-800 transition hover:bg-white/20 hover:text-slate-900"
+                    className="w-full sm:w-auto min-w-[160px] md:min-w-[180px] justify-center border-white/40 bg-white/10 text-white transition hover:bg-white/20"
                     onClick={handleReturnToLobby}
                     disabled={isRematching || isReturning}
                   >
