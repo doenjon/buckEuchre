@@ -560,6 +560,17 @@ export function applyCardPlay(
  * @returns New game state with scores updated
  */
 export function finishRound(state: GameState): GameState {
+  // Guard: If already in ROUND_OVER or GAME_OVER, scores have already been calculated
+  // This prevents double-scoring bugs
+  if (state.phase === 'ROUND_OVER' || state.phase === 'GAME_OVER') {
+    console.warn('[SCORING] finishRound called on already-scored state! Returning state as-is to prevent double-scoring.', {
+      phase: state.phase,
+      round: state.round,
+      scores: state.players.map(p => ({ name: p.name, score: p.score })),
+    });
+    return state;
+  }
+
   // Log scoring details for debugging
   console.log('[SCORING] Calculating round scores:', {
     isClubsTurnUp: state.isClubsTurnUp,
