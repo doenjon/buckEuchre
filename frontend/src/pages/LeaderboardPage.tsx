@@ -76,8 +76,8 @@ export default function LeaderboardPage() {
     return (
       <div className="min-h-screen bg-green-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading leaderboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+          <p className="text-emerald-700">Loading leaderboard...</p>
         </div>
       </div>
     );
@@ -92,20 +92,20 @@ export default function LeaderboardPage() {
         {/* Error Message */}
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-600">{error}</p>
+            <p className="text-sm text-red-700 font-medium">{error}</p>
           </div>
         )}
 
         {/* Controls */}
         <div className="mb-6 flex flex-col md:flex-row gap-4">
           {/* Type Toggle */}
-          <div className="flex bg-white rounded-lg p-1 shadow-sm">
+          <div className="flex bg-white/80 backdrop-blur-sm rounded-lg p-1 shadow-md border border-green-200/50">
             <button
               onClick={() => setType('global')}
               className={`flex-1 py-2 px-6 rounded-md font-medium transition-colors ${
                 type === 'global'
-                  ? 'bg-green-600 text-white shadow'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'text-emerald-700 hover:bg-emerald-50'
               }`}
             >
               🌍 Global
@@ -114,8 +114,8 @@ export default function LeaderboardPage() {
               onClick={() => setType('friends')}
               className={`flex-1 py-2 px-6 rounded-md font-medium transition-colors ${
                 type === 'friends'
-                  ? 'bg-green-600 text-white shadow'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'text-emerald-700 hover:bg-emerald-50'
               }`}
             >
               👥 Friends
@@ -127,7 +127,7 @@ export default function LeaderboardPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortBy)}
-              className="w-full md:w-auto px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-medium"
+              className="w-full md:w-auto px-4 py-2 bg-white/80 backdrop-blur-sm border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-medium text-emerald-900 shadow-md"
             >
               <option value="gamesWon">🏆 Most Wins</option>
               <option value="winRate">📈 Win Rate</option>
@@ -139,50 +139,50 @@ export default function LeaderboardPage() {
 
         {/* Leaderboard */}
         {entries.length === 0 ? (
-          <Card className="p-8 text-center">
-            <div className="text-gray-400 mb-4">
+          <Card className="p-8 text-center bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
+            <div className="text-emerald-400 mb-4">
               <span className="text-6xl">📊</span>
             </div>
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+            <h3 className="text-lg font-semibold text-emerald-800 mb-2">
               {type === 'friends' ? 'No Friends Data' : 'No Leaderboard Data'}
             </h3>
-            <p className="text-gray-600">
+            <p className="text-emerald-700">
               {type === 'friends'
                 ? 'Add friends and play games to see friend rankings!'
                 : 'Be the first to play and claim the top spot!'}
             </p>
           </Card>
         ) : (
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
             {/* Desktop Table */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-emerald-50/80 border-b border-emerald-200">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-emerald-700 uppercase tracking-wider">
                       Rank
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-emerald-700 uppercase tracking-wider">
                       Player
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-center text-xs font-medium text-emerald-700 uppercase tracking-wider">
                       Games
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-center text-xs font-medium text-emerald-700 uppercase tracking-wider">
                       Wins
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-center text-xs font-medium text-emerald-700 uppercase tracking-wider">
                       Win Rate
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-center text-xs font-medium text-emerald-700 uppercase tracking-wider">
                       Points
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-center text-xs font-medium text-emerald-700 uppercase tracking-wider">
                       Bid Success
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white/60 divide-y divide-emerald-100">
                   {entries.map((entry, index) => {
                     const rank = index + 1;
                     const isCurrentUser = entry.userId === userId;
@@ -190,8 +190,8 @@ export default function LeaderboardPage() {
                     return (
                       <tr
                         key={entry.userId}
-                        className={`hover:bg-gray-50 transition-colors ${
-                          isCurrentUser ? 'bg-green-50' : ''
+                        className={`hover:bg-emerald-50/50 transition-colors ${
+                          isCurrentUser ? 'bg-emerald-100/60' : ''
                         }`}
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -217,39 +217,39 @@ export default function LeaderboardPage() {
                             )}
                             <div>
                               <div className="flex items-center space-x-2">
-                                <p className="font-semibold text-gray-900">
+                                <p className="font-semibold text-emerald-900">
                                   {entry.displayName || entry.username || 'User'}
                                 </p>
                                 {isCurrentUser && (
-                                  <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
+                                  <span className="px-2 py-0.5 bg-emerald-200 text-emerald-800 text-xs font-medium rounded">
                                     You
                                   </span>
                                 )}
                               </div>
-                              <p className="text-sm text-gray-500">@{entry.username}</p>
+                              <p className="text-sm text-emerald-600">@{entry.username}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-emerald-900">
                           {entry.gamesPlayed}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className="text-sm font-semibold text-green-600">
+                          <span className="text-sm font-semibold text-emerald-700">
                             {entry.gamesWon}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className="text-sm font-semibold text-blue-600">
+                          <span className="text-sm font-semibold text-emerald-600">
                             {entry.winRate.toFixed(1)}%
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className="text-sm font-semibold text-orange-600">
+                          <span className="text-sm font-semibold text-emerald-700">
                             {entry.totalPoints.toLocaleString()}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className="text-sm font-semibold text-purple-600">
+                          <span className="text-sm font-semibold text-emerald-600">
                             {entry.bidSuccessRate.toFixed(1)}%
                           </span>
                         </td>
@@ -261,7 +261,7 @@ export default function LeaderboardPage() {
             </div>
 
             {/* Mobile Cards */}
-            <div className="md:hidden divide-y divide-gray-200">
+            <div className="md:hidden divide-y divide-emerald-100">
               {entries.map((entry, index) => {
                 const rank = index + 1;
                 const isCurrentUser = entry.userId === userId;
@@ -269,7 +269,7 @@ export default function LeaderboardPage() {
                 return (
                   <div
                     key={entry.userId}
-                    className={`p-4 ${isCurrentUser ? 'bg-green-50' : ''}`}
+                    className={`p-4 ${isCurrentUser ? 'bg-emerald-100/60' : ''}`}
                   >
                     <div className="flex items-center space-x-3 mb-3">
                       <span className="text-2xl font-bold w-10">
@@ -293,33 +293,33 @@ export default function LeaderboardPage() {
 
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
-                          <p className="font-semibold text-gray-900">{entry.displayName || entry.username || 'User'}</p>
+                          <p className="font-semibold text-emerald-900">{entry.displayName || entry.username || 'User'}</p>
                           {isCurrentUser && (
-                            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
+                            <span className="px-2 py-0.5 bg-emerald-200 text-emerald-800 text-xs font-medium rounded">
                               You
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500">@{entry.username}</p>
+                        <p className="text-sm text-emerald-600">@{entry.username}</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <p className="text-gray-500">Games</p>
-                        <p className="font-semibold text-gray-900">{entry.gamesPlayed}</p>
+                        <p className="text-emerald-600">Games</p>
+                        <p className="font-semibold text-emerald-900">{entry.gamesPlayed}</p>
                       </div>
                       <div>
-                        <p className="text-gray-500">Wins</p>
-                        <p className="font-semibold text-green-600">{entry.gamesWon}</p>
+                        <p className="text-emerald-600">Wins</p>
+                        <p className="font-semibold text-emerald-700">{entry.gamesWon}</p>
                       </div>
                       <div>
-                        <p className="text-gray-500">Win Rate</p>
-                        <p className="font-semibold text-blue-600">{entry.winRate.toFixed(1)}%</p>
+                        <p className="text-emerald-600">Win Rate</p>
+                        <p className="font-semibold text-emerald-700">{entry.winRate.toFixed(1)}%</p>
                       </div>
                       <div>
-                        <p className="text-gray-500">Points</p>
-                        <p className="font-semibold text-orange-600">{entry.totalPoints.toLocaleString()}</p>
+                        <p className="text-emerald-600">Points</p>
+                        <p className="font-semibold text-emerald-700">{entry.totalPoints.toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
@@ -330,11 +330,11 @@ export default function LeaderboardPage() {
         )}
 
         {/* Info Card */}
-        <Card className="mt-6 p-4 bg-blue-50 border-blue-200">
+        <Card className="mt-6 p-4 bg-emerald-50/80 border-emerald-200/50 backdrop-blur-sm shadow-md">
           <div className="flex items-start space-x-3">
             <span className="text-2xl">ℹ️</span>
             <div className="flex-1">
-              <p className="text-sm text-blue-900">
+              <p className="text-sm text-emerald-800">
                 <strong>Leaderboard Updates:</strong> Rankings are updated in real-time as games complete. 
                 {type === 'friends' 
                   ? ' Only your friends are shown here.' 

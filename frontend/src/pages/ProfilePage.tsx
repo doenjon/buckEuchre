@@ -85,8 +85,8 @@ export default function ProfilePage() {
         <Header />
         <div className="min-h-screen bg-green-50 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading profile...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+            <p className="text-emerald-700">Loading profile...</p>
           </div>
         </div>
       </>
@@ -99,9 +99,11 @@ export default function ProfilePage() {
       <>
         <Header />
         <div className="min-h-screen bg-green-50 flex items-center justify-center">
-          <Card className="p-6 max-w-md">
+          <Card className="p-6 max-w-md bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
             <div className="text-center">
-              <p className="text-red-600 mb-4">{error || 'Profile not found'}</p>
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-red-700 font-medium">{error || 'Profile not found'}</p>
+              </div>
               <Button onClick={() => navigate('/lobby')}>Back to Lobby</Button>
             </div>
           </Card>
@@ -128,7 +130,7 @@ export default function ProfilePage() {
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Profile Header */}
-        <Card className="p-6 mb-6">
+        <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
           <div className="flex items-center space-x-6">
             {/* Avatar */}
             <div className="flex-shrink-0">
@@ -136,10 +138,10 @@ export default function ProfilePage() {
                 <img
                   src={profile.avatarUrl}
                   alt={profile.displayName || profile.username || 'User'}
-                  className="w-24 h-24 rounded-full border-4 border-green-500"
+                  className="w-24 h-24 rounded-full border-4 border-emerald-500"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center border-4 border-green-500">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center border-4 border-emerald-500">
                   <span className="text-3xl font-bold text-white">
                     {(profile.displayName || profile.username || 'U').charAt(0).toUpperCase()}
                   </span>
@@ -150,16 +152,16 @@ export default function ProfilePage() {
             {/* User Info */}
             <div className="flex-1">
               <div className="flex items-center space-x-3">
-                <h2 className="text-3xl font-bold text-gray-900">{profile.displayName || profile.username || 'User'}</h2>
+                <h2 className="text-3xl font-bold text-emerald-900">{profile.displayName || profile.username || 'User'}</h2>
                 {isGuest && (
-                  <span className="px-3 py-1 bg-gray-200 text-gray-700 text-sm font-medium rounded-full">
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-sm font-medium rounded-full">
                     Guest
                   </span>
                 )}
               </div>
-              <p className="text-gray-600 mt-1">@{profile.username}</p>
+              <p className="text-emerald-700 mt-1">@{profile.username}</p>
               {profile.email && (
-                <p className="text-gray-500 text-sm mt-1">{profile.email}</p>
+                <p className="text-emerald-600 text-sm mt-1">{profile.email}</p>
               )}
             </div>
           </div>
@@ -270,10 +272,10 @@ export default function ProfilePage() {
               </Card>
 
               {/* Games Lost */}
-              <Card className="p-5">
+              <Card className="p-5 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-md hover:shadow-lg transition-shadow">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 font-medium">Games Lost</p>
+                    <p className="text-sm text-emerald-600 font-medium">Games Lost</p>
                     <p className="text-3xl font-bold text-red-600 mt-1">{stats.gamesLost}</p>
                   </div>
                   <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
@@ -283,28 +285,28 @@ export default function ProfilePage() {
               </Card>
 
               {/* Total Points */}
-              <Card className="p-5">
+              <Card className="p-5 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-md hover:shadow-lg transition-shadow">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 font-medium">Total Points</p>
-                    <p className="text-3xl font-bold text-indigo-600 mt-1">{stats.totalPoints}</p>
+                    <p className="text-sm text-emerald-600 font-medium">Total Points</p>
+                    <p className="text-3xl font-bold text-emerald-700 mt-1">{stats.totalPoints}</p>
                   </div>
-                  <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
                     <span className="text-2xl">💎</span>
                   </div>
                 </div>
               </Card>
             </div>
           ) : (
-            <Card className="p-8 text-center">
-              <div className="text-gray-400 mb-4">
+            <Card className="p-8 text-center bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
+              <div className="text-emerald-400 mb-4">
                 <span className="text-6xl">🎮</span>
               </div>
-              <h4 className="text-lg font-semibold text-gray-700 mb-2">No Stats Yet</h4>
-              <p className="text-gray-600 mb-4">
+              <h4 className="text-lg font-semibold text-emerald-800 mb-2">No Stats Yet</h4>
+              <p className="text-emerald-700 mb-4">
                 Play some games to start tracking your statistics!
               </p>
-              <Button onClick={() => navigate('/lobby')} className="bg-green-600 hover:bg-green-700">
+              <Button onClick={() => navigate('/lobby')} variant="primary">
                 Play Now
               </Button>
             </Card>
@@ -312,12 +314,13 @@ export default function ProfilePage() {
         </div>
 
         {/* Quick Actions */}
-        <Card className="p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h3>
+        <Card className="p-6 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
+          <h3 className="text-xl font-bold text-emerald-800 mb-4">Quick Actions</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Button 
               onClick={() => navigate('/lobby')}
-              className="bg-green-600 hover:bg-green-700 py-6"
+              variant="primary"
+              className="py-6"
             >
               <div className="text-center">
                 <p className="text-lg font-semibold">Play Game</p>
@@ -326,7 +329,8 @@ export default function ProfilePage() {
             </Button>
             <Button 
               onClick={() => navigate('/friends')}
-              className="bg-blue-600 hover:bg-blue-700 py-6"
+              variant="primary"
+              className="py-6"
             >
               <div className="text-center">
                 <p className="text-lg font-semibold">Friends</p>
@@ -335,7 +339,8 @@ export default function ProfilePage() {
             </Button>
             <Button 
               onClick={() => navigate('/leaderboard')}
-              className="bg-purple-600 hover:bg-purple-700 py-6"
+              variant="primary"
+              className="py-6"
             >
               <div className="text-center">
                 <p className="text-lg font-semibold">Leaderboard</p>

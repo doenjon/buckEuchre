@@ -141,7 +141,7 @@ export default function SettingsPage() {
         <div className="min-h-screen bg-green-50 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading settings...</p>
+            <p className="text-emerald-700">Loading settings...</p>
           </div>
         </div>
       </>
@@ -155,32 +155,32 @@ export default function SettingsPage() {
         <div className="max-w-4xl mx-auto px-4 py-8">
           {/* Settings Header */}
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Settings</h1>
-            <p className="text-gray-600">Customize your Buck Euchre experience</p>
+            <h1 className="text-3xl font-bold text-emerald-800 mb-2">Settings</h1>
+            <p className="text-emerald-700">Customize your Buck Euchre experience</p>
           </div>
 
           {/* Error/Success Messages */}
           {error && (
             <Card className="p-4 mb-6 bg-red-50 border-red-200">
-              <p className="text-red-600">{error}</p>
+              <p className="text-red-700 font-medium">{error}</p>
             </Card>
           )}
           {success && (
-            <Card className="p-4 mb-6 bg-green-50 border-green-200">
-              <p className="text-green-600">{success}</p>
+            <Card className="p-4 mb-6 bg-emerald-50/80 border-emerald-200 backdrop-blur-sm">
+              <p className="text-emerald-700 font-medium">{success}</p>
             </Card>
           )}
 
           {/* Display Settings */}
-          <Card className="p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Display</h2>
+          <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
+            <h2 className="text-xl font-semibold text-emerald-800 mb-4">Display</h2>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="showCardOverlay" className="text-base">
                     Show Card Overlay
                   </Label>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-emerald-600">
                     Display trump suit, bid info, and game phase
                   </p>
                 </div>
@@ -198,7 +198,7 @@ export default function SettingsPage() {
                   <Label htmlFor="showTooltips" className="text-base">
                     Show Tooltips
                   </Label>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-emerald-600">
                     Display helpful hints and explanations
                   </p>
                 </div>
@@ -216,7 +216,7 @@ export default function SettingsPage() {
                   <Label htmlFor="autoSortHand" className="text-base">
                     Auto-Sort Hand
                   </Label>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-emerald-600">
                     Automatically organize cards by suit and rank
                   </p>
                 </div>
@@ -232,15 +232,15 @@ export default function SettingsPage() {
           </Card>
 
           {/* Animation Settings */}
-          <Card className="p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Animation</h2>
+          <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
+            <h2 className="text-xl font-semibold text-emerald-800 mb-4">Animation</h2>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="bidSpeed" className="text-base">
                     Bid Speed
                   </Label>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-emerald-600">
                     Speed of bidding animations
                   </p>
                 </div>
@@ -266,7 +266,7 @@ export default function SettingsPage() {
                   <Label htmlFor="animationSpeed" className="text-base">
                     Animation Speed
                   </Label>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-emerald-600">
                     Speed of card animations and transitions
                   </p>
                 </div>
@@ -290,15 +290,15 @@ export default function SettingsPage() {
           </Card>
 
           {/* Audio Settings */}
-          <Card className="p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Audio</h2>
+          <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
+            <h2 className="text-xl font-semibold text-emerald-800 mb-4">Audio</h2>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="soundEffects" className="text-base">
                     Sound Effects
                   </Label>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-emerald-600">
                     Play sounds for game actions
                   </p>
                 </div>
@@ -314,15 +314,15 @@ export default function SettingsPage() {
           </Card>
 
           {/* Debug Settings */}
-          <Card className="p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Debug</h2>
+          <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
+            <h2 className="text-xl font-semibold text-emerald-800 mb-4">Debug</h2>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="showDebugConsole" className="text-base">
                     Show Debug Console
                   </Label>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-emerald-600">
                     Display console logger for copying debug logs
                   </p>
                 </div>

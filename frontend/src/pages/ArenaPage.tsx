@@ -188,7 +188,7 @@ export function ArenaPage() {
                     max="100"
                     value={numGames}
                     onChange={(e) => setNumGames(parseInt(e.target.value) || 1)}
-                    className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white"
+                    className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-slate-800"
                   />
                 </div>
 
@@ -209,8 +209,8 @@ export function ArenaPage() {
                               : 'border-white/20 bg-white/5 hover:bg-white/10'
                           }`}
                         >
-                          <div className="font-medium text-white">{config.name}</div>
-                          <div className="text-xs text-emerald-100/70">
+                          <div className="font-medium text-slate-800">{config.name}</div>
+                          <div className="text-xs text-slate-600">
                             ELO: {Math.round(config.eloRating)}
                           </div>
                         </button>

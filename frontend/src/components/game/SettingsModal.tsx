@@ -233,7 +233,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <Button
               onClick={onClose}
               variant="outline"
-              className="flex-1 border-white/30 text-white hover:bg-white/20"
+              className="flex-1 border-white/30 hover:bg-white/20"
             >
               Cancel
             </Button>

@@ -167,7 +167,7 @@ export default function FriendsPage() {
       <div className="min-h-screen bg-green-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading friends...</p>
+          <p className="text-emerald-700">Loading friends...</p>
         </div>
       </div>
     );
@@ -183,21 +183,21 @@ export default function FriendsPage() {
         {error && (
           <div className={`mb-4 p-3 rounded-md ${
             error.includes('sent') || error.includes('accepted')
-              ? 'bg-green-50 border border-green-200 text-green-600'
-              : 'bg-red-50 border border-red-200 text-red-600'
+              ? 'bg-emerald-50/80 border border-emerald-200 text-emerald-700 backdrop-blur-sm'
+              : 'bg-red-50 border border-red-200 text-red-700'
           }`}>
-            <p className="text-sm">{error}</p>
+            <p className="text-sm font-medium">{error}</p>
           </div>
         )}
 
         {/* Tabs */}
-        <div className="flex mb-6 bg-white rounded-lg p-1 shadow-sm">
+        <div className="flex mb-6 bg-white/80 backdrop-blur-sm rounded-lg p-1 shadow-md border border-emerald-200/50">
           <button
             onClick={() => setActiveTab('friends')}
             className={`flex-1 py-3 px-4 rounded-md font-medium transition-colors ${
               activeTab === 'friends'
-                ? 'bg-green-600 text-white shadow'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-emerald-700 hover:bg-emerald-50'
             }`}
           >
             Friends ({friends.length})
@@ -206,8 +206,8 @@ export default function FriendsPage() {
             onClick={() => setActiveTab('requests')}
             className={`flex-1 py-3 px-4 rounded-md font-medium transition-colors relative ${
               activeTab === 'requests'
-                ? 'bg-green-600 text-white shadow'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-emerald-700 hover:bg-emerald-50'
             }`}
           >
             Requests ({requests.length})
@@ -221,8 +221,8 @@ export default function FriendsPage() {
             onClick={() => setActiveTab('search')}
             className={`flex-1 py-3 px-4 rounded-md font-medium transition-colors ${
               activeTab === 'search'
-                ? 'bg-green-600 text-white shadow'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-emerald-700 hover:bg-emerald-50'
             }`}
           >
             Add Friends
@@ -233,17 +233,17 @@ export default function FriendsPage() {
         {activeTab === 'friends' && (
           <div>
             {friends.length === 0 ? (
-              <Card className="p-8 text-center">
-                <div className="text-gray-400 mb-4">
+              <Card className="p-8 text-center bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
+                <div className="text-emerald-400 mb-4">
                   <span className="text-6xl">👥</span>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">No Friends Yet</h3>
-                <p className="text-gray-600 mb-4">
+                <h3 className="text-lg font-semibold text-emerald-800 mb-2">No Friends Yet</h3>
+                <p className="text-emerald-700 mb-4">
                   Start by searching for users to add as friends!
                 </p>
                 <Button 
                   onClick={() => setActiveTab('search')}
-                  className="bg-green-600 hover:bg-green-700"
+                  variant="primary"
                 >
                   Search Users
                 </Button>
@@ -251,7 +251,7 @@ export default function FriendsPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {friends.map((friend) => (
-                  <Card key={friend.friendshipId} className="p-4">
+                  <Card key={friend.friendshipId} className="p-4 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-md hover:shadow-lg transition-shadow">
                     <div className="flex items-center space-x-3">
                       {/* Avatar */}
                       {friend.avatarUrl ? (
@@ -261,7 +261,7 @@ export default function FriendsPage() {
                           className="w-12 h-12 rounded-full"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
                           <span className="text-lg font-bold text-white">
                             {friend.displayName.charAt(0).toUpperCase()}
                           </span>
@@ -270,8 +270,8 @@ export default function FriendsPage() {
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 truncate">{friend.displayName}</p>
-                        <p className="text-sm text-gray-500 truncate">@{friend.username}</p>
+                        <p className="font-semibold text-emerald-900 truncate">{friend.displayName}</p>
+                        <p className="text-sm text-emerald-600 truncate">@{friend.username}</p>
                       </div>
                     </div>
 
@@ -302,19 +302,19 @@ export default function FriendsPage() {
         {activeTab === 'requests' && (
           <div>
             {requests.length === 0 ? (
-              <Card className="p-8 text-center">
-                <div className="text-gray-400 mb-4">
+              <Card className="p-8 text-center bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
+                <div className="text-emerald-400 mb-4">
                   <span className="text-6xl">📬</span>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">No Pending Requests</h3>
-                <p className="text-gray-600">
+                <h3 className="text-lg font-semibold text-emerald-800 mb-2">No Pending Requests</h3>
+                <p className="text-emerald-700">
                   You have no friend requests at this time.
                 </p>
               </Card>
             ) : (
               <div className="space-y-4">
                 {requests.map((request) => (
-                  <Card key={request.id} className="p-4">
+                  <Card key={request.id} className="p-4 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-md hover:shadow-lg transition-shadow">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3 flex-1">
                         {/* Avatar */}
@@ -325,7 +325,7 @@ export default function FriendsPage() {
                             className="w-12 h-12 rounded-full"
                           />
                         ) : (
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
                             <span className="text-lg font-bold text-white">
                               {request.senderDisplayName.charAt(0).toUpperCase()}
                             </span>
@@ -334,9 +334,9 @@ export default function FriendsPage() {
 
                         {/* Info */}
                         <div className="flex-1">
-                          <p className="font-semibold text-gray-900">{request.senderDisplayName}</p>
-                          <p className="text-sm text-gray-500">@{request.senderUsername}</p>
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className="font-semibold text-emerald-900">{request.senderDisplayName}</p>
+                          <p className="text-sm text-emerald-600">@{request.senderUsername}</p>
+                          <p className="text-xs text-emerald-500 mt-1">
                             {new Date(request.createdAt).toLocaleDateString()}
                           </p>
                         </div>
@@ -347,14 +347,16 @@ export default function FriendsPage() {
                         <Button
                           onClick={() => handleAcceptRequest(request.id)}
                           disabled={actionLoading === request.id}
-                          className="bg-green-600 hover:bg-green-700 px-4 py-2"
+                          variant="primary"
+                          className="px-4 py-2"
                         >
                           {actionLoading === request.id ? '...' : 'Accept'}
                         </Button>
                         <Button
                           onClick={() => handleDeclineRequest(request.id)}
                           disabled={actionLoading === request.id}
-                          className="bg-gray-600 hover:bg-gray-700 px-4 py-2"
+                          variant="outline"
+                          className="px-4 py-2"
                         >
                           Decline
                         </Button>
@@ -371,7 +373,7 @@ export default function FriendsPage() {
         {activeTab === 'search' && (
           <div>
             {/* Search Bar */}
-            <Card className="p-4 mb-6">
+            <Card className="p-4 mb-6 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-md">
               <div className="flex space-x-3">
                 <input
                   type="text"
@@ -379,11 +381,12 @@ export default function FriendsPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   placeholder="Search by username or display name..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="flex-1 px-4 py-2 bg-white/90 border border-emerald-200 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-emerald-900 placeholder:text-emerald-400"
                 />
                 <Button
                   onClick={handleSearch}
-                  className="bg-green-600 hover:bg-green-700 px-6"
+                  variant="primary"
+                  className="px-6"
                 >
                   Search
                 </Button>
@@ -394,7 +397,7 @@ export default function FriendsPage() {
             {searchResults.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {searchResults.map((user) => (
-                  <Card key={user.userId} className="p-4">
+                  <Card key={user.userId} className="p-4 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-md hover:shadow-lg transition-shadow">
                     <div className="flex items-center space-x-3 mb-4">
                       {/* Avatar */}
                       {user.avatarUrl ? (
@@ -404,7 +407,7 @@ export default function FriendsPage() {
                           className="w-12 h-12 rounded-full"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
                           <span className="text-lg font-bold text-white">
                             {user.displayName.charAt(0).toUpperCase()}
                           </span>
@@ -413,8 +416,8 @@ export default function FriendsPage() {
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 truncate">{user.displayName}</p>
-                        <p className="text-sm text-gray-500 truncate">@{user.username}</p>
+                        <p className="font-semibold text-emerald-900 truncate">{user.displayName}</p>
+                        <p className="text-sm text-emerald-600 truncate">@{user.username}</p>
                       </div>
                     </div>
 
@@ -422,7 +425,8 @@ export default function FriendsPage() {
                     <Button
                       onClick={() => handleSendRequest(user.userId)}
                       disabled={actionLoading === user.userId}
-                      className="w-full bg-green-600 hover:bg-green-700"
+                      variant="primary"
+                      className="w-full"
                     >
                       {actionLoading === user.userId ? 'Sending...' : 'Add Friend'}
                     </Button>
@@ -430,22 +434,22 @@ export default function FriendsPage() {
                 ))}
               </div>
             ) : searchQuery ? (
-              <Card className="p-8 text-center">
-                <div className="text-gray-400 mb-4">
+              <Card className="p-8 text-center bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
+                <div className="text-emerald-400 mb-4">
                   <span className="text-6xl">🔍</span>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">No Results Found</h3>
-                <p className="text-gray-600">
+                <h3 className="text-lg font-semibold text-emerald-800 mb-2">No Results Found</h3>
+                <p className="text-emerald-700">
                   No users found matching "{searchQuery}". Try a different search term.
                 </p>
               </Card>
             ) : (
-              <Card className="p-8 text-center">
-                <div className="text-gray-400 mb-4">
+              <Card className="p-8 text-center bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-lg">
+                <div className="text-emerald-400 mb-4">
                   <span className="text-6xl">🔍</span>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">Search for Users</h3>
-                <p className="text-gray-600">
+                <h3 className="text-lg font-semibold text-emerald-800 mb-2">Search for Users</h3>
+                <p className="text-emerald-700">
                   Enter a username or display name to find users to add as friends.
                 </p>
               </Card>
