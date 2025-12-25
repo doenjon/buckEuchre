@@ -218,7 +218,7 @@ export function registerGameHandlers(io: Server, socket: Socket): void {
   // DEBUG: Log when handlers are registered
   process.stdout.write(`[WEBSOCKET_REGISTRATION] Registering handlers for socket ${socket.id}\n`);
   
-  socket.on('JOIN_GAME', (payload) => handleJoinGame(io, socket, payload));
+  socket.on('JOIN_GAME', (payload, callback) => handleJoinGame(io, socket, payload, callback));
   socket.on('LEAVE_GAME', (payload) => handleLeaveGame(io, socket, payload));
   socket.on('PLACE_BID', (payload) => handlePlaceBid(io, socket, payload));
   socket.on('DECLARE_TRUMP', (payload) => handleDeclareTrump(io, socket, payload));
@@ -244,7 +244,13 @@ export function registerGameHandlers(io: Server, socket: Socket): void {
 /**
  * Handle JOIN_GAME event
  */
-async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Promise<void> {
+async function handleJoinGame(
+  io: Server,
+  socket: Socket,
+  payload: unknown,
+  callback?: (response: { success: boolean; message?: string; code?: string }) => void
+): Promise<void> {
+  let ackSent = false;
   try {
     // Validate payload
     const validated = JoinGameSchema.parse(payload);
@@ -252,6 +258,12 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
     const displayName = socket.data.displayName;
 
     if (!userId) {
+      callback?.({
+        success: false,
+        code: 'AUTHENTICATION_REQUIRED',
+        message: 'Authentication required to join game',
+      });
+      ackSent = true;
       socket.emit('ERROR', {
         code: 'AUTHENTICATION_REQUIRED',
         message: 'Authentication required to join game'
@@ -260,6 +272,11 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
     }
 
     console.log(`[WS:JOIN_GAME] ENTRY userId=${userId} displayName=${displayName} gameId=${validated.gameId} socketId=${socket.id}`);
+
+    // Ack quickly so client can retry/resync even if backend is slow.
+    // The actual success/failure of seating will still come via ERROR / GAME_* events.
+    callback?.({ success: true, message: 'Join request received' });
+    ackSent = true;
 
     // Add player to game (uses game service)
     console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - calling joinGame()`);
@@ -351,6 +368,15 @@ async function handleJoinGame(io: Server, socket: Socket, payload: unknown): Pro
     }
   } catch (error: any) {
     console.error(`[JOIN_GAME] Error for user ${socket.data.displayName}:`, error.message || error);
+    // If validation failed before ack, tell the caller. If ack was already sent, the client
+    // will still receive the ERROR event and can react accordingly.
+    if (!ackSent) {
+      try {
+        callback?.({ success: false, code: 'JOIN_GAME_FAILED', message: error.message || 'Failed to join game' });
+      } catch {
+        // ignore
+      }
+    }
     socket.emit('ERROR', {
       code: 'JOIN_GAME_FAILED',
       message: error.message || 'Failed to join game'

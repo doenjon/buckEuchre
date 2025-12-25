@@ -3,7 +3,7 @@
  * @description List of user's active games with leave functionality
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getUserGames, leaveGame } from '@/services/api';
 import type { GameSummary } from '@buck-euchre/shared';
@@ -19,21 +19,22 @@ export function ActiveGames() {
   const [games, setGames] = useState<GameSummary[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [leavingGameId, setLeavingGameId] = useState<string | null>(null);
+  const fetchingRef = useRef(false);
 
   const fetchGames = async (isInitial = false) => {
+    if (fetchingRef.current) return;
     try {
+      fetchingRef.current = true;
       if (isInitial) {
         setInitialLoading(true);
       }
       const response = await getUserGames();
-      console.log('[ActiveGames] Fetched games:', response);
-      console.log('[ActiveGames] Games array:', response.games);
       setGames(response.games || []);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load your games';
-      console.error('[ActiveGames] Error fetching games:', err);
       setError(message);
     } finally {
+      fetchingRef.current = false;
       if (isInitial) {
         setInitialLoading(false);
       }
@@ -43,8 +44,8 @@ export function ActiveGames() {
   useEffect(() => {
     fetchGames(true);
     
-    // Auto-refresh every 5 seconds
-    const interval = setInterval(() => fetchGames(false), 5000);
+    // Auto-refresh; avoid overlapping requests (helps under overload).
+    const interval = setInterval(() => fetchGames(false), 1000);
     return () => clearInterval(interval);
   }, []);
 

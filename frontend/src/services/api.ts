@@ -13,6 +13,86 @@ import type {
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
+type FetchJsonOptions = {
+  timeoutMs?: number;
+  retries?: number;
+  retryDelayMs?: number;
+  retryOnStatuses?: number[];
+};
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchJson<T>(
+  url: string,
+  init: RequestInit,
+  options?: FetchJsonOptions
+): Promise<T> {
+  const timeoutMs = options?.timeoutMs ?? 10000;
+  const retries = options?.retries ?? 2;
+  const retryDelayMs = options?.retryDelayMs ?? 300;
+  const retryOnStatuses = options?.retryOnStatuses ?? [429, 502, 503, 504];
+
+  let lastError: any = null;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        ...init,
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const shouldRetry = retryOnStatuses.includes(response.status) && attempt < retries;
+        let message = `HTTP ${response.status}: ${response.statusText}`;
+
+        // Try to read JSON error if available
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const error = await response.json().catch(() => null);
+          if (error?.message) message = error.message;
+        } else {
+          await response.text().catch(() => null);
+        }
+
+        if (!shouldRetry) {
+          throw new Error(message);
+        }
+
+        lastError = new Error(message);
+        const backoff = retryDelayMs * Math.pow(2, attempt);
+        const jitter = Math.floor(Math.random() * 200);
+        await sleep(Math.min(5000, backoff + jitter));
+        continue;
+      }
+
+      return (await response.json()) as T;
+    } catch (err: any) {
+      lastError = err;
+      const isAbort = err?.name === 'AbortError';
+      const isNetwork = err instanceof TypeError; // fetch() network errors
+
+      const shouldRetry = (isAbort || isNetwork) && attempt < retries;
+      if (!shouldRetry) {
+        if (isAbort) throw new Error('Request timed out');
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+
+      const backoff = retryDelayMs * Math.pow(2, attempt);
+      const jitter = Math.floor(Math.random() * 200);
+      await sleep(Math.min(5000, backoff + jitter));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError || 'Request failed'));
+}
+
 /**
  * Get authentication token from localStorage
  */
@@ -240,34 +320,29 @@ export async function createRematchGame(oldGameId: string): Promise<CreateGameRe
  * Create a new game
  */
 export async function createGame(): Promise<CreateGameResponse> {
-  const response = await fetch(`${API_URL}/api/games`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to create game');
-  }
-
-  return response.json();
+  return fetchJson<CreateGameResponse>(
+    `${API_URL}/api/games`,
+    {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    },
+    { timeoutMs: 12000, retries: 2 }
+  );
 }
 
 /**
  * List all available games
  */
 export async function listGames(): Promise<ListGamesResponse> {
-  const response = await fetch(`${API_URL}/api/games`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to list games');
-  }
-
-  return response.json();
+  return fetchJson<ListGamesResponse>(
+    `${API_URL}/api/games`,
+    {
+      method: 'GET',
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    },
+    { timeoutMs: 10000, retries: 2 }
+  );
 }
 
 /**
@@ -275,27 +350,15 @@ export async function listGames(): Promise<ListGamesResponse> {
  */
 export async function getUserGames(): Promise<ListGamesResponse> {
   const headers = getAuthHeaders();
-  console.log('[getUserGames] Request headers:', { 
-    hasAuth: !!headers.Authorization,
-    authLength: headers.Authorization?.length 
-  });
-  
-  const response = await fetch(`${API_URL}/api/games/my`, {
-    method: 'GET',
-    headers,
-  });
-
-  console.log('[getUserGames] Response status:', response.status);
-  
-  if (!response.ok) {
-    const error = await response.json();
-    console.error('[getUserGames] Error response:', error);
-    throw new Error(error.message || 'Failed to get user games');
-  }
-
-  const data = await response.json();
-  console.log('[getUserGames] Response data:', data);
-  return data;
+  return fetchJson<ListGamesResponse>(
+    `${API_URL}/api/games/my`,
+    {
+      method: 'GET',
+      headers,
+      cache: 'no-store',
+    },
+    { timeoutMs: 10000, retries: 2 }
+  );
 }
 
 /**
@@ -347,18 +410,15 @@ export async function addAIToGame(
   gameId: string,
   options?: { difficulty?: 'easy' | 'medium' | 'hard'; name?: string }
 ): Promise<AddAIPlayerResponse> {
-  const response = await fetch(`${API_URL}/api/games/${gameId}/ai`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(options || {}),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to add AI player');
-  }
-
-  return response.json();
+  return fetchJson<AddAIPlayerResponse>(
+    `${API_URL}/api/games/${gameId}/ai`,
+    {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(options || {}),
+    },
+    { timeoutMs: 15000, retries: 3 }
+  );
 }
 
 /**

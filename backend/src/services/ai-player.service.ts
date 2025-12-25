@@ -149,11 +149,52 @@ export async function addAIToGame(
   
   // Add to game using existing joinGame logic
   try {
-    const gameState = await joinGame(gameId, aiUser.id);
+    // Under load Prisma can throw connection-pool timeouts (P2024). Retry a few times to
+    // make "Add AI" much more reliable without creating duplicate players.
+    let attempt = 0;
+    const maxAttempts = 4;
+    let lastError: any = null;
+
+    while (attempt < maxAttempts) {
+      try {
+        const gameState = await joinGame(gameId, aiUser.id);
     
-    console.log(`🤖 AI player ${aiUser.displayName} joined game ${gameId}`);
+        console.log(`🤖 AI player ${aiUser.displayName} joined game ${gameId}`);
     
-    return gameState;
+        return gameState;
+      } catch (err: any) {
+        lastError = err;
+
+        // Retry only on transient DB/pool errors; otherwise fail fast.
+        const isPoolTimeout =
+          err?.code === 'P2024' ||
+          (typeof err?.message === 'string' &&
+            (err.message.includes('Timed out fetching a new connection') ||
+              err.message.includes('connection pool') ||
+              err.message.includes('P2024')));
+
+        if (!isPoolTimeout) {
+          throw err;
+        }
+
+        attempt++;
+        if (attempt >= maxAttempts) {
+          break;
+        }
+
+        // Exponential backoff with jitter (250ms, 500ms, 1000ms...)
+        const base = 250 * Math.pow(2, attempt - 1);
+        const jitter = Math.floor(Math.random() * 150);
+        const delayMs = base + jitter;
+        console.warn(
+          `🤖 [addAIToGame] Transient DB error (attempt ${attempt}/${maxAttempts - 1}), retrying in ${delayMs}ms:`,
+          err?.message || err
+        );
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+
+    throw lastError || new Error('Failed to add AI player');
   } catch (error: any) {
     // If join failed, clean up the AI user
     await prisma.user.delete({

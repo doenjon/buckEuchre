@@ -3,11 +3,12 @@
  * @description List of available games in the lobby
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listGames } from '@/services/api';
 import type { GameSummary } from '@buck-euchre/shared';
 import { useUIStore } from '@/stores/uiStore';
+import { useAuthStore } from '@/stores/authStore';
 import { Users, Clock, Play, Loader2 } from 'lucide-react';
 import { AddAIButton } from './AddAIButton';
 import { Button } from '@/components/ui/button';
@@ -15,11 +16,15 @@ import { Button } from '@/components/ui/button';
 export function GameList() {
   const navigate = useNavigate();
   const { setError } = useUIStore();
+  const { userId } = useAuthStore();
   const [games, setGames] = useState<GameSummary[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
+  const fetchingRef = useRef(false);
 
   const fetchGames = async (isInitial = false) => {
+    if (fetchingRef.current) return;
     try {
+      fetchingRef.current = true;
       if (isInitial) {
         setInitialLoading(true);
       }
@@ -29,6 +34,7 @@ export function GameList() {
       const message = err instanceof Error ? err.message : 'Failed to load games';
       setError(message);
     } finally {
+      fetchingRef.current = false;
       if (isInitial) {
         setInitialLoading(false);
       }
@@ -38,8 +44,8 @@ export function GameList() {
   useEffect(() => {
     fetchGames(true);
     
-    // Auto-refresh game list every 5 seconds
-    const interval = setInterval(() => fetchGames(false), 5000);
+    // Auto-refresh game list; skip overlapping requests to avoid overload cascades.
+    const interval = setInterval(() => fetchGames(false), 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -152,7 +158,10 @@ export function GameList() {
                 </div>
 
                 <div className="flex items-center gap-3 self-start lg:self-center">
-                  {game.status === 'WAITING' && game.playerCount < game.maxPlayers && (
+                  {game.status === 'WAITING' &&
+                    game.playerCount < game.maxPlayers &&
+                    !!userId &&
+                    game.creatorId === userId && (
                     <AddAIButton gameId={game.gameId!} onAIAdded={fetchGames} />
                   )}
 

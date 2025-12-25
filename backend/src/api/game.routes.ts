@@ -204,6 +204,7 @@ router.post('/:gameId/ai', authenticateToken, async (req: Request, res: Response
   try {
     const { gameId } = req.params;
     const { difficulty, name } = req.body;
+    const userId = req.user!.id;
 
     // Validate game exists
     const game = await getGame(gameId);
@@ -211,6 +212,14 @@ router.post('/:gameId/ai', authenticateToken, async (req: Request, res: Response
       return res.status(404).json({
         error: 'Not found',
         message: 'Game not found'
+      });
+    }
+
+    // Only the game owner (creator) can add AI players
+    if (game.creatorId !== userId) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Only the table owner can add AI players'
       });
     }
 

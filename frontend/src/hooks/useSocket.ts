@@ -12,7 +12,7 @@ import {
   createSocketConnection, 
   setupSocketListeners, 
   cleanupSocketListeners,
-  emitJoinGame,
+  emitJoinGameReliable,
   emitLeaveGame,
   emitPlaceBid,
   emitDeclareTrump,
@@ -246,9 +246,26 @@ export function useSocket() {
   // Socket event emitters wrapped in callbacks
   const joinGame = useCallback((gameId: string) => {
     if (socketRef.current) {
-      emitJoinGame(socketRef.current, { gameId });
+      const socket = socketRef.current;
+      // Reliable join + fallback state resync if we didn't receive anything promptly.
+      void emitJoinGameReliable(socket, { gameId }).catch((err) => {
+        // If join never reaches server (overload/disconnect), surface a notification.
+        const message = err instanceof Error ? err.message : 'Failed to join game';
+        setNotification(`Join delayed: ${message}`);
+        setTimeout(() => setNotification(null), 5000);
+      });
+
+      // If we haven't gotten waiting/state soon, request state explicitly (covers dropped updates).
+      setTimeout(() => {
+        const { gameState, waitingInfo } = useGameStore.getState();
+        const hasState = !!gameState && gameState.gameId === gameId;
+        const hasWaiting = !!waitingInfo && waitingInfo.gameId === gameId;
+        if (!hasState && !hasWaiting && socketRef.current) {
+          emitRequestState(socketRef.current, gameId);
+        }
+      }, 2500);
     }
-  }, []);
+  }, [setNotification]);
 
   const leaveGame = useCallback((gameId: string) => {
     if (socketRef.current) {
