@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import type { GameState, Card, Player, CardAnalysis, BidAnalysis, FoldAnalysis, BidAmount } from '@buck-euchre/shared';
+import type { GameState, Card, Player, CardAnalysis, BidAnalysis, FoldAnalysis, SuitAnalysis, BidAmount, Suit } from '@buck-euchre/shared';
 
 export interface WaitingInfo {
   gameId: string;
@@ -30,6 +30,7 @@ export interface GameStoreState {
   aiAnalysis: CardAnalysis[] | null; // AI analysis for current hand
   bidAnalysis: BidAnalysis[] | null; // AI analysis for bidding
   foldAnalysis: FoldAnalysis[] | null; // AI analysis for fold decisions
+  suitAnalysis: SuitAnalysis[] | null; // AI analysis for suit selection
 }
 
 export interface GameStoreActions {
@@ -43,6 +44,7 @@ export interface GameStoreActions {
   setAIAnalysis: (analysis: CardAnalysis[] | null) => void;
   setBidAnalysis: (analysis: BidAnalysis[] | null) => void;
   setFoldAnalysis: (analysis: FoldAnalysis[] | null) => void;
+  setSuitAnalysis: (analysis: SuitAnalysis[] | null) => void;
 
   // Computed getters (selectors)
   getMyPlayer: () => Player | null;
@@ -52,6 +54,7 @@ export interface GameStoreActions {
   getCardAnalysis: (cardId: string) => CardAnalysis | null;
   getBidAnalysis: (bidAmount: BidAmount) => BidAnalysis | null;
   getFoldAnalysis: (fold: boolean) => FoldAnalysis | null;
+  getSuitAnalysis: (suit: Suit) => SuitAnalysis | null;
 }
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -66,6 +69,7 @@ const initialState: GameStoreState = {
   aiAnalysis: null,
   bidAnalysis: null,
   foldAnalysis: null,
+  suitAnalysis: null,
 };
 
 /**
@@ -132,6 +136,10 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
   setFoldAnalysis: (analysis) => {
     set({ foldAnalysis: analysis });
+  },
+
+  setSuitAnalysis: (analysis) => {
+    set({ suitAnalysis: analysis });
   },
 
   // Computed getters
@@ -230,5 +238,11 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     const { foldAnalysis } = get();
     if (!foldAnalysis) return null;
     return foldAnalysis.find(a => a.fold === fold) || null;
+  },
+
+  getSuitAnalysis: (suit: Suit) => {
+    const { suitAnalysis } = get();
+    if (!suitAnalysis) return null;
+    return suitAnalysis.find(a => a.suit === suit) || null;
   },
 }));
