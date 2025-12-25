@@ -62,6 +62,17 @@ const createGameState = (overrides: Partial<GameState> = {}): GameState => {
     round: 1,
     dealerPosition: 0,
     scoresCalculated: false,
+    scoreHistory: [
+      {
+        round: 0,
+        scoresByPlayerId: {
+          'player-0': 15,
+          'player-1': 15,
+          'player-2': 15,
+          'player-3': 15,
+        },
+      },
+    ],
     blind: [],
     turnUpCard: null,
     isClubsTurnUp: false,
