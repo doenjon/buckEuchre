@@ -670,6 +670,12 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
     }
 
     console.log(`${logPrefix} Step 2: Setting up variables...`);
+
+    // Send acknowledgment IMMEDIATELY so client knows we received the request
+    // Don't wait for executeGameAction or it might timeout (>5s on slow queue)
+    callback?.({ success: true, message: 'Card play received and queued' });
+    console.log(`${logPrefix} Step 2a: Acknowledgment sent to client`);
+
     // Execute action through queue
     let illegalPlayAttempt = false;
     let illegalReason: string | null = null;
@@ -679,7 +685,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
 
     let trickWasCompleted = false;
     let tricksBeforePlay = 0;
-    
+
     console.log(`${logPrefix} Step 3: Calling executeGameAction...`);
     const newState = await executeGameAction(validated.gameId, async (currentState) => {
       // Store tricks count before play to detect completion
@@ -849,7 +855,11 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
         playerPosition: illegalPlayerPosition,
         reason: illegalReason,
       });
-      callback?.({ success: false, error: 'ILLEGAL_PLAY', reason: illegalReason });
+      // Send error to client via ERROR event (acknowledgment was already sent)
+      socket.emit('ERROR', {
+        code: 'ILLEGAL_CARD_PLAY',
+        message: illegalReason || 'Invalid card play'
+      });
       return;
     }
 
@@ -983,9 +993,6 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
     
     const duration = Date.now() - startTime;
     console.log(`${logPrefix} ========== PLAY_CARD HANDLER SUCCESS (${duration}ms) ==========`);
-
-    // Send acknowledgment to client
-    callback?.({ success: true });
   } catch (error: any) {
     const duration = Date.now() - startTime;
     console.error(`${logPrefix} ========== PLAY_CARD HANDLER ERROR (${duration}ms) ==========`);
@@ -1000,7 +1007,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
       code: 'PLAY_CARD_FAILED',
       message: error.message || 'Failed to play card'
     });
-    callback?.({ success: false, error: 'PLAY_CARD_FAILED', message: error.message });
+    // Note: acknowledgment was already sent early in the function
   }
 }
 
