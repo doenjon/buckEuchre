@@ -213,12 +213,10 @@ export interface CardAnalysis {
   visits: number;  // Number of MCTS simulations that explored this card
   rank: number;  // Rank among all cards (1 = best)
   /**
-   * Variance of the simulation outcomes for this action on the expectedScore scale.
-   * Larger = more uncertainty/volatility in outcomes.
-   *
-   * Units: (score change)^2
+   * Probability of getting bucked (receiving +5 score penalty).
+   * Value is 0-1, where 0.15 = 15% chance of getting bucked.
    */
-  variance?: number;
+  buckProbability?: number;
   standardError?: number;  // Standard error of the expected score estimate
   confidenceInterval?: {
     lower: number;  // Lower bound of expected score (95% CI)
