@@ -543,12 +543,12 @@ export function PlayerHand({
                         ±{(analysis.confidenceInterval.width / 2).toFixed(1)}
                       </span>
                     )}
-                    {typeof analysis.variance === 'number' && (
+                    {typeof analysis.buckProbability === 'number' && (
                       <span
-                        className="text-indigo-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
-                        title={`MCTS variance (expectedScore scale): ${analysis.variance.toFixed(1)} (score^2)`}
+                        className="text-orange-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+                        title={`Buck probability: ${(analysis.buckProbability * 100).toFixed(0)}% chance of getting bucked (+5 penalty)`}
                       >
-                        Var {analysis.variance.toFixed(1)}
+                        Buck {(analysis.buckProbability * 100).toFixed(0)}%
                       </span>
                     )}
                     <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="MCTS visits (exploration count)">
