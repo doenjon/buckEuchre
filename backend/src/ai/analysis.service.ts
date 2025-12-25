@@ -26,7 +26,7 @@ export interface AnalysisConfig {
  * Default analysis configuration
  */
 const DEFAULT_CONFIG: Required<AnalysisConfig> = {
-  simulations: 10000,  // Higher number for more accurate analysis (increased from 2000 to 10000)
+  simulations: 5000,  // Balanced number for good analysis performance
   verbose: false,
 };
 
