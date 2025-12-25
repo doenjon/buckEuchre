@@ -254,9 +254,11 @@ async function sendAIAnalysis(
     }
 
     // Create a unique key for this analysis request
+    // Key should change when the player's hand changes (not just when trick number changes)
     const currentPlayerPos = gameState.currentPlayerPosition ?? gameState.currentBidder ?? -1;
-    const trickNumber = gameState.tricks.length;
-    const analysisKey = `${gameId}:${playerPosition}:${currentPlayerPos}:${trickNumber}:${gameState.phase}`;
+    const player = gameState.players[playerPosition];
+    const handSize = player?.hand?.length || 0;
+    const analysisKey = `${gameId}:${playerPosition}:${currentPlayerPos}:${handSize}:${gameState.phase}`;
 
     // Check if we've already sent analysis for this exact situation recently
     const lastSent = lastAnalysisKey.get(analysisKey);
