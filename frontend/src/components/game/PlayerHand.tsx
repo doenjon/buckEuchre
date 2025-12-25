@@ -22,6 +22,7 @@ export interface PlayerHandProps {
   disabled?: boolean;
   selectedCardId?: string | null;
   trumpSuit?: Suit | null;
+  playableCardIds?: Set<string>;
 }
 
 const SUIT_DISPLAY_ORDER: readonly Suit[] = ['SPADES', 'HEARTS', 'DIAMONDS', 'CLUBS'];
@@ -81,7 +82,8 @@ export function PlayerHand({
   onCardClick,
   disabled = false,
   selectedCardId = null,
-  trumpSuit = null
+  trumpSuit = null,
+  playableCardIds
 }: PlayerHandProps) {
   const { aiAnalysis, getCardAnalysis } = useGameStore();
   const { showCardOverlay, autoSortHand } = useSettingsStore();
@@ -478,7 +480,8 @@ export function PlayerHand({
           const archOffset = normalizedDistance * normalizedDistance * 6; // 6px max offset
 
           const analysis = getCardAnalysis(card.id);
-          const showAnalysis = !disabled && aiAnalysis && analysis && showCardOverlay;
+          const isCardPlayable = !playableCardIds || playableCardIds.has(card.id);
+          const showAnalysis = !disabled && aiAnalysis && analysis && showCardOverlay && isCardPlayable;
           const isPlaying = playingCardId === card.id;
 
           return (
