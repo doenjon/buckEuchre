@@ -20,6 +20,13 @@ const lastAnalysisKey = new Map<string, number>();
 const ANALYSIS_COOLDOWN_MS = 2000; // Don't send analysis again within 2 seconds
 
 /**
+ * Track last checkAndTriggerAI call to prevent excessive triggering
+ * Key: `${gameId}`
+ */
+const lastTriggerCheck = new Map<string, number>();
+const TRIGGER_COOLDOWN_MS = 100; // Don't check triggers more than once per 100ms per game
+
+/**
  * Get the current player who needs to act
  * 
  * @param gameState - Current game state
@@ -115,8 +122,25 @@ export async function checkAndTriggerAI(
   io: Server
 ): Promise<void> {
   try {
+    // Throttle: Don't check triggers more than once per TRIGGER_COOLDOWN_MS per game
+    const now = Date.now();
+    const lastCheck = lastTriggerCheck.get(gameId);
+    if (lastCheck && (now - lastCheck) < TRIGGER_COOLDOWN_MS) {
+      // Too soon since last check, skip
+      return;
+    }
+    lastTriggerCheck.set(gameId, now);
+
+    // Clean up old entries (keep only last 100 games)
+    if (lastTriggerCheck.size > 100) {
+      const entries = Array.from(lastTriggerCheck.entries());
+      entries.sort((a, b) => b[1] - a[1]); // Sort by timestamp descending
+      lastTriggerCheck.clear();
+      entries.slice(0, 50).forEach(([key, time]) => lastTriggerCheck.set(key, time));
+    }
+
     console.log(`[AI Trigger] Checking AI trigger for game ${gameId}, phase: ${gameState.phase}, currentBidder: ${gameState.currentBidder}`);
-    
+
     // Special handling for FOLDING_DECISION phase
     // All non-bidders need to decide, and they can all decide simultaneously
     if (gameState.phase === 'FOLDING_DECISION') {
