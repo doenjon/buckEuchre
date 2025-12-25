@@ -20,6 +20,13 @@ const lastAnalysisKey = new Map<string, number>();
 const ANALYSIS_COOLDOWN_MS = 2000; // Don't send analysis again within 2 seconds
 
 /**
+ * Track last checkAndTriggerAI call to prevent excessive triggering
+ * Key: `${gameId}`
+ */
+const lastTriggerCheck = new Map<string, number>();
+const TRIGGER_COOLDOWN_MS = 100; // Don't check triggers more than once per 100ms per game
+
+/**
  * Get the current player who needs to act
  * 
  * @param gameState - Current game state
@@ -115,8 +122,25 @@ export async function checkAndTriggerAI(
   io: Server
 ): Promise<void> {
   try {
+    // Throttle: Don't check triggers more than once per TRIGGER_COOLDOWN_MS per game
+    const now = Date.now();
+    const lastCheck = lastTriggerCheck.get(gameId);
+    if (lastCheck && (now - lastCheck) < TRIGGER_COOLDOWN_MS) {
+      // Too soon since last check, skip
+      return;
+    }
+    lastTriggerCheck.set(gameId, now);
+
+    // Clean up old entries (keep only last 100 games)
+    if (lastTriggerCheck.size > 100) {
+      const entries = Array.from(lastTriggerCheck.entries());
+      entries.sort((a, b) => b[1] - a[1]); // Sort by timestamp descending
+      lastTriggerCheck.clear();
+      entries.slice(0, 50).forEach(([key, time]) => lastTriggerCheck.set(key, time));
+    }
+
     console.log(`[AI Trigger] Checking AI trigger for game ${gameId}, phase: ${gameState.phase}, currentBidder: ${gameState.currentBidder}`);
-    
+
     // Special handling for FOLDING_DECISION phase
     // All non-bidders need to decide, and they can all decide simultaneously
     if (gameState.phase === 'FOLDING_DECISION') {
@@ -229,21 +253,8 @@ async function sendAIAnalysis(
       return;
     }
 
-    // Create a unique key for this analysis request
-    const currentPlayerPos = gameState.currentPlayerPosition ?? gameState.currentBidder ?? -1;
-    const trickNumber = gameState.tricks.length;
-    const analysisKey = `${gameId}:${playerPosition}:${currentPlayerPos}:${trickNumber}:${gameState.phase}`;
-
-    // Check if we've already sent analysis for this exact situation recently
-    const lastSent = lastAnalysisKey.get(analysisKey);
-    const now = Date.now();
-
-    if (lastSent && (now - lastSent) < ANALYSIS_COOLDOWN_MS) {
-      // Already sent analysis recently for this turn - skip
-      return;
-    }
-
     // Check if it's actually this player's turn based on phase
+    const currentPlayerPos = gameState.currentPlayerPosition ?? gameState.currentBidder ?? -1;
     let isPlayersTurn = false;
     if (gameState.phase === 'PLAYING') {
       isPlayersTurn = currentPlayerPos === playerPosition;
@@ -259,11 +270,26 @@ async function sendAIAnalysis(
       return;
     }
 
+    // Create cooldown key based on player position, hand size, and phase
+    // Analysis should only re-run when hand size changes (card played)
+    const player = gameState.players[playerPosition];
+    const handSize = player?.hand?.length || 0;
+    const analysisKey = `${gameId}:${playerPosition}:${handSize}:${gameState.phase}`;
+
+    // Check if we've already sent analysis for this exact situation recently
+    const lastSent = lastAnalysisKey.get(analysisKey);
+    const now = Date.now();
+
+    if (lastSent && (now - lastSent) < ANALYSIS_COOLDOWN_MS) {
+      // Already sent analysis recently for this hand - skip
+      return;
+    }
+
     console.log(`[AI Analysis] Analyzing for player at position ${playerPosition} in phase ${gameState.phase}`);
 
-    // Run analysis with high quality (10000 simulations)
+    // Run analysis with high quality (5000 simulations)
     const analysisConfig = {
-      simulations: 10000,
+      simulations: 5000,
       verbose: false,
     };
 
