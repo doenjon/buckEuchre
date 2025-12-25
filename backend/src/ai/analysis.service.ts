@@ -153,6 +153,13 @@ export async function analyzeHand(
       // Since it's a linear transformation with factor 10, multiply stdError by 10
       const stdErrorScore = stats.stdError * 10;
 
+      // Variance of simulation outcomes:
+      // stdError = stdDev / sqrt(n)  =>  variance = stdDev^2 = (stdError^2) * n
+      // Convert from avgValue scale to expectedScore scale:
+      // score = -(avgValue * 10 - 5) => scale factor is 10, so variance scales by 10^2 = 100
+      const varianceAvgValue = (stats.stdError * stats.stdError) * Math.max(1, stats.visits);
+      const varianceScore = varianceAvgValue * 100;
+
       analyses.push({
         cardId: card.id,
         winProbability,
@@ -161,6 +168,7 @@ export async function analyzeHand(
         confidence,
         visits: stats.visits,
         rank: 0, // Will be set after sorting
+        variance: varianceScore,
         standardError: stdErrorScore,
         confidenceInterval: {
           lower: Math.min(ciLowerScore, ciUpperScore),

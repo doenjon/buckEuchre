@@ -538,9 +538,17 @@ export function PlayerHand({
                     {analysis.confidenceInterval && (
                       <span
                         className="text-blue-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
-                        title={`95% Confidence Interval: [${analysis.confidenceInterval.lower.toFixed(1)}, ${analysis.confidenceInterval.upper.toFixed(1)}]`}
+                        title={`MCTS uncertainty (95% CI): [${analysis.confidenceInterval.lower.toFixed(1)}, ${analysis.confidenceInterval.upper.toFixed(1)}]`}
                       >
                         ±{(analysis.confidenceInterval.width / 2).toFixed(1)}
+                      </span>
+                    )}
+                    {typeof analysis.variance === 'number' && (
+                      <span
+                        className="text-indigo-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+                        title={`MCTS variance (expectedScore scale): ${analysis.variance.toFixed(1)} (score^2)`}
+                      >
+                        Var {analysis.variance.toFixed(1)}
                       </span>
                     )}
                     <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="MCTS visits (exploration count)">

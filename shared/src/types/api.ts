@@ -212,6 +212,13 @@ export interface CardAnalysis {
   confidence: number;  // 0-1 confidence in the analysis
   visits: number;  // Number of MCTS simulations that explored this card
   rank: number;  // Rank among all cards (1 = best)
+  /**
+   * Variance of the simulation outcomes for this action on the expectedScore scale.
+   * Larger = more uncertainty/volatility in outcomes.
+   *
+   * Units: (score change)^2
+   */
+  variance?: number;
   standardError?: number;  // Standard error of the expected score estimate
   confidenceInterval?: {
     lower: number;  // Lower bound of expected score (95% CI)

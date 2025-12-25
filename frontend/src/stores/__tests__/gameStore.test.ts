@@ -34,6 +34,7 @@ function createGameState(overrides: Partial<GameState> = {}): GameState {
     players,
     round: 1,
     dealerPosition: 0,
+    scoresCalculated: false,
     blind: [],
     turnUpCard: null,
     isClubsTurnUp: false,
