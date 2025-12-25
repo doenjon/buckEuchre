@@ -252,18 +252,32 @@ export interface FoldAnalysis {
 }
 
 /**
+ * AI analysis for a trump suit selection
+ */
+export interface SuitAnalysis {
+  suit: Suit;  // The suit being analyzed
+  winProbability: number;  // 0-1 probability of winning the game with this suit as trump
+  expectedScore: number;  // Expected score change if choosing this suit
+  confidence: number;  // 0-1 confidence in the analysis
+  visits: number;  // Number of MCTS simulations that explored this suit
+  rank: number;  // Rank among all suits (1 = best)
+}
+
+/**
  * AI analysis update event (sent when it's a human player's turn)
  */
 export interface AIAnalysisEvent {
   playerPosition: PlayerPosition;
-  analysisType: 'card' | 'bid' | 'fold';
+  analysisType: 'card' | 'bid' | 'fold' | 'suit';
   cards?: CardAnalysis[];  // For card play decisions
   bids?: BidAnalysis[];  // For bidding decisions
   foldOptions?: FoldAnalysis[];  // For fold decisions (fold vs stay)
+  suits?: SuitAnalysis[];  // For trump suit selection
   totalSimulations: number;
   bestCardId?: string;  // For card play
   bestBid?: BidAmount;  // For bidding
   bestFoldDecision?: boolean;  // For fold decisions
+  bestSuit?: Suit;  // For trump selection
 }
 
 /**
