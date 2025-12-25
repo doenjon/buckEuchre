@@ -61,14 +61,6 @@ function fastBid(
     desiredBid = 2;
   }
 
-  // Add small randomness to bid selection (±1 bid level with 20% probability)
-  // This creates variance in rollout outcomes
-  if (Math.random() < 0.2 && desiredBid > 0) {
-    desiredBid = Math.random() < 0.5
-      ? Math.max(2, desiredBid - 1)
-      : Math.min(5, desiredBid + 1);
-  }
-
   // Must beat current bid
   if (desiredBid === 0 || (currentBid !== null && desiredBid <= currentBid)) {
     return 'PASS';
@@ -128,16 +120,8 @@ function fastFoldDecision(
   const foldThreshold = character?.foldThreshold ?? 1.0;
   const adjustedThreshold = Math.max(1, Math.floor(2 * foldThreshold));
 
-  // Base fold decision
-  const shouldFold = trumpCount < adjustedThreshold;
-
-  // Add 15% randomness to fold decision to create variance in rollouts
-  // This reflects uncertainty in opponent play and hand evaluation
-  if (Math.random() < 0.15) {
-    return !shouldFold; // Flip the decision
-  }
-
-  return shouldFold;
+  // Fold if below adjusted threshold
+  return trumpCount < adjustedThreshold;
 }
 
 /**
@@ -191,33 +175,8 @@ function fastCardPlay(
     return { card, score };
   });
 
-  // Sort by score descending
+  // Sort by score descending and return best
   scoredCards.sort((a, b) => b.score - a.score);
-
-  // Add stochasticity using softmax-like selection with temperature
-  // This ensures rollout outcomes vary, giving us meaningful variance estimates
-  // Temperature: lower = more deterministic, higher = more random
-  const temperature = 0.3; // Relatively low temp for mostly good play with some variation
-
-  // Apply softmax to top 3 cards (or all if fewer)
-  const topCards = scoredCards.slice(0, Math.min(3, scoredCards.length));
-  const maxScore = topCards[0].score;
-
-  // Compute exp(score/temp) for each card, normalized by maxScore for numerical stability
-  const expScores = topCards.map(sc => Math.exp((sc.score - maxScore) / temperature));
-  const sumExp = expScores.reduce((a, b) => a + b, 0);
-
-  // Sample from the distribution
-  const rand = Math.random() * sumExp;
-  let cumulative = 0;
-  for (let i = 0; i < topCards.length; i++) {
-    cumulative += expScores[i];
-    if (rand <= cumulative) {
-      return topCards[i].card;
-    }
-  }
-
-  // Fallback (shouldn't happen)
   return scoredCards[0].card;
 }
 

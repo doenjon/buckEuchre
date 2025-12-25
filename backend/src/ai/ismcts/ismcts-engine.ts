@@ -348,7 +348,9 @@ export class ISMCTSEngine {
 
     const childStats = root.getChildStatistics();
     for (const [key, stat] of childStats) {
-      console.log(`[ISMCTS] Child ${key}: visits=${stat.visits}, avgValue=${stat.avgValue.toFixed(3)}`);
+      const variance = (stat.stdError * stat.stdError) * Math.max(1, stat.visits);
+      console.log(`[ISMCTS] Child ${key}: visits=${stat.visits}, avgValue=${stat.avgValue.toFixed(3)}, ` +
+        `stdError=${stat.stdError.toFixed(4)}, variance=${variance.toFixed(6)}`);
     }
 
     // If too many simulations failed, we might not have enough data

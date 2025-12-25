@@ -104,14 +104,18 @@ export class MCTSNode {
     const meanOfSquares = this.totalValueSquared / this.visits;
     const empiricalVariance = meanOfSquares - mean * mean;
 
-    // Add small variance floor to account for epistemic uncertainty
-    // (model uncertainty) even with stochastic rollouts. This reflects
-    // that we never have perfect information about the true expected value.
+    // Add small variance floor to handle edge cases where empirical variance
+    // might be artificially low due to:
+    // - Limited exploration in early simulations
+    // - Numerical precision issues
+    // - Genuinely deterministic outcomes in specific game situations
     // For avgValue in [0,1], we use a conservative floor of (0.02)^2 = 0.0004
-    // This ensures SE >= 0.02/sqrt(n), providing a small baseline uncertainty.
+    // This ensures SE >= 0.02/sqrt(n), providing minimal baseline uncertainty.
     const minVariance = 0.0004; // Equivalent to ±0.2 on the score scale
 
-    // With stochastic rollouts, empirical variance should now be meaningful
+    // With proper determinization, empirical variance should usually be non-zero
+    // If it's consistently zero, that indicates either a bug or genuinely
+    // deterministic game state (e.g., only one legal move, obvious best choice)
     return Math.max(empiricalVariance, minVariance);
   }
 
@@ -263,8 +267,18 @@ export class MCTSNode {
 
     // Debug logging to see actual values being backpropagated
     if (this.visits <= 10 && this.action?.type === 'CARD') {
+      const empVar = (this.totalValueSquared / this.visits) - (this.averageValue * this.averageValue);
       console.log(`[MCTS Debug] Card ${(this.action as any).card.id} visit ${this.visits}: value=${value.toFixed(3)}, ` +
-        `avgValue=${this.averageValue.toFixed(3)}, empiricalVar=${((this.totalValueSquared / this.visits) - (this.averageValue * this.averageValue)).toFixed(6)}`);
+        `avgValue=${this.averageValue.toFixed(3)}, empiricalVar=${empVar.toFixed(6)}`);
+    }
+
+    // Log when we finish exploring a card to see final variance
+    if (this.visits === 50 && this.action?.type === 'CARD') {
+      const empVar = (this.totalValueSquared / this.visits) - (this.averageValue * this.averageValue);
+      const stdDev = Math.sqrt(Math.max(0, empVar));
+      console.log(`[MCTS Variance] Card ${(this.action as any).card.id} after ${this.visits} visits: ` +
+        `empiricalVar=${empVar.toFixed(6)}, stdDev=${stdDev.toFixed(4)}, ` +
+        `using floor=${empVar < 0.0004 ? 'YES' : 'NO'}`);
     }
 
     if (this.parent) {
