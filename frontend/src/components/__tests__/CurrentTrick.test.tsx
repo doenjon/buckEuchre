@@ -71,6 +71,7 @@ const mockGameState: GameState = {
   players: mockPlayers,
   round: 1,
   dealerPosition: 0,
+  scoresCalculated: false,
   blind: [],
   turnUpCard: null,
   isClubsTurnUp: false,

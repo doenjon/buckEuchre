@@ -14,10 +14,41 @@ import { analyzeHand, getBestCard, analyzeBids, getBestBid, analyzeFoldDecision,
 
 /**
  * Track last analysis sent to prevent duplicate sends
- * Key: `${gameId}:${playerPosition}:${currentPlayerPosition}:${trickNumber}`
+ *
+ * IMPORTANT: Analysis should run **once per decision point**, not on a timer.
+ * We key analysis by a stable "situation id" so duplicate state updates while a
+ * player is thinking don't repeatedly trigger expensive MCTS.
  */
 const lastAnalysisKey = new Map<string, number>();
-const ANALYSIS_COOLDOWN_MS = 2000; // Don't send analysis again within 2 seconds
+
+function getAnalysisSituationKey(gameId: string, gameState: GameState, playerPosition: number): string {
+  switch (gameState.phase) {
+    case 'PLAYING': {
+      const round = gameState.round;
+      const trickNo = gameState.currentTrick?.number ?? (gameState.tricks.length + 1);
+      const cardsInTrick = gameState.currentTrick?.cards?.length ?? 0;
+      const currentPlayer = gameState.currentPlayerPosition ?? -1;
+      return `${gameId}:PLAYING:p${playerPosition}:r${round}:t${trickNo}:c${cardsInTrick}:cp${currentPlayer}`;
+    }
+    case 'BIDDING': {
+      const round = gameState.round;
+      const bidsLen = gameState.bids?.length ?? 0;
+      const currentBidder = gameState.currentBidder ?? -1;
+      const highestBid = gameState.highestBid ?? 'N';
+      return `${gameId}:BIDDING:p${playerPosition}:r${round}:b${bidsLen}:cb${currentBidder}:hb${highestBid}`;
+    }
+    case 'FOLDING_DECISION': {
+      const round = gameState.round;
+      const winningBidder = gameState.winningBidderPosition ?? -1;
+      // Compact signature of fold decisions + folded flags to change key when decisions update
+      const decisionsSig = gameState.players.map(p => p.foldDecision[0]).join('');
+      const foldedSig = gameState.players.map(p => (p.folded ? '1' : '0')).join('');
+      return `${gameId}:FOLDING:p${playerPosition}:r${round}:wb${winningBidder}:d${decisionsSig}:f${foldedSig}`;
+    }
+    default:
+      return `${gameId}:${gameState.phase}:p${playerPosition}:v${gameState.version}`;
+  }
+}
 
 /**
  * Track last checkAndTriggerAI call to prevent excessive triggering
@@ -144,18 +175,15 @@ function shouldSendAnalysis(
     return false;
   }
 
-  // Create cooldown key based on player position, hand size, and phase
-  // Analysis should only re-run when hand size changes (card played)
-  const player = gameState.players[playerPosition];
-  const handSize = player?.hand?.length || 0;
-  const analysisKey = `${gameId}:${playerPosition}:${handSize}:${gameState.phase}`;
+  // Build a stable "decision point" key so analysis runs once per turn/decision.
+  const analysisKey = getAnalysisSituationKey(gameId, gameState, playerPosition);
 
-  // Check if we've already sent analysis for this exact situation recently
+  // Check if we've already sent analysis for this exact decision point.
   const lastSent = lastAnalysisKey.get(analysisKey);
   const now = Date.now();
 
-  if (lastSent && (now - lastSent) < ANALYSIS_COOLDOWN_MS) {
-    // Already sent analysis recently for this hand - skip
+  if (lastSent) {
+    // Already sent analysis for this decision point - skip
     return false;
   }
 

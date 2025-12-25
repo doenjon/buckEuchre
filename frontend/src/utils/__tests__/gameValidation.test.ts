@@ -61,6 +61,7 @@ const createGameState = (overrides: Partial<GameState> = {}): GameState => {
     players: overrides.players ? (overrides.players as [Player, Player, Player, Player]) : basePlayers,
     round: 1,
     dealerPosition: 0,
+    scoresCalculated: false,
     blind: [],
     turnUpCard: null,
     isClubsTurnUp: false,
