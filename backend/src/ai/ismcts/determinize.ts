@@ -243,18 +243,117 @@ export function sampleOpponentHands(
 }
 
 /**
- * Sample opponent hands with void constraint checking (v2 - not implemented yet)
+ * Sample opponent hands with void constraint checking
  *
- * This is more sophisticated but also more complex. Can add later.
+ * Uses a constraint satisfaction approach to ensure sampled hands
+ * respect known void suits. Falls back to simple sampling if
+ * constraints cannot be satisfied.
+ *
+ * @param gameState - Current game state
+ * @param myPosition - Our player position
+ * @param observations - Current observations including void constraints
+ * @returns Cloned game state with sampled opponent hands
  */
 export function sampleOpponentHandsWithConstraints(
   gameState: GameState,
   myPosition: PlayerPosition,
   observations: Observations
 ): GameState {
-  // TODO: Implement constraint-based sampling
-  // For now, fall back to simple sampling
+  const MAX_ATTEMPTS = 100;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const result = trySampleWithConstraints(gameState, myPosition, observations);
+    if (result) {
+      return result;
+    }
+  }
+
+  // If we couldn't satisfy constraints after MAX_ATTEMPTS, fall back to simple sampling
+  console.warn('[ISMCTS] Could not satisfy void constraints, falling back to simple sampling');
   return sampleOpponentHands(gameState, myPosition, observations);
+}
+
+/**
+ * Attempt to sample opponent hands respecting void constraints
+ *
+ * @returns GameState if successful, null if constraints cannot be satisfied
+ */
+function trySampleWithConstraints(
+  gameState: GameState,
+  myPosition: PlayerPosition,
+  observations: Observations
+): GameState | null {
+  // Clone the game state
+  const clonedState = JSON.parse(JSON.stringify(gameState)) as GameState;
+
+  // Get unseen cards and shuffle
+  const unseenCards = getUnseenCards(observations);
+  shuffleArray(unseenCards);
+
+  // Determine how many cards each opponent should have
+  const opponentPositions: PlayerPosition[] = [];
+  const opponentHandSizes: Map<PlayerPosition, number> = new Map();
+
+  for (let pos = 0; pos < 4; pos++) {
+    if (pos === myPosition) continue;
+
+    const player = gameState.players[pos];
+    const handSize = player.folded ? 0 : player.hand.length;
+
+    if (handSize > 0) {
+      const playerPosition = pos as PlayerPosition;
+      opponentPositions.push(playerPosition);
+      opponentHandSizes.set(playerPosition, handSize);
+    }
+  }
+
+  // Track which cards have been assigned
+  const availableCards = [...unseenCards];
+  const assignedHands: Map<PlayerPosition, Card[]> = new Map();
+
+  // Initialize empty hands for all opponents
+  for (const pos of opponentPositions) {
+    assignedHands.set(pos, []);
+  }
+
+  // Try to assign cards to each opponent
+  for (const playerPosition of opponentPositions) {
+    const handSize = opponentHandSizes.get(playerPosition) || 0;
+    const hand = assignedHands.get(playerPosition)!;
+
+    // Partition available cards into valid and invalid
+    const validCards: Card[] = [];
+    const invalidCards: Card[] = [];
+
+    for (const card of availableCards) {
+      if (isValidAssignment(card, playerPosition, observations, gameState)) {
+        validCards.push(card);
+      } else {
+        invalidCards.push(card);
+      }
+    }
+
+    // If we don't have enough valid cards, this attempt fails
+    if (validCards.length < handSize) {
+      return null;
+    }
+
+    // Assign valid cards to this player
+    for (let i = 0; i < handSize; i++) {
+      hand.push(validCards[i]);
+    }
+
+    // Update available cards (remove assigned valid cards, keep invalid ones)
+    availableCards.length = 0;
+    availableCards.push(...validCards.slice(handSize), ...invalidCards);
+  }
+
+  // Apply assigned hands to cloned state
+  for (const [playerPosition, hand] of assignedHands.entries()) {
+    clonedState.players[playerPosition].hand = hand;
+  }
+
+  return clonedState;
 }
 
 /**
@@ -271,5 +370,5 @@ export function determinize(
   myPosition: PlayerPosition
 ): GameState {
   const observations = extractObservations(gameState, myPosition);
-  return sampleOpponentHands(gameState, myPosition, observations);
+  return sampleOpponentHandsWithConstraints(gameState, myPosition, observations);
 }
