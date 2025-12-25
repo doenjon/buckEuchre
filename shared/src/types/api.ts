@@ -212,6 +212,12 @@ export interface CardAnalysis {
   confidence: number;  // 0-1 confidence in the analysis
   visits: number;  // Number of MCTS simulations that explored this card
   rank: number;  // Rank among all cards (1 = best)
+  standardError?: number;  // Standard error of the expected score estimate
+  confidenceInterval?: {
+    lower: number;  // Lower bound of expected score (95% CI)
+    upper: number;  // Upper bound of expected score (95% CI)
+    width: number;  // Width of confidence interval (measure of uncertainty)
+  };
 }
 
 /**

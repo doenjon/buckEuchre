@@ -81,7 +81,15 @@ export async function analyzeHand(
     );
 
     // Extract card actions from statistics
-    const cardStats = new Map<string, { visits: number; avgValue: number }>();
+    const cardStats = new Map<
+      string,
+      {
+        visits: number;
+        avgValue: number;
+        stdError: number;
+        confidenceInterval: { lower: number; upper: number; width: number };
+      }
+    >();
 
     for (const [key, stat] of Array.from(statistics)) {
       // Only include CARD actions
@@ -89,6 +97,8 @@ export async function analyzeHand(
         cardStats.set(stat.action.card.id, {
           visits: stat.visits,
           avgValue: stat.avgValue,
+          stdError: stat.stdError,
+          confidenceInterval: stat.confidenceInterval,
         });
       }
     }
@@ -133,6 +143,16 @@ export async function analyzeHand(
       const remainingTricks = 5 - gameState.tricks.length;
       const expectedTricks = Math.max(0, Math.min(remainingTricks, -expectedScoreChange));
 
+      // Convert confidence interval from avgValue scale to expectedScore scale
+      // Apply the same transformation: expectedScore = -(avgValue * 10 - 5)
+      const ciLowerScore = -(stats.confidenceInterval.lower * 10 - 5);
+      const ciUpperScore = -(stats.confidenceInterval.upper * 10 - 5);
+      const ciWidth = Math.abs(ciLowerScore - ciUpperScore);
+
+      // Convert standard error from avgValue scale to expectedScore scale
+      // Since it's a linear transformation with factor 10, multiply stdError by 10
+      const stdErrorScore = stats.stdError * 10;
+
       analyses.push({
         cardId: card.id,
         winProbability,
@@ -141,6 +161,12 @@ export async function analyzeHand(
         confidence,
         visits: stats.visits,
         rank: 0, // Will be set after sorting
+        standardError: stdErrorScore,
+        confidenceInterval: {
+          lower: Math.min(ciLowerScore, ciUpperScore),
+          upper: Math.max(ciLowerScore, ciUpperScore),
+          width: ciWidth,
+        },
       });
     }
 

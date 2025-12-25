@@ -43,6 +43,9 @@ export class MCTSNode {
   /** Sum of all simulation values from this node */
   totalValue: number = 0;
 
+  /** Sum of squared simulation values (for variance calculation) */
+  totalValueSquared: number = 0;
+
   /** Parent node (null for root) */
   parent: MCTSNode | null;
 
@@ -83,6 +86,64 @@ export class MCTSNode {
    */
   get averageValue(): number {
     return this.visits > 0 ? this.totalValue / this.visits : 0;
+  }
+
+  /**
+   * Calculate variance of simulation values
+   *
+   * Variance = E[X²] - E[X]²
+   */
+  getVariance(): number {
+    if (this.visits === 0) return 0;
+    const mean = this.averageValue;
+    const meanOfSquares = this.totalValueSquared / this.visits;
+    return meanOfSquares - mean * mean;
+  }
+
+  /**
+   * Calculate standard deviation of simulation values
+   */
+  getStdDev(): number {
+    return Math.sqrt(Math.max(0, this.getVariance())); // max(0, ...) handles floating point errors
+  }
+
+  /**
+   * Calculate standard error of the mean
+   *
+   * SE = σ / sqrt(n)
+   */
+  getStandardError(): number {
+    if (this.visits === 0) return 0;
+    return this.getStdDev() / Math.sqrt(this.visits);
+  }
+
+  /**
+   * Calculate confidence interval for the average value
+   *
+   * @param confidenceLevel - Confidence level (0.95 for 95%, 0.99 for 99%)
+   * @returns Confidence interval with lower and upper bounds
+   */
+  getConfidenceInterval(confidenceLevel: number = 0.95): { lower: number; upper: number; width: number } {
+    if (this.visits === 0) {
+      return { lower: 0, upper: 0, width: 0 };
+    }
+
+    // Z-scores for common confidence levels
+    const zScores: Record<number, number> = {
+      0.90: 1.645,
+      0.95: 1.96,
+      0.99: 2.576,
+    };
+
+    const z = zScores[confidenceLevel] || 1.96; // Default to 95%
+    const se = this.getStandardError();
+    const margin = z * se;
+
+    return {
+      lower: this.averageValue - margin,
+      upper: this.averageValue + margin,
+      width: 2 * margin,
+    };
   }
 
   /**
@@ -183,6 +244,7 @@ export class MCTSNode {
   backpropagate(value: number): void {
     this.visits++;
     this.totalValue += value;
+    this.totalValueSquared += value * value;
 
     if (this.parent) {
       this.parent.backpropagate(value);
@@ -240,8 +302,17 @@ export class MCTSNode {
    *
    * @returns Map of action to statistics
    */
-  getChildStatistics(): Map<string, { visits: number; avgValue: number; action: Action }> {
-    const stats = new Map<string, { visits: number; avgValue: number; action: Action }>();
+  getChildStatistics(): Map<
+    string,
+    {
+      visits: number;
+      avgValue: number;
+      action: Action;
+      stdError: number;
+      confidenceInterval: { lower: number; upper: number; width: number };
+    }
+  > {
+    const stats = new Map();
 
     for (const [key, child] of this.children) {
       if (child.action) {
@@ -249,6 +320,8 @@ export class MCTSNode {
           visits: child.visits,
           avgValue: child.averageValue,
           action: child.action,
+          stdError: child.getStandardError(),
+          confidenceInterval: child.getConfidenceInterval(),
         });
       }
     }
