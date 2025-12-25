@@ -56,7 +56,7 @@ export function TrumpSelector({ isMyTurn }: TrumpSelectorProps) {
         {SUITS.map(suit => {
           const analysis = getSuitAnalysis(suit);
           return (
-            <div key={suit} className="relative w-full">
+            <div key={suit} className="w-full">
               <button
                 onClick={() => declareTrump(suit)}
                 className="w-full aspect-[3/4] min-h-[80px] md:min-h-[94px] flex items-center justify-center border-2 border-gray-300 rounded-lg shadow-md md:shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 touch-target tap-feedback focus:outline-none focus:ring-2 focus:ring-emerald-400 active:scale-95"
@@ -68,25 +68,21 @@ export function TrumpSelector({ isMyTurn }: TrumpSelectorProps) {
                 </span>
               </button>
               {analysis && showCardOverlay && (
-                <div className="absolute -top-16 left-0 right-0 bg-gradient-to-b from-black/95 to-black/30 rounded-lg p-2 pointer-events-none shadow-lg">
-                  <div className="flex flex-col gap-1 text-[10px] font-bold">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1">
-                        {analysis.rank === 1 && (
-                          <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best suit">⭐</span>
-                        )}
-                        <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                          {(analysis.winProbability * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                      <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                        {analysis.expectedScore > 0 ? '+' : ''}{analysis.expectedScore.toFixed(1)} pts
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[9px] opacity-90">
-                      <span className="text-green-300">{analysis.visits} visits</span>
-                      <span className="text-green-300">{(analysis.confidence * 100).toFixed(0)}% conf</span>
-                    </div>
+                <div className="mt-1 rounded-md border border-white/10 bg-black/40 px-2 py-1 pointer-events-none">
+                  <div className="flex items-center justify-between gap-2 text-[10px] font-semibold leading-snug tabular-nums">
+                    <span className="flex items-center gap-1 text-emerald-200">
+                      {analysis.rank === 1 && (
+                        <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best suit">⭐</span>
+                      )}
+                      <span>{(analysis.winProbability * 100).toFixed(0)}%</span>
+                    </span>
+                    <span className="text-emerald-200">
+                      {analysis.expectedScore > 0 ? '+' : ''}{analysis.expectedScore.toFixed(1)} pts
+                    </span>
+                  </div>
+                  <div className="mt-0.5 flex items-center justify-between gap-2 text-[9px] leading-snug text-emerald-200/70 tabular-nums">
+                    <span>{analysis.visits}v</span>
+                    <span>{(analysis.confidence * 100).toFixed(0)}% conf</span>
                   </div>
                 </div>
               )}

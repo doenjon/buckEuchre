@@ -272,6 +272,31 @@ export async function checkAndTriggerAI(
           console.error(`[AI Trigger] Unexpected error in AI fold decision batch:`, err);
         });
       }
+
+      // ALSO send analysis to any human players who are currently deciding to fold/stay.
+      // (Previously we returned early and never emitted fold analysis events for humans.)
+      for (let pos = 0; pos < 4; pos++) {
+        const player = gameState.players[pos];
+
+        // Skip bidder and already-decided players
+        if (pos === gameState.winningBidderPosition || player.foldDecision !== 'UNDECIDED') {
+          continue;
+        }
+
+        // Skip AI players (they'll act automatically)
+        if (isAIPlayerByName(player.name)) {
+          continue;
+        }
+
+        if (shouldSendAnalysis(gameId, gameState, pos as any)) {
+          setTimeout(() => {
+            sendAIAnalysis(gameId, gameState, pos, io).catch(err => {
+              console.error(`[AI Trigger] Error sending fold analysis:`, err);
+            });
+          }, 0);
+        }
+      }
+
       return;
     }
 

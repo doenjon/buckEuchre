@@ -58,7 +58,7 @@ export function FoldDecision({ gameState, myPosition, isMyTurn }: FoldDecisionPr
       </div>
 
       <div className="flex flex-wrap justify-center gap-1.5 md:gap-2 lg:gap-3">
-        <div className="relative min-w-[100px] md:min-w-[120px] flex-1 sm:flex-none">
+        <div className="min-w-[100px] md:min-w-[120px] flex-1 sm:flex-none">
           <Button
             onClick={() => makeFoldDecision(false)}
             variant="default"
@@ -68,31 +68,27 @@ export function FoldDecision({ gameState, myPosition, isMyTurn }: FoldDecisionPr
             Stay in
           </Button>
           {stayAnalysis && showCardOverlay && (
-            <div className="absolute -top-16 left-0 right-0 bg-gradient-to-b from-black/95 to-black/30 rounded-lg p-2 pointer-events-none shadow-lg">
-              <div className="flex flex-col gap-1 text-[10px] font-bold">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    {stayAnalysis.isBest && (
-                      <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best choice">⭐</span>
-                    )}
-                    <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                      {(stayAnalysis.winProbability * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                  <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                    {stayAnalysis.expectedScore > 0 ? '+' : ''}{stayAnalysis.expectedScore.toFixed(1)} pts
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-[9px] opacity-90">
-                  <span className="text-green-300">{stayAnalysis.visits} visits</span>
-                  <span className="text-green-300">{(stayAnalysis.confidence * 100).toFixed(0)}% conf</span>
-                </div>
+            <div className="mt-1 rounded-md border border-white/10 bg-black/40 px-2 py-1 pointer-events-none">
+              <div className="flex items-center justify-between gap-2 text-[10px] font-semibold leading-snug tabular-nums">
+                <span className="flex items-center gap-1 text-emerald-200">
+                  {stayAnalysis.isBest && (
+                    <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best choice">⭐</span>
+                  )}
+                  <span>{(stayAnalysis.winProbability * 100).toFixed(0)}%</span>
+                </span>
+                <span className="text-emerald-200">
+                  {stayAnalysis.expectedScore > 0 ? '+' : ''}{stayAnalysis.expectedScore.toFixed(1)} pts
+                </span>
+              </div>
+              <div className="mt-0.5 flex items-center justify-between gap-2 text-[9px] leading-snug text-emerald-200/70 tabular-nums">
+                <span>{stayAnalysis.visits}v</span>
+                <span>{(stayAnalysis.confidence * 100).toFixed(0)}% conf</span>
               </div>
             </div>
           )}
         </div>
 
-        <div className="relative min-w-[100px] md:min-w-[120px] flex-1 sm:flex-none">
+        <div className="min-w-[100px] md:min-w-[120px] flex-1 sm:flex-none">
           <Button
             onClick={() => makeFoldDecision(true)}
             variant="outline"
@@ -103,25 +99,21 @@ export function FoldDecision({ gameState, myPosition, isMyTurn }: FoldDecisionPr
             Fold
           </Button>
           {foldAnalysis && canFold && showCardOverlay && (
-            <div className="absolute -top-16 left-0 right-0 bg-gradient-to-b from-black/95 to-black/30 rounded-lg p-2 pointer-events-none shadow-lg">
-              <div className="flex flex-col gap-1 text-[10px] font-bold">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    {foldAnalysis.isBest && (
-                      <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best choice">⭐</span>
-                    )}
-                    <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                      {(foldAnalysis.winProbability * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                  <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                    {foldAnalysis.expectedScore > 0 ? '+' : ''}{foldAnalysis.expectedScore.toFixed(1)} pts
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-[9px] opacity-90">
-                  <span className="text-green-300">{foldAnalysis.visits} visits</span>
-                  <span className="text-green-300">{(foldAnalysis.confidence * 100).toFixed(0)}% conf</span>
-                </div>
+            <div className="mt-1 rounded-md border border-white/10 bg-black/40 px-2 py-1 pointer-events-none">
+              <div className="flex items-center justify-between gap-2 text-[10px] font-semibold leading-snug tabular-nums">
+                <span className="flex items-center gap-1 text-emerald-200">
+                  {foldAnalysis.isBest && (
+                    <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best choice">⭐</span>
+                  )}
+                  <span>{(foldAnalysis.winProbability * 100).toFixed(0)}%</span>
+                </span>
+                <span className="text-emerald-200">
+                  {foldAnalysis.expectedScore > 0 ? '+' : ''}{foldAnalysis.expectedScore.toFixed(1)} pts
+                </span>
+              </div>
+              <div className="mt-0.5 flex items-center justify-between gap-2 text-[9px] leading-snug text-emerald-200/70 tabular-nums">
+                <span>{foldAnalysis.visits}v</span>
+                <span>{(foldAnalysis.confidence * 100).toFixed(0)}% conf</span>
               </div>
             </div>
           )}
