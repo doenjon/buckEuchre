@@ -104,13 +104,14 @@ export class MCTSNode {
     const meanOfSquares = this.totalValueSquared / this.visits;
     const empiricalVariance = meanOfSquares - mean * mean;
 
-    // Add minimum variance floor to account for epistemic uncertainty
-    // (model uncertainty) even when aleatoric uncertainty (outcome variance) is low.
-    // For avgValue in [0,1], we use a floor of (0.05)^2 = 0.0025
-    // This ensures SE >= 0.05/sqrt(n), giving meaningful confidence intervals
-    // even when rollout outcomes are very consistent.
-    const minVariance = 0.0025; // Equivalent to ±0.5 on the score scale
+    // Add small variance floor to account for epistemic uncertainty
+    // (model uncertainty) even with stochastic rollouts. This reflects
+    // that we never have perfect information about the true expected value.
+    // For avgValue in [0,1], we use a conservative floor of (0.02)^2 = 0.0004
+    // This ensures SE >= 0.02/sqrt(n), providing a small baseline uncertainty.
+    const minVariance = 0.0004; // Equivalent to ±0.2 on the score scale
 
+    // With stochastic rollouts, empirical variance should now be meaningful
     return Math.max(empiricalVariance, minVariance);
   }
 
@@ -259,6 +260,12 @@ export class MCTSNode {
     this.visits++;
     this.totalValue += value;
     this.totalValueSquared += value * value;
+
+    // Debug logging to see actual values being backpropagated
+    if (this.visits <= 10 && this.action?.type === 'CARD') {
+      console.log(`[MCTS Debug] Card ${(this.action as any).card.id} visit ${this.visits}: value=${value.toFixed(3)}, ` +
+        `avgValue=${this.averageValue.toFixed(3)}, empiricalVar=${((this.totalValueSquared / this.visits) - (this.averageValue * this.averageValue)).toFixed(6)}`);
+    }
 
     if (this.parent) {
       this.parent.backpropagate(value);
