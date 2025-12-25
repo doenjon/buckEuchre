@@ -399,15 +399,15 @@ export function applyFoldDecision(
         breakdown: playersWithAutoTricks.map((p, i) => ({
           position: i,
           name: p.name,
-          change: scoreChanges[i],
+          change: scoreChanges[p.position],
           oldScore: p.score,
-          newScore: p.score + scoreChanges[i],
+          newScore: p.score + scoreChanges[p.position],
         })),
       });
 
       const scoredPlayers = playersWithAutoTricks.map((player, position) => ({
         ...player,
-        score: player.score + scoreChanges[position],
+        score: player.score + scoreChanges[player.position],
       })) as [Player, Player, Player, Player];
 
       const { winner, gameOver } = checkWinCondition(scoredPlayers);
@@ -605,17 +605,17 @@ export function finishRound(state: GameState): GameState {
       name: p.name,
       tricksTaken: p.tricksTaken,
       folded: p.folded,
-      change: scoreChanges[i],
+      change: scoreChanges[p.position],
       oldScore: p.score,
-      newScore: p.score + scoreChanges[i],
-      isBidder: i === state.winningBidderPosition,
+      newScore: p.score + scoreChanges[p.position],
+      isBidder: p.position === state.winningBidderPosition,
     })),
   });
 
   // Apply score changes
   const players = state.players.map((p, i) => ({
     ...p,
-    score: p.score + scoreChanges[i],
+    score: p.score + scoreChanges[p.position],
   })) as [Player, Player, Player, Player];
 
   // Check for winner

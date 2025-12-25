@@ -85,9 +85,15 @@ export function buildRoundCompletionPayload(
     return null;
   }
 
-  const scoreChanges = postScoreState.players.map((player, index) =>
-    player.score - preScoreState.players[index].score
-  );
+  // Compute score deltas by *player position* to avoid relying on array ordering.
+  const preScoreByPosition: Record<number, number> = {};
+  for (const p of preScoreState.players) {
+    preScoreByPosition[p.position] = p.score;
+  }
+  const scoreChangeByPosition: Record<number, number> = {};
+  for (const p of postScoreState.players) {
+    scoreChangeByPosition[p.position] = p.score - (preScoreByPosition[p.position] ?? p.score);
+  }
 
   const bidderPosition = preScoreState.winningBidderPosition;
   const highestBid = preScoreState.highestBid;
@@ -117,7 +123,7 @@ export function buildRoundCompletionPayload(
       const totalTricks = player.folded ? 0 : (cardsPlayed || autoWinTricks);
 
       const wasBidder = bidderPosition !== null && player.position === bidderPosition;
-      const scoreChange = scoreChanges[index];
+      const scoreChange = scoreChangeByPosition[player.position] ?? 0;
       
       // For stats/leaderboards: higher is better, but negative values are allowed (for bucks)
       // pointsEarned = -scoreChange means:

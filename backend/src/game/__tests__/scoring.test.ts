@@ -126,6 +126,24 @@ describe('scoring.ts - Scoring Logic', () => {
       expect(scores[0]).toBe(-5); // Made contract
     });
 
+    it('should score correctly even if players array is out of position order', () => {
+      // Regression guard: scoring should key off player.position, not array index.
+      // (If array order is ever disrupted by persistence/recovery, scoring must still be correct.)
+      const p0 = createPlayer(0, 3, false); // Bidder (made bid 2)
+      const p1 = createPlayer(1, 1, false);
+      const p2 = createPlayer(2, 1, false);
+      const p3 = createPlayer(3, 0, false); // Bucked
+
+      // Shuffle the array order intentionally.
+      const players = [p2, p0, p3, p1];
+
+      const scores = calculateRoundScores(players, 0, 2, false);
+      expect(scores[0]).toBe(-3);
+      expect(scores[1]).toBe(-1);
+      expect(scores[2]).toBe(-1);
+      expect(scores[3]).toBe(5);
+    });
+
     it('should NOT buck non-bidders who stay and get 1 trick', () => {
       // This test specifically addresses the reported bug:
       // "when a player stays, gets 1 trick, and then still gets bucked"
