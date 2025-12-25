@@ -19,6 +19,7 @@ export interface GameSummary {
   playerCount: number;
   maxPlayers: 4;
   status: GameStatus;
+  creatorId: string;
   creatorName: string;
 }
 
@@ -701,8 +702,9 @@ export async function getUserActiveGames(userId: string): Promise<GameSummary[]>
     gameId: game.id,
     createdAt: game.createdAt.getTime(),
     playerCount: game.players.length,
-    maxPlayers: 4,
+    maxPlayers: 4 as const,
     status: game.status,
+    creatorId: game.creator.id,
     creatorName: game.creator.displayName,
   }));
 }
@@ -830,8 +832,9 @@ export async function listAvailableGames(): Promise<GameSummary[]> {
         gameId: game.id,
         createdAt: game.createdAt.getTime(),
         playerCount: game.players.length,
-        maxPlayers: 4,
+        maxPlayers: 4 as const,
         status: game.status,
+        creatorId: game.creator.id,
         creatorName: game.creator.displayName,
       }));
 
@@ -840,7 +843,7 @@ export async function listAvailableGames(): Promise<GameSummary[]> {
   })();
 
   try {
-    return await availableGamesInFlight;
+    return await availableGamesInFlight!;
   } finally {
     availableGamesInFlight = null;
   }

@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { listGames } from '@/services/api';
 import type { GameSummary } from '@buck-euchre/shared';
 import { useUIStore } from '@/stores/uiStore';
+import { useAuthStore } from '@/stores/authStore';
 import { Users, Clock, Play, Loader2 } from 'lucide-react';
 import { AddAIButton } from './AddAIButton';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { Button } from '@/components/ui/button';
 export function GameList() {
   const navigate = useNavigate();
   const { setError } = useUIStore();
+  const { userId } = useAuthStore();
   const [games, setGames] = useState<GameSummary[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const fetchingRef = useRef(false);
@@ -156,7 +158,10 @@ export function GameList() {
                 </div>
 
                 <div className="flex items-center gap-3 self-start lg:self-center">
-                  {game.status === 'WAITING' && game.playerCount < game.maxPlayers && (
+                  {game.status === 'WAITING' &&
+                    game.playerCount < game.maxPlayers &&
+                    !!userId &&
+                    game.creatorId === userId && (
                     <AddAIButton gameId={game.gameId!} onAIAdded={fetchGames} />
                   )}
 

@@ -176,5 +176,6 @@ export interface GameSummary {
   playerCount: number;
   maxPlayers: 4;
   createdAt: number;
+  creatorId: string;
   creatorName: string;
 }

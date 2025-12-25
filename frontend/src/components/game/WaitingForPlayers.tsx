@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { addAIToGame, getGameState } from '@/services/api';
 import { useUIStore } from '@/stores/uiStore';
 import { useGameStore } from '@/stores/gameStore';
+import { useAuthStore } from '@/stores/authStore';
 
 interface WaitingForPlayersProps {
   gameId: string;
@@ -35,10 +36,12 @@ export function WaitingForPlayers({
   const [gamePlayers, setGamePlayers] = useState<Array<{ id: string; name: string; position: number }>>(players || []);
   const [loadingPlayers, setLoadingPlayers] = useState(!players || players.length === 0);
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const { setError } = useUIStore();
   const waitingInfo = useGameStore(state => state.waitingInfo);
   const setWaitingInfo = useGameStore(state => state.setWaitingInfo);
   const setGameState = useGameStore(state => state.setGameState);
+  const userId = useAuthStore(state => state.userId);
 
   // Fetch game info to get players from database
   useEffect(() => {
@@ -51,6 +54,12 @@ export function WaitingForPlayers({
         
         // Query the game API to get player information from database
         const gameData: any = await getGameState(gameId);
+
+        // Determine whether the current user is the game creator (owner)
+        // Works for both "waiting game" DB shape (has creatorId) and started game state (no creatorId).
+        if (userId && gameData && typeof gameData.creatorId === 'string') {
+          setIsOwner(gameData.creatorId === userId);
+        }
         
         // The API returns either GameState (if game started) or Game (if waiting)
         // Both have a players array, but with different structures
@@ -261,7 +270,7 @@ export function WaitingForPlayers({
                 </div>
               </div>
               
-              {playersNeeded > 0 && (
+              {playersNeeded > 0 && isOwner && (
                 <div className="pt-2">
                   <Button
                     onClick={handleAddAI}
