@@ -493,10 +493,11 @@ describe('state.ts - State Transitions', () => {
       state.winningBidderPosition = 1;
       
       // Set tricks taken
-      state.players[1].tricksTaken = 3;
-      state.players[0].tricksTaken = 1;
-      state.players[2].tricksTaken = 1;
-      state.players[3].tricksTaken = 0;
+      const byPos = (pos: number) => state.players.find(p => p.position === pos)!;
+      byPos(1).tricksTaken = 3;
+      byPos(0).tricksTaken = 1;
+      byPos(2).tricksTaken = 1;
+      byPos(3).tricksTaken = 0;
     });
 
     it('should update player scores', () => {
@@ -543,6 +544,27 @@ describe('state.ts - State Transitions', () => {
       
       expect(state.winner).toBe(1); // Lowest score
       expect(state.gameOver).toBe(true);
+    });
+
+    it('should apply scoring by player.position even if players array order is shuffled', () => {
+      const preScoreByPos = Object.fromEntries(state.players.map(p => [p.position, p.score]));
+
+      // Shuffle array order intentionally (simulates a persistence/recovery ordering bug).
+      (state as any).players = [state.players[2], state.players[0], state.players[3], state.players[1]];
+
+      const next = finishRound(state);
+
+      const postScoreByPos = Object.fromEntries(next.players.map(p => [p.position, p.score]));
+
+      // Expected deltas:
+      // - bidder (pos 1) took 3, made bid => -3
+      // - pos 0 took 1 => -1
+      // - pos 2 took 1 => -1
+      // - pos 3 took 0 => +5
+      expect(postScoreByPos[1]).toBe(preScoreByPos[1] - 3);
+      expect(postScoreByPos[0]).toBe(preScoreByPos[0] - 1);
+      expect(postScoreByPos[2]).toBe(preScoreByPos[2] - 1);
+      expect(postScoreByPos[3]).toBe(preScoreByPos[3] + 5);
     });
   });
 
