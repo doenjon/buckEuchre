@@ -4,6 +4,12 @@ import { GameState, Player } from '@buck-euchre/shared';
 import { initializeGame, dealNewRound } from '../game/state';
 import { executeGameActionWithInit, getActiveGameState, loadGameState, setActiveGameState } from './state.service';
 
+// Lightweight in-memory cache to reduce DB load when many clients poll the lobby.
+// Short TTL keeps the list fresh while preventing stampedes during overload.
+let availableGamesCache: { at: number; data: GameSummary[] } | null = null;
+let availableGamesInFlight: Promise<GameSummary[]> | null = null;
+const AVAILABLE_GAMES_CACHE_TTL_MS = 1000;
+
 /**
  * Game summary for listing available games
  */
@@ -92,6 +98,8 @@ export async function createGame(creatorId: string): Promise<GameWithPlayers> {
   console.log(`[createGame] Game ${game.id} created with creatorId: ${creatorId}`);
   console.log(`[createGame] Players in game:`, game.players.map(p => ({ userId: p.userId, position: p.position })));
 
+  // Invalidate lobby cache so the game shows up immediately.
+  availableGamesCache = null;
   return game;
 }
 
@@ -499,6 +507,9 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
     throw new Error('Failed to join game after multiple attempts (race condition)');
   }
 
+  // Player count changed; invalidate lobby cache so lists refresh quickly.
+  availableGamesCache = null;
+
   // Query fresh to check if game is now full (4 players)
   // This prevents race condition where multiple players join simultaneously
   const finalGame = await prisma.game.findUnique({
@@ -759,6 +770,9 @@ export async function leaveGame(gameId: string, userId: string): Promise<void> {
       where: { id: gameId },
     });
   }
+
+  // Invalidate lobby cache (player count / game existence may have changed).
+  availableGamesCache = null;
 }
 
 /**
@@ -769,47 +783,67 @@ export async function leaveGame(gameId: string, userId: string): Promise<void> {
  * @returns Array of game summaries
  */
 export async function listAvailableGames(): Promise<GameSummary[]> {
-  const games = await prisma.game.findMany({
-    where: {
-      status: GameStatus.WAITING,
-    },
-    include: {
-      players: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              username: true,
-              displayName: true,
-              isGuest: true,
+  const now = Date.now();
+  if (availableGamesCache && now - availableGamesCache.at < AVAILABLE_GAMES_CACHE_TTL_MS) {
+    return availableGamesCache.data;
+  }
+
+  if (availableGamesInFlight) {
+    return availableGamesInFlight;
+  }
+
+  availableGamesInFlight = (async () => {
+    const games = await prisma.game.findMany({
+      where: {
+        status: GameStatus.WAITING,
+      },
+      include: {
+        players: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                isGuest: true,
+              },
             },
           },
         },
-      },
-      creator: {
-        select: {
-          id: true,
-          username: true,
-          displayName: true,
-          isGuest: true,
+        creator: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            isGuest: true,
+          },
         },
       },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
-  return games
-    .filter((game) => game.players.length < 4)
-    .map((game) => ({
-      gameId: game.id,
-      createdAt: game.createdAt.getTime(),
-      playerCount: game.players.length,
-      maxPlayers: 4,
-      status: game.status,
-      creatorName: game.creator.displayName,
-    }));
+    const result = games
+      .filter((game) => game.players.length < 4)
+      .map((game) => ({
+        gameId: game.id,
+        createdAt: game.createdAt.getTime(),
+        playerCount: game.players.length,
+        maxPlayers: 4,
+        status: game.status,
+        creatorName: game.creator.displayName,
+      }));
+
+    availableGamesCache = { at: Date.now(), data: result };
+    return result;
+  })();
+
+  try {
+    return await availableGamesInFlight;
+  } finally {
+    availableGamesInFlight = null;
+  }
 }
 
 /**

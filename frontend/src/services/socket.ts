@@ -18,6 +18,44 @@ import type {
 // For production, this will use the same origin (empty string = relative URL)
 const WS_URL = import.meta.env.VITE_WS_URL || '';
 
+// Singleton socket connection so multiple hooks/components don't create competing connections.
+let singletonSocket: Socket | null = null;
+let singletonToken: string | null = null;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function waitForConnect(socket: Socket, timeoutMs: number): Promise<void> {
+  if (socket.connected) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Socket connect timeout'));
+    }, timeoutMs);
+
+    const onConnect = () => {
+      cleanup();
+      resolve();
+    };
+
+    const onError = (err: any) => {
+      cleanup();
+      reject(err instanceof Error ? err : new Error(String(err)));
+    };
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      socket.off('connect', onConnect);
+      socket.off('connect_error', onError);
+    };
+
+    socket.on('connect', onConnect);
+    socket.on('connect_error', onError);
+  });
+}
+
 /**
  * Create a new socket connection with authentication
  */
@@ -28,13 +66,30 @@ export function createSocketConnection(token: string): Socket {
     tokenLength: token?.length || 0,
   });
 
+  // Reuse existing connection if token is unchanged.
+  if (singletonSocket && singletonToken === token) {
+    return singletonSocket;
+  }
+
+  // Token changed (login/logout/refresh) - reset connection.
+  if (singletonSocket) {
+    try {
+      singletonSocket.disconnect();
+    } catch {
+      // ignore
+    }
+    singletonSocket = null;
+    singletonToken = null;
+  }
+
   const socket = io(WS_URL, {
     auth: { token },
     transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
-    reconnectionAttempts: 5,
+    reconnectionDelayMax: 10000,
+    // Under overload we want the client to keep trying, not give up after ~15s.
+    reconnectionAttempts: Infinity,
   });
 
   // Log connection attempts
@@ -50,14 +105,70 @@ export function createSocketConnection(token: string): Socket {
     console.error('[Socket.io] Reconnection failed after all attempts');
   });
 
-  return socket;
+  singletonSocket = socket;
+  singletonToken = token;
+  return singletonSocket;
 }
 
 /**
  * Emit JOIN_GAME event
  */
-export function emitJoinGame(socket: Socket, payload: JoinGamePayload): void {
-  socket.emit('JOIN_GAME', payload);
+export function emitJoinGame(
+  socket: Socket,
+  payload: JoinGamePayload,
+  callback?: (response: { success: boolean; message?: string; code?: string }) => void
+): void {
+  socket.emit('JOIN_GAME', payload, callback);
+}
+
+/**
+ * More reliable JOIN_GAME: waits for connection, uses ack timeout, and retries with backoff.
+ * This prevents "join sometimes doesn't work" when the server is slow/overloaded.
+ */
+export async function emitJoinGameReliable(
+  socket: Socket,
+  payload: JoinGamePayload,
+  options?: { attempts?: number; connectTimeoutMs?: number; ackTimeoutMs?: number }
+): Promise<void> {
+  const attempts = options?.attempts ?? 5;
+  const connectTimeoutMs = options?.connectTimeoutMs ?? 15000;
+  const ackTimeoutMs = options?.ackTimeoutMs ?? 8000;
+
+  let lastErr: any = null;
+
+  for (let i = 0; i < attempts; i++) {
+    try {
+      if (!socket.connected) {
+        // Ensure connect() is called (socket may be idle/disconnected).
+        if (!socket.active) {
+          socket.connect();
+        }
+        await waitForConnect(socket, connectTimeoutMs);
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        socket
+          .timeout(ackTimeoutMs)
+          .emit('JOIN_GAME', payload, (err: any, response?: any) => {
+            if (err) return reject(err);
+            if (response && response.success === false) {
+              return reject(new Error(response.message || 'Join failed'));
+            }
+            resolve();
+          });
+      });
+
+      return;
+    } catch (err: any) {
+      lastErr = err;
+      // Exponential backoff with jitter.
+      const base = 300 * Math.pow(2, i);
+      const jitter = Math.floor(Math.random() * 200);
+      await sleep(Math.min(5000, base + jitter));
+    }
+  }
+
+  throw lastErr || new Error('Failed to join game');
 }
 
 /**

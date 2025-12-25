@@ -3,7 +3,7 @@
  * @description List of available games in the lobby
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listGames } from '@/services/api';
 import type { GameSummary } from '@buck-euchre/shared';
@@ -17,9 +17,12 @@ export function GameList() {
   const { setError } = useUIStore();
   const [games, setGames] = useState<GameSummary[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
+  const fetchingRef = useRef(false);
 
   const fetchGames = async (isInitial = false) => {
+    if (fetchingRef.current) return;
     try {
+      fetchingRef.current = true;
       if (isInitial) {
         setInitialLoading(true);
       }
@@ -29,6 +32,7 @@ export function GameList() {
       const message = err instanceof Error ? err.message : 'Failed to load games';
       setError(message);
     } finally {
+      fetchingRef.current = false;
       if (isInitial) {
         setInitialLoading(false);
       }
@@ -38,8 +42,8 @@ export function GameList() {
   useEffect(() => {
     fetchGames(true);
     
-    // Auto-refresh game list every 5 seconds
-    const interval = setInterval(() => fetchGames(false), 5000);
+    // Auto-refresh game list; skip overlapping requests to avoid overload cascades.
+    const interval = setInterval(() => fetchGames(false), 2500);
     return () => clearInterval(interval);
   }, []);
 
