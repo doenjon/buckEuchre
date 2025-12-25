@@ -598,6 +598,26 @@ export function finishRound(state: GameState): GameState {
     state.isClubsTurnUp
   );
 
+  // BUG DETECTION: Validate scoreChanges object structure
+  for (let i = 0; i < 4; i++) {
+    if (scoreChanges[i] === undefined || scoreChanges[i] === null) {
+      console.error('[SCORING BUG] scoreChanges missing value at index', i, {
+        scoreChanges,
+        keys: Object.keys(scoreChanges),
+        values: Object.values(scoreChanges),
+      });
+      throw new Error(`scoreChanges[${i}] is undefined or null`);
+    }
+    if (typeof scoreChanges[i] !== 'number' || isNaN(scoreChanges[i])) {
+      console.error('[SCORING BUG] scoreChanges has invalid type at index', i, {
+        value: scoreChanges[i],
+        type: typeof scoreChanges[i],
+        scoreChanges,
+      });
+      throw new Error(`scoreChanges[${i}] is not a valid number: ${scoreChanges[i]}`);
+    }
+  }
+
   console.log('[SCORING] Score changes calculated:', {
     scoreChanges,
     breakdown: state.players.map((p, i) => ({
@@ -613,10 +633,39 @@ export function finishRound(state: GameState): GameState {
   });
 
   // Apply score changes
-  const players = state.players.map((p, i) => ({
-    ...p,
-    score: p.score + scoreChanges[i],
-  })) as [Player, Player, Player, Player];
+  const players = state.players.map((p, i) => {
+    const scoreChange = scoreChanges[i];
+    const newScore = p.score + scoreChange;
+
+    // BUG DETECTION: Log any impossible score changes
+    const validChanges = new Set([-5, -4, -3, -2, -1, 0, 5]);
+    if (!validChanges.has(scoreChange)) {
+      console.error('[SCORING BUG] Invalid score change detected!', {
+        player: { name: p.name, position: p.position, arrayIndex: i },
+        oldScore: p.score,
+        scoreChange,
+        newScore,
+        tricksTaken: p.tricksTaken,
+        folded: p.folded,
+        isBidder: i === state.winningBidderPosition,
+        bid: state.highestBid,
+        allScoreChanges: scoreChanges,
+        allPlayers: state.players.map((player, idx) => ({
+          idx,
+          name: player.name,
+          position: player.position,
+          score: player.score,
+          tricksTaken: player.tricksTaken,
+          folded: player.folded,
+        })),
+      });
+    }
+
+    return {
+      ...p,
+      score: newScore,
+    };
+  }) as [Player, Player, Player, Player];
 
   // Check for winner
   const { winner, gameOver } = checkWinCondition(players);

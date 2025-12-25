@@ -47,6 +47,24 @@ export function calculateRoundScores(
     throw new Error('winningBidderPosition cannot be null for normal bidding');
   }
 
+  // BUG FIX: Validate that player positions match array indices
+  // This prevents score mismatches when players array order is unexpected
+  for (let i = 0; i < 4; i++) {
+    const player = players[i];
+    if (!player) {
+      throw new Error(`Player at index ${i} is undefined`);
+    }
+    if (player.position !== i) {
+      console.error('[SCORING BUG] Player position mismatch detected!', {
+        arrayIndex: i,
+        playerPosition: player.position,
+        playerName: player.name,
+        allPlayers: players.map((p, idx) => ({ idx, position: p?.position, name: p?.name }))
+      });
+      throw new Error(`Player at array index ${i} has position ${player.position}. Array indices must match player positions for correct scoring.`);
+    }
+  }
+
   for (let i = 0; i < 4; i++) {
     const player = players[i];
 
