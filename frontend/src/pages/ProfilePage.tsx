@@ -305,6 +305,9 @@ export default function ProfilePage() {
   const avgPointsPerGame = stats && stats.gamesPlayed > 0
     ? (stats.totalPoints / stats.gamesPlayed).toFixed(1)
     : '0.0';
+  const avgPointsPerRound = stats && stats.totalRounds && stats.totalRounds > 0
+    ? (stats.totalPoints / stats.totalRounds).toFixed(1)
+    : '0.0';
   const foldRate = stats && stats.timesCouldFold && stats.timesCouldFold > 0
     ? ((stats.timesFolded || 0) / stats.timesCouldFold * 100).toFixed(1)
     : '0.0';
@@ -398,6 +401,10 @@ export default function ProfilePage() {
                 <Card className="p-3 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-sm hover:shadow-md transition-shadow">
                   <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Avg Points/Game</p>
                   <p className="text-xl font-bold text-orange-600">{avgPointsPerGame}</p>
+                </Card>
+                <Card className="p-3 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-sm hover:shadow-md transition-shadow">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Avg Points/Round</p>
+                  <p className="text-xl font-bold text-amber-600">{avgPointsPerRound}</p>
                 </Card>
                 <Card className="p-3 bg-white/80 backdrop-blur-sm border-emerald-200/50 shadow-sm hover:shadow-md transition-shadow">
                   <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Points</p>

@@ -239,12 +239,17 @@ export async function getComputedStats(userId: string) {
     ? stats.totalPoints / stats.gamesPlayed
     : 0;
 
+  const avgPointsPerRound = stats.totalRounds > 0
+    ? stats.totalPoints / stats.totalRounds
+    : 0;
+
   return {
     ...stats,
     winRate: Math.round(winRate * 10) / 10,
     bidSuccessRate: Math.round(bidSuccessRate * 10) / 10,
     trickWinRate: Math.round(trickWinRate * 10) / 10,
     averagePoints: Math.round(averagePoints * 10) / 10,
+    avgPointsPerRound: Math.round(avgPointsPerRound * 10) / 10,
   };
 }
 
@@ -252,7 +257,7 @@ export async function getComputedStats(userId: string) {
  * Get leaderboard by a specific metric
  */
 export async function getLeaderboard(
-  metric: 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' | 'totalRounds' | 'foldRate' | 'bucks' | 'tricksWon' | 'avgPointsPerGame',
+  metric: 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' | 'totalRounds' | 'foldRate' | 'bucks' | 'tricksWon' | 'avgPointsPerGame' | 'avgPointsPerRound',
   limit: number = 50
 ) {
   const allStats = await prisma.userStats.findMany({
@@ -305,12 +310,17 @@ export async function getLeaderboard(
       ? stat.totalPoints / stat.gamesPlayed
       : 0;
 
+    const avgPointsPerRound = stat.totalRounds > 0
+      ? stat.totalPoints / stat.totalRounds
+      : 0;
+
     return {
       ...stat,
       winRate: Math.round(winRate * 10) / 10,
       bidSuccessRate: Math.round(bidSuccessRate * 10) / 10,
       foldRate: Math.round(foldRate * 10) / 10,
       avgPointsPerGame: Math.round(avgPointsPerGame * 10) / 10,
+      avgPointsPerRound: Math.round(avgPointsPerRound * 10) / 10,
     };
   });
 
@@ -360,6 +370,21 @@ export async function getLeaderboard(
 
       // Both have enough games - sort descending (higher is better)
       return Number(b.avgPointsPerGame) - Number(a.avgPointsPerGame);
+    } else if (metric === 'avgPointsPerRound') {
+      // Require at least 10 rounds for meaningful comparison
+      const aHasEnough = a.totalRounds >= 10;
+      const bHasEnough = b.totalRounds >= 10;
+
+      // Players with less than 10 rounds go to the end
+      if (!aHasEnough && !bHasEnough) {
+        // Both don't have enough - sort by avgPointsPerRound among themselves (higher is better)
+        return Number(b.avgPointsPerRound || 0) - Number(a.avgPointsPerRound || 0);
+      }
+      if (!aHasEnough) return 1;
+      if (!bHasEnough) return -1;
+
+      // Both have enough rounds - sort descending (higher is better)
+      return Number(b.avgPointsPerRound) - Number(a.avgPointsPerRound);
     }
     return 0;
   });
@@ -373,7 +398,7 @@ export async function getLeaderboard(
  */
 export async function getFriendsLeaderboard(
   userId: string,
-  metric: 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' | 'totalRounds' | 'foldRate' | 'bucks' | 'tricksWon' | 'avgPointsPerGame'
+  metric: 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' | 'totalRounds' | 'foldRate' | 'bucks' | 'tricksWon' | 'avgPointsPerGame' | 'avgPointsPerRound'
 ) {
   // Get user's friends
   const friendships = await prisma.friendship.findMany({
@@ -443,12 +468,17 @@ export async function getFriendsLeaderboard(
       ? stat.totalPoints / stat.gamesPlayed
       : 0;
 
+    const avgPointsPerRound = stat.totalRounds > 0
+      ? stat.totalPoints / stat.totalRounds
+      : 0;
+
     return {
       ...stat,
       winRate: Math.round(winRate * 10) / 10,
       bidSuccessRate: Math.round(bidSuccessRate * 10) / 10,
       foldRate: Math.round(foldRate * 10) / 10,
       avgPointsPerGame: Math.round(avgPointsPerGame * 10) / 10,
+      avgPointsPerRound: Math.round(avgPointsPerRound * 10) / 10,
     };
   });
 
@@ -504,6 +534,21 @@ export async function getFriendsLeaderboard(
 
       // Both have enough games - sort descending (higher is better)
       return Number(b.avgPointsPerGame) - Number(a.avgPointsPerGame);
+    } else if (metric === 'avgPointsPerRound') {
+      // Require at least 10 rounds for meaningful comparison
+      const aHasEnough = a.totalRounds >= 10;
+      const bHasEnough = b.totalRounds >= 10;
+
+      // Players with less than 10 rounds go to the end
+      if (!aHasEnough && !bHasEnough) {
+        // Both don't have enough - sort by avgPointsPerRound among themselves (higher is better)
+        return Number(b.avgPointsPerRound || 0) - Number(a.avgPointsPerRound || 0);
+      }
+      if (!aHasEnough) return 1;
+      if (!bHasEnough) return -1;
+
+      // Both have enough rounds - sort descending (higher is better)
+      return Number(b.avgPointsPerRound) - Number(a.avgPointsPerRound);
     }
     return 0;
   });

@@ -20,12 +20,13 @@ interface LeaderboardEntry {
   bucks?: number;
   tricksWon?: number;
   avgPointsPerGame?: number;
+  avgPointsPerRound?: number;
   timesCouldFold?: number;
   totalBids?: number;
 }
 
 type LeaderboardType = 'global' | 'friends';
-type SortBy = 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' | 'totalRounds' | 'foldRate' | 'bucks' | 'tricksWon' | 'avgPointsPerGame';
+type SortBy = 'gamesWon' | 'winRate' | 'totalPoints' | 'bidSuccessRate' | 'totalRounds' | 'foldRate' | 'bucks' | 'tricksWon' | 'avgPointsPerGame' | 'avgPointsPerRound';
 
 export default function LeaderboardPage() {
   const [type, setType] = useState<LeaderboardType>('global');
@@ -74,6 +75,7 @@ export default function LeaderboardPage() {
         bucks: entry.bucks || 0,
         tricksWon: entry.tricksWon || 0,
         avgPointsPerGame: entry.avgPointsPerGame || 0,
+        avgPointsPerRound: entry.avgPointsPerRound || 0,
         timesCouldFold: entry.timesCouldFold || 0,
         totalBids: entry.totalBids || 0,
       }));
@@ -165,6 +167,7 @@ export default function LeaderboardPage() {
               <option value="bucks">💰 Bucks</option>
               <option value="tricksWon">🃏 Tricks Won</option>
               <option value="avgPointsPerGame">📊 Avg Points/Game</option>
+              <option value="avgPointsPerRound">📈 Avg Points/Round</option>
             </select>
           </div>
         </div>
@@ -212,6 +215,8 @@ export default function LeaderboardPage() {
                       return { label: 'Tricks Won', value: (entry.tricksWon || 0).toLocaleString(), unit: '' };
                     case 'avgPointsPerGame':
                       return { label: 'Avg Points/Game', value: (entry.avgPointsPerGame || 0).toFixed(1), unit: '' };
+                    case 'avgPointsPerRound':
+                      return { label: 'Avg Points/Round', value: (entry.avgPointsPerRound || 0).toFixed(1), unit: '' };
                     default:
                       return { label: 'Wins', value: entry.gamesWon, unit: '' };
                   }
@@ -224,6 +229,8 @@ export default function LeaderboardPage() {
                   switch (sortBy) {
                     case 'avgPointsPerGame':
                       return entry.gamesPlayed < 5;
+                    case 'avgPointsPerRound':
+                      return (entry.totalRounds || 0) < 10;
                     case 'foldRate':
                       return (entry.timesCouldFold || 0) < 5;
                     case 'winRate':
