@@ -45,7 +45,7 @@ export function GameList() {
     fetchGames(true);
     
     // Auto-refresh game list; skip overlapping requests to avoid overload cascades.
-    const interval = setInterval(() => fetchGames(false), 2500);
+    const interval = setInterval(() => fetchGames(false), 1000);
     return () => clearInterval(interval);
   }, []);
 
