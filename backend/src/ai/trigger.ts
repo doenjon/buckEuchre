@@ -253,23 +253,8 @@ async function sendAIAnalysis(
       return;
     }
 
-    // Create a unique key for this analysis request
-    // Key should change when the player's hand changes (not just when trick number changes)
-    const currentPlayerPos = gameState.currentPlayerPosition ?? gameState.currentBidder ?? -1;
-    const player = gameState.players[playerPosition];
-    const handSize = player?.hand?.length || 0;
-    const analysisKey = `${gameId}:${playerPosition}:${currentPlayerPos}:${handSize}:${gameState.phase}`;
-
-    // Check if we've already sent analysis for this exact situation recently
-    const lastSent = lastAnalysisKey.get(analysisKey);
-    const now = Date.now();
-
-    if (lastSent && (now - lastSent) < ANALYSIS_COOLDOWN_MS) {
-      // Already sent analysis recently for this turn - skip
-      return;
-    }
-
     // Check if it's actually this player's turn based on phase
+    const currentPlayerPos = gameState.currentPlayerPosition ?? gameState.currentBidder ?? -1;
     let isPlayersTurn = false;
     if (gameState.phase === 'PLAYING') {
       isPlayersTurn = currentPlayerPos === playerPosition;
@@ -282,6 +267,21 @@ async function sendAIAnalysis(
     }
 
     if (!isPlayersTurn) {
+      return;
+    }
+
+    // Create cooldown key based on player position, hand size, and phase
+    // Analysis should only re-run when hand size changes (card played)
+    const player = gameState.players[playerPosition];
+    const handSize = player?.hand?.length || 0;
+    const analysisKey = `${gameId}:${playerPosition}:${handSize}:${gameState.phase}`;
+
+    // Check if we've already sent analysis for this exact situation recently
+    const lastSent = lastAnalysisKey.get(analysisKey);
+    const now = Date.now();
+
+    if (lastSent && (now - lastSent) < ANALYSIS_COOLDOWN_MS) {
+      // Already sent analysis recently for this hand - skip
       return;
     }
 
