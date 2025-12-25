@@ -51,18 +51,25 @@ export function initializeGame(playerIds: [string, string, string, string]): Gam
     ? (override % 4 + 4) % 4 as PlayerPosition
     : Math.floor(Math.random() * 4) as PlayerPosition;
 
+  // Initialize score history with round 0 (starting scores)
+  const startingScores: Record<string, number> = {};
+  playerIds.forEach((id) => {
+    startingScores[id] = STARTING_SCORE;
+  });
+
   return {
     gameId: '', // Will be set by caller
     phase: 'DEALING',
     version: 1,
     createdAt: Date.now(),
     updatedAt: Date.now(),
-    
+
     players,
-    
+
     round: 0,
     dealerPosition,
     scoresCalculated: false,
+    scoreHistory: [{ round: 0, scoresByPlayerId: startingScores }],
     
     blind: [],
     turnUpCard: null,
@@ -410,12 +417,29 @@ export function applyFoldDecision(
         score: player.score + scoreChanges[player.position],
       })) as [Player, Player, Player, Player];
 
+      // Update score history with auto-scored round
+      const roundScores: Record<string, number> = {};
+      scoredPlayers.forEach((p) => {
+        roundScores[p.id] = p.score;
+      });
+
+      const newScoreHistory = [...state.scoreHistory];
+      const existingEntry = newScoreHistory.find((entry) => entry.round === state.round);
+
+      if (existingEntry) {
+        existingEntry.scoresByPlayerId = roundScores;
+      } else {
+        newScoreHistory.push({ round: state.round, scoresByPlayerId: roundScores });
+        newScoreHistory.sort((a, b) => a.round - b.round);
+      }
+
       const { winner, gameOver } = checkWinCondition(scoredPlayers);
 
       const updates: Partial<GameState> = {
         phase: gameOver ? 'GAME_OVER' : 'ROUND_OVER',
         players: scoredPlayers,
         scoresCalculated: true,
+        scoreHistory: newScoreHistory,
         currentPlayerPosition: null,
         currentTrick: {
           number: 1,
@@ -618,25 +642,45 @@ export function finishRound(state: GameState): GameState {
     score: p.score + scoreChanges[p.position],
   })) as [Player, Player, Player, Player];
 
+  // Update score history with current round scores
+  const roundScores: Record<string, number> = {};
+  players.forEach((p) => {
+    roundScores[p.id] = p.score;
+  });
+
+  const newScoreHistory = [...state.scoreHistory];
+  const existingEntry = newScoreHistory.find((entry) => entry.round === state.round);
+
+  if (existingEntry) {
+    // Update existing entry
+    existingEntry.scoresByPlayerId = roundScores;
+  } else {
+    // Add new entry
+    newScoreHistory.push({ round: state.round, scoresByPlayerId: roundScores });
+    newScoreHistory.sort((a, b) => a.round - b.round);
+  }
+
   // Check for winner
   const { winner, gameOver } = checkWinCondition(players);
-  
+
   if (gameOver) {
     return withVersion(state, {
       phase: 'GAME_OVER',
       players,
       scoresCalculated: true,
+      scoreHistory: newScoreHistory,
       winner,
       gameOver: true,
     });
   }
-  
+
   // Transition to ROUND_OVER to show scores
   // (Players will manually start next round via START_NEXT_ROUND event)
   return withVersion(state, {
     phase: 'ROUND_OVER',
     players,
     scoresCalculated: true,
+    scoreHistory: newScoreHistory,
   });
 }
 

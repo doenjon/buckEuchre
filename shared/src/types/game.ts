@@ -96,6 +96,14 @@ export interface Bid {
 }
 
 /**
+ * Score history entry for a single round
+ */
+export interface ScoreHistoryEntry {
+  round: number;
+  scoresByPlayerId: Record<string, number>;
+}
+
+/**
  * Complete game state
  * This is the canonical state structure used by both frontend and backend
  */
@@ -106,10 +114,10 @@ export interface GameState {
   version: number;        // Version number (incremented on each state change)
   createdAt: number;      // Unix timestamp
   updatedAt: number;      // Unix timestamp
-  
+
   // Players (always 4 players, positions 0-3)
   players: [Player, Player, Player, Player];
-  
+
   // Round State
   round: number;          // Current round number (starts at 1)
   dealerPosition: PlayerPosition; // Current dealer (0-3)
@@ -122,6 +130,9 @@ export interface GameState {
    * applied twice (e.g. a +5 buck becoming +10).
    */
   scoresCalculated: boolean;
+
+  // Score History (round-by-round)
+  scoreHistory: ScoreHistoryEntry[];  // Complete score history from round 0 onwards
   
   // Blind/Kitty State (for information only - not used in play)
   blind: Card[];          // 4 cards in the blind
