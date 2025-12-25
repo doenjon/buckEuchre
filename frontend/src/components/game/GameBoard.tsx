@@ -3,7 +3,7 @@
  * @description Main game board component
  */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, RotateCcw, LogOut, Trophy, X, Settings } from 'lucide-react';
 import { Scoreboard } from './Scoreboard';
@@ -41,6 +41,18 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [scoreHistory, setScoreHistory] = useState<Array<{ round: number; scoresByPlayerId: Record<string, number> }>>([]);
   const lastGameIdRef = useRef<string | null>(null);
+
+  // Memoize card click handler to prevent PlayerHand re-renders
+  const handleCardClick = useCallback((cardId: string) => {
+    const validation = canPlayCard(gameState, myPosition as 0 | 1 | 2 | 3, cardId);
+    if (validation.valid) {
+      playCard(cardId);
+      return true; // Signal that loading should be shown
+    } else {
+      console.warn('[GameBoard] Invalid card selection:', validation.reason);
+      return false; // Don't show loading for invalid selections
+    }
+  }, [gameState, myPosition, playCard]);
 
   // Setup game notifications
   useGameNotifications(gameState, myPosition);
@@ -660,17 +672,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
               <>
                 <PlayerHand
                   cards={myPlayer.hand}
-                  onCardClick={isMyTurn && phase === 'PLAYING' ? (cardId: string) => {
-                    // Validate card before playing - only show loading if valid
-                    const validation = canPlayCard(gameState, myPosition as 0 | 1 | 2 | 3, cardId);
-                    if (validation.valid) {
-                      playCard(cardId);
-                      return true; // Signal that loading should be shown
-                    } else {
-                      console.warn('[GameBoard] Invalid card selection:', validation.reason);
-                      return false; // Don't show loading for invalid selections
-                    }
-                  } : undefined}
+                  onCardClick={isMyTurn && phase === 'PLAYING' ? handleCardClick : undefined}
                   disabled={!isMyTurn || phase !== 'PLAYING'}
                   trumpSuit={gameState.trumpSuit}
                 />
