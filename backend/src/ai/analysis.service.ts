@@ -227,10 +227,9 @@ export async function analyzeBids(
     return [];
   }
 
-  const player = gameState.players[playerPosition];
-
   // Only analyze if it's the player's turn
-  if (gameState.currentPlayerPosition !== playerPosition) {
+  // NOTE: During bidding, the state field is `currentBidder`, not `currentPlayerPosition`.
+  if (gameState.currentBidder !== playerPosition) {
     return [];
   }
 
@@ -262,7 +261,9 @@ export async function analyzeBids(
 
     // Convert to BidAnalysis array
     const analyses: BidAnalysis[] = [];
-    const possibleBids: BidAmount[] = ['PASS', 3, 4, 5];
+    // Include all possible bid amounts; the UI can still filter to "legal" bids.
+    // We include 2 here because it's a valid opening bid.
+    const possibleBids: BidAmount[] = ['PASS', 2, 3, 4, 5];
 
     for (const bidAmount of possibleBids) {
       const stats = bidStats.get(bidAmount);
@@ -346,8 +347,13 @@ export async function analyzeFoldDecision(
 
   const player = gameState.players[playerPosition];
 
-  // Only analyze if it's the player's turn
-  if (gameState.currentPlayerPosition !== playerPosition) {
+  // Only analyze if this player actually needs to decide.
+  // NOTE: Folding decisions are not driven by `currentPlayerPosition` (multiple players can act).
+  if (playerPosition === gameState.winningBidderPosition) {
+    return [];
+  }
+
+  if (player.foldDecision !== 'UNDECIDED') {
     return [];
   }
 
