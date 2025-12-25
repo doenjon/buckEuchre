@@ -314,7 +314,7 @@ export class ISMCTSEngine {
     playerPosition: PlayerPosition
   ): {
     bestAction: Action;
-    statistics: Map<string, { visits: number; avgValue: number; action: Action }>;
+    statistics: Map<string, { visits: number; avgValue: number; action: Action; stdError: number; confidenceInterval: { lower: number; upper: number; width: number } }>;
     totalSimulations: number;
   } {
     // Run normal search
