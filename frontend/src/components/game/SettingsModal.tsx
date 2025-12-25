@@ -27,6 +27,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   // Local state for important settings only
   const [formData, setFormData] = useState({
     showCardOverlay: settingsStore.showCardOverlay,
+    showBidOverlay: settingsStore.showBidOverlay,
+    showFoldOverlay: settingsStore.showFoldOverlay,
+    showSuitOverlay: settingsStore.showSuitOverlay,
     showTooltips: settingsStore.showTooltips,
     autoSortHand: settingsStore.autoSortHand,
     soundEffects: settingsStore.soundEffects,
@@ -44,6 +47,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       const settings = await getUserSettings();
       const newSettings = {
         showCardOverlay: settings.showCardOverlay,
+        showBidOverlay: settings.showBidOverlay,
+        showFoldOverlay: settings.showFoldOverlay,
+        showSuitOverlay: settings.showSuitOverlay,
         showTooltips: settings.showTooltips,
         autoSortHand: settings.autoSortHand,
         soundEffects: settings.soundEffects,
@@ -71,6 +77,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       // Update store with the complete settings from the server
       settingsStore.setSettings({
         showCardOverlay: updatedSettings.showCardOverlay,
+        showBidOverlay: updatedSettings.showBidOverlay,
+        showFoldOverlay: updatedSettings.showFoldOverlay,
+        showSuitOverlay: updatedSettings.showSuitOverlay,
         showTooltips: updatedSettings.showTooltips,
         autoSortHand: updatedSettings.autoSortHand,
         bidSpeed: updatedSettings.bidSpeed,
@@ -141,7 +150,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   Show Card Overlay
                 </Label>
                 <p className="text-sm text-gray-400">
-                  Display trump suit, bid info, and game phase
+                  Display AI analysis on playable cards
                 </p>
               </div>
               <Switch
@@ -149,6 +158,60 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 checked={formData.showCardOverlay}
                 onCheckedChange={(checked) =>
                   setFormData({ ...formData, showCardOverlay: checked })
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5 flex-1">
+                <Label htmlFor="showBidOverlay" className="text-base text-white">
+                  Show Bid Overlay
+                </Label>
+                <p className="text-sm text-gray-400">
+                  Display AI analysis on bid options
+                </p>
+              </div>
+              <Switch
+                id="showBidOverlay"
+                checked={formData.showBidOverlay}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, showBidOverlay: checked })
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5 flex-1">
+                <Label htmlFor="showFoldOverlay" className="text-base text-white">
+                  Show Fold Overlay
+                </Label>
+                <p className="text-sm text-gray-400">
+                  Display AI analysis on fold/stay decisions
+                </p>
+              </div>
+              <Switch
+                id="showFoldOverlay"
+                checked={formData.showFoldOverlay}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, showFoldOverlay: checked })
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5 flex-1">
+                <Label htmlFor="showSuitOverlay" className="text-base text-white">
+                  Show Suit Overlay
+                </Label>
+                <p className="text-sm text-gray-400">
+                  Display AI analysis on trump suit selection
+                </p>
+              </div>
+              <Switch
+                id="showSuitOverlay"
+                checked={formData.showSuitOverlay}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, showSuitOverlay: checked })
                 }
               />
             </div>

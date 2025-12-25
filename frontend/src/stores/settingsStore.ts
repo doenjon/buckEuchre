@@ -8,6 +8,9 @@ import { persist } from 'zustand/middleware';
 
 export interface UserSettings {
   showCardOverlay: boolean;
+  showBidOverlay: boolean;
+  showFoldOverlay: boolean;
+  showSuitOverlay: boolean;
   showTooltips: boolean;
   autoSortHand: boolean;
   bidSpeed: 'slow' | 'normal' | 'fast';
@@ -26,6 +29,9 @@ export type SettingsStore = UserSettings & SettingsActions;
 
 const defaultSettings: UserSettings = {
   showCardOverlay: false,
+  showBidOverlay: false,
+  showFoldOverlay: false,
+  showSuitOverlay: false,
   showTooltips: true,
   autoSortHand: true,
   bidSpeed: 'normal',
@@ -61,6 +67,9 @@ export const useSettingsStore = create<SettingsStore>()(
       name: 'user-settings',
       partialize: (state) => ({
         showCardOverlay: state.showCardOverlay,
+        showBidOverlay: state.showBidOverlay,
+        showFoldOverlay: state.showFoldOverlay,
+        showSuitOverlay: state.showSuitOverlay,
         showTooltips: state.showTooltips,
         autoSortHand: state.autoSortHand,
         bidSpeed: state.bidSpeed,

@@ -25,7 +25,7 @@ import {
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
   const { token } = useAuthStore();
-  const { setGameState, setError, setWaitingInfo, setAIAnalysis, setBidAnalysis, setFoldAnalysis } = useGameStore();
+  const { setGameState, setError, setWaitingInfo, setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis } = useGameStore();
   const { setConnected, setNotification } = useUIStore();
 
   // Initialize socket connection
@@ -204,14 +204,22 @@ export function useSocket() {
             setAIAnalysis(data.cards);
             setBidAnalysis(null);
             setFoldAnalysis(null);
+            setSuitAnalysis(null);
           } else if (data.analysisType === 'bid' && data.bids) {
             setBidAnalysis(data.bids);
             setAIAnalysis(null);
             setFoldAnalysis(null);
+            setSuitAnalysis(null);
           } else if (data.analysisType === 'fold' && data.foldOptions) {
             setFoldAnalysis(data.foldOptions);
             setAIAnalysis(null);
             setBidAnalysis(null);
+            setSuitAnalysis(null);
+          } else if (data.analysisType === 'suit' && data.suits) {
+            setSuitAnalysis(data.suits);
+            setAIAnalysis(null);
+            setBidAnalysis(null);
+            setFoldAnalysis(null);
           }
         }
       },
