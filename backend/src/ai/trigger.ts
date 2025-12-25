@@ -107,11 +107,79 @@ function getAIPlayersNeedingFoldDecision(gameState: GameState): string[] {
 }
 
 /**
+ * Check if analysis should be sent for a player
+ *
+ * This function checks the cooldown and marks analysis as sent if it should run.
+ * This prevents race conditions where multiple analyses are scheduled before any execute.
+ *
+ * @param gameId - ID of the game
+ * @param gameState - Current game state
+ * @param playerPosition - Position of the player
+ * @returns true if analysis should be sent, false if already sent recently
+ */
+function shouldSendAnalysis(
+  gameId: string,
+  gameState: GameState,
+  playerPosition: number
+): boolean {
+  // Only analyze during specific phases
+  if (gameState.phase !== 'PLAYING' && gameState.phase !== 'BIDDING' && gameState.phase !== 'FOLDING_DECISION') {
+    return false;
+  }
+
+  // Check if it's actually this player's turn based on phase
+  const currentPlayerPos = gameState.currentPlayerPosition ?? gameState.currentBidder ?? -1;
+  let isPlayersTurn = false;
+  if (gameState.phase === 'PLAYING') {
+    isPlayersTurn = currentPlayerPos === playerPosition;
+  } else if (gameState.phase === 'BIDDING') {
+    isPlayersTurn = gameState.currentBidder === playerPosition;
+  } else if (gameState.phase === 'FOLDING_DECISION') {
+    // In folding phase, check if this player needs to make a decision
+    const player = gameState.players[playerPosition];
+    isPlayersTurn = player.foldDecision === 'UNDECIDED' && playerPosition !== gameState.winningBidderPosition;
+  }
+
+  if (!isPlayersTurn) {
+    return false;
+  }
+
+  // Create cooldown key based on player position, hand size, and phase
+  // Analysis should only re-run when hand size changes (card played)
+  const player = gameState.players[playerPosition];
+  const handSize = player?.hand?.length || 0;
+  const analysisKey = `${gameId}:${playerPosition}:${handSize}:${gameState.phase}`;
+
+  // Check if we've already sent analysis for this exact situation recently
+  const lastSent = lastAnalysisKey.get(analysisKey);
+  const now = Date.now();
+
+  if (lastSent && (now - lastSent) < ANALYSIS_COOLDOWN_MS) {
+    // Already sent analysis recently for this hand - skip
+    return false;
+  }
+
+  // Mark that we're sending analysis for this key NOW (before it actually runs)
+  // This prevents race conditions where multiple calls check the cooldown before any set it
+  lastAnalysisKey.set(analysisKey, now);
+
+  // Clean up old entries (keep only last 100)
+  if (lastAnalysisKey.size > 100) {
+    const entries = Array.from(lastAnalysisKey.entries());
+    entries.sort((a, b) => b[1] - a[1]); // Sort by timestamp descending
+    lastAnalysisKey.clear();
+    entries.slice(0, 50).forEach(([key, time]) => lastAnalysisKey.set(key, time));
+  }
+
+  return true;
+}
+
+/**
  * Check if AI should act and trigger if needed
- * 
+ *
  * This function is called after every game state update to check
  * if an AI player needs to take an action.
- * 
+ *
  * @param gameId - ID of the game
  * @param gameState - Current game state
  * @param io - Socket.io server for broadcasting
@@ -208,12 +276,20 @@ export async function checkAndTriggerAI(
       // Current player is human, send AI analysis.
       // IMPORTANT: Don't await analysis here — it can be expensive (MCTS simulations) and will
       // block the event loop, causing noticeable lag after actions like PLAY_CARD.
-      console.log(`[AI Trigger] Current player ${currentPlayer.name} is human, scheduling AI analysis`);
-      setTimeout(() => {
-        sendAIAnalysis(gameId, gameState, currentPlayer.position, io).catch(err => {
-          console.error(`[AI Trigger] Error sending AI analysis:`, err);
-        });
-      }, 0);
+      console.log(`[AI Trigger] Current player ${currentPlayer.name} is human, checking if analysis needed`);
+
+      // Check cooldown BEFORE scheduling to prevent race condition
+      // where multiple analyses are scheduled before any execute
+      if (shouldSendAnalysis(gameId, gameState, currentPlayer.position)) {
+        console.log(`[AI Trigger] Scheduling AI analysis for player ${currentPlayer.name}`);
+        setTimeout(() => {
+          sendAIAnalysis(gameId, gameState, currentPlayer.position, io).catch(err => {
+            console.error(`[AI Trigger] Error sending AI analysis:`, err);
+          });
+        }, 0);
+      } else {
+        console.log(`[AI Trigger] Analysis already sent recently for this situation, skipping`);
+      }
       return;
     }
 
@@ -236,6 +312,8 @@ export async function checkAndTriggerAI(
  * Analyzes the player's options (cards, bids, or fold decision) and sends statistics
  * to help them make decisions.
  *
+ * NOTE: Cooldown check is done in shouldSendAnalysis() before this is called
+ *
  * @param gameId - ID of the game
  * @param gameState - Current game state
  * @param playerPosition - Position of the human player
@@ -248,43 +326,6 @@ async function sendAIAnalysis(
   io: Server
 ): Promise<void> {
   try {
-    // Only analyze during specific phases
-    if (gameState.phase !== 'PLAYING' && gameState.phase !== 'BIDDING' && gameState.phase !== 'FOLDING_DECISION') {
-      return;
-    }
-
-    // Check if it's actually this player's turn based on phase
-    const currentPlayerPos = gameState.currentPlayerPosition ?? gameState.currentBidder ?? -1;
-    let isPlayersTurn = false;
-    if (gameState.phase === 'PLAYING') {
-      isPlayersTurn = currentPlayerPos === playerPosition;
-    } else if (gameState.phase === 'BIDDING') {
-      isPlayersTurn = gameState.currentBidder === playerPosition;
-    } else if (gameState.phase === 'FOLDING_DECISION') {
-      // In folding phase, check if this player needs to make a decision
-      const player = gameState.players[playerPosition];
-      isPlayersTurn = player.foldDecision === 'UNDECIDED' && playerPosition !== gameState.winningBidderPosition;
-    }
-
-    if (!isPlayersTurn) {
-      return;
-    }
-
-    // Create cooldown key based on player position, hand size, and phase
-    // Analysis should only re-run when hand size changes (card played)
-    const player = gameState.players[playerPosition];
-    const handSize = player?.hand?.length || 0;
-    const analysisKey = `${gameId}:${playerPosition}:${handSize}:${gameState.phase}`;
-
-    // Check if we've already sent analysis for this exact situation recently
-    const lastSent = lastAnalysisKey.get(analysisKey);
-    const now = Date.now();
-
-    if (lastSent && (now - lastSent) < ANALYSIS_COOLDOWN_MS) {
-      // Already sent analysis recently for this hand - skip
-      return;
-    }
-
     console.log(`[AI Analysis] Analyzing for player at position ${playerPosition} in phase ${gameState.phase}`);
 
     // Run analysis with high quality (5000 simulations)
@@ -355,17 +396,6 @@ async function sendAIAnalysis(
       console.log(`[AI Analysis] Sent fold analysis for ${analyses.length} options to game ${gameId}`);
     } else {
       return;
-    }
-
-    // Mark that we've sent analysis for this key
-    lastAnalysisKey.set(analysisKey, now);
-
-    // Clean up old entries (keep only last 100)
-    if (lastAnalysisKey.size > 100) {
-      const entries = Array.from(lastAnalysisKey.entries());
-      entries.sort((a, b) => b[1] - a[1]); // Sort by timestamp descending
-      lastAnalysisKey.clear();
-      entries.slice(0, 50).forEach(([key, time]) => lastAnalysisKey.set(key, time));
     }
 
     // Broadcast to the game room
