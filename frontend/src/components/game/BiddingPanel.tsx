@@ -63,7 +63,7 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
         {availableBids.map(bid => {
           const analysis = getBidAnalysis(bid as 3 | 4 | 5);
           return (
-            <div key={bid} className="relative min-w-[72px] md:min-w-[84px] flex-1 sm:flex-none">
+            <div key={bid} className="min-w-[72px] md:min-w-[84px] flex-1 sm:flex-none">
               <Button
                 onClick={() => placeBid(bid as 2 | 3 | 4 | 5)}
                 variant="default"
@@ -74,25 +74,21 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
                 Bid {bid}
               </Button>
               {analysis && !isDisabled && showCardOverlay && (
-                <div className="absolute -top-16 left-0 right-0 bg-gradient-to-b from-black/95 to-black/30 rounded-lg p-2 pointer-events-none shadow-lg">
-                  <div className="flex flex-col gap-1 text-[10px] font-bold">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1">
-                        {analysis.rank === 1 && (
-                          <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best bid">⭐</span>
-                        )}
-                        <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                          {(analysis.winProbability * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                      <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                        {analysis.expectedScore > 0 ? '+' : ''}{analysis.expectedScore.toFixed(1)} pts
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[9px] opacity-90">
-                      <span className="text-green-300">{analysis.visits} visits</span>
-                      <span className="text-green-300">{(analysis.confidence * 100).toFixed(0)}% conf</span>
-                    </div>
+                <div className="mt-1 rounded-md border border-white/10 bg-black/40 px-2 py-1 pointer-events-none">
+                  <div className="flex items-center justify-between gap-2 text-[10px] font-semibold leading-snug tabular-nums">
+                    <span className="flex items-center gap-1 text-emerald-200">
+                      {analysis.rank === 1 && (
+                        <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best bid">⭐</span>
+                      )}
+                      <span>{(analysis.winProbability * 100).toFixed(0)}%</span>
+                    </span>
+                    <span className="text-emerald-200">
+                      {analysis.expectedScore > 0 ? '+' : ''}{analysis.expectedScore.toFixed(1)} pts
+                    </span>
+                  </div>
+                  <div className="mt-0.5 flex items-center justify-between gap-2 text-[9px] leading-snug text-emerald-200/70 tabular-nums">
+                    <span>{analysis.visits}v</span>
+                    <span>{(analysis.confidence * 100).toFixed(0)}% conf</span>
                   </div>
                 </div>
               )}
@@ -100,7 +96,7 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
           );
         })}
 
-        <div className="relative min-w-[72px] md:min-w-[84px] flex-1 sm:flex-none">
+        <div className="min-w-[72px] md:min-w-[84px] flex-1 sm:flex-none">
           <Button
             onClick={() => placeBid('PASS')}
             variant="outline"
@@ -113,25 +109,21 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
           {(() => {
             const passAnalysis = getBidAnalysis('PASS');
             return passAnalysis && !isDisabled && showCardOverlay ? (
-              <div className="absolute -top-16 left-0 right-0 bg-gradient-to-b from-black/95 to-black/30 rounded-lg p-2 pointer-events-none shadow-lg">
-                <div className="flex flex-col gap-1 text-[10px] font-bold">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      {passAnalysis.rank === 1 && (
-                        <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best bid">⭐</span>
-                      )}
-                      <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                        {(passAnalysis.winProbability * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                    <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                      {passAnalysis.expectedScore > 0 ? '+' : ''}{passAnalysis.expectedScore.toFixed(1)} pts
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-[9px] opacity-90">
-                    <span className="text-green-300">{passAnalysis.visits} visits</span>
-                    <span className="text-green-300">{(passAnalysis.confidence * 100).toFixed(0)}% conf</span>
-                  </div>
+              <div className="mt-1 rounded-md border border-white/10 bg-black/40 px-2 py-1 pointer-events-none">
+                <div className="flex items-center justify-between gap-2 text-[10px] font-semibold leading-snug tabular-nums">
+                  <span className="flex items-center gap-1 text-emerald-200">
+                    {passAnalysis.rank === 1 && (
+                      <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best bid">⭐</span>
+                    )}
+                    <span>{(passAnalysis.winProbability * 100).toFixed(0)}%</span>
+                  </span>
+                  <span className="text-emerald-200">
+                    {passAnalysis.expectedScore > 0 ? '+' : ''}{passAnalysis.expectedScore.toFixed(1)} pts
+                  </span>
+                </div>
+                <div className="mt-0.5 flex items-center justify-between gap-2 text-[9px] leading-snug text-emerald-200/70 tabular-nums">
+                  <span>{passAnalysis.visits}v</span>
+                  <span>{(passAnalysis.confidence * 100).toFixed(0)}% conf</span>
                 </div>
               </div>
             ) : null;

@@ -196,9 +196,18 @@ export function useSocket() {
 
       onAIAnalysisUpdate: (data) => {
         console.log('AI Analysis update:', data);
-        // Only store analysis if it's for the current player
+        // Only store analysis if it's for the current player.
+        // Note: analysis events are broadcast to the whole game room, so every client receives them.
+        // We gate on *our* seat position. If myPosition hasn't been set yet, derive it from auth+gameState.
         const gameStore = useGameStore.getState();
-        if (data.playerPosition === gameStore.myPosition) {
+        const authState = useAuthStore.getState();
+        const derivedMyPosition =
+          gameStore.myPosition ??
+          (gameStore.gameState && authState.userId
+            ? (gameStore.gameState.players.find((p) => p.id === authState.userId)?.position ?? null)
+            : null);
+
+        if (derivedMyPosition !== null && data.playerPosition === derivedMyPosition) {
           // Handle different analysis types
           if (data.analysisType === 'card' && data.cards) {
             setAIAnalysis(data.cards);
