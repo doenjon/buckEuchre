@@ -10,7 +10,7 @@ import { Server } from 'socket.io';
 import { GameState, AIAnalysisEvent } from '@buck-euchre/shared';
 import { isAIPlayerByName, isAIPlayerAsync } from '../services/ai-player.service';
 import { executeAITurn } from './executor';
-import { analyzeHand, getBestCard, analyzeBids, getBestBid, analyzeFoldDecision, getBestFoldDecision } from './analysis.service';
+import { analyzeHand, getBestCard, analyzeBids, getBestBid, analyzeFoldDecision, getBestFoldDecision, analyzeTrumpSelection, getBestSuit } from './analysis.service';
 
 /**
  * Track last analysis sent to prevent duplicate sends
@@ -154,7 +154,7 @@ function shouldSendAnalysis(
   playerPosition: number
 ): boolean {
   // Only analyze during specific phases
-  if (gameState.phase !== 'PLAYING' && gameState.phase !== 'BIDDING' && gameState.phase !== 'FOLDING_DECISION') {
+  if (gameState.phase !== 'PLAYING' && gameState.phase !== 'BIDDING' && gameState.phase !== 'FOLDING_DECISION' && gameState.phase !== 'DECLARING_TRUMP') {
     return false;
   }
 
@@ -169,6 +169,9 @@ function shouldSendAnalysis(
     // In folding phase, check if this player needs to make a decision
     const player = gameState.players[playerPosition];
     isPlayersTurn = player.foldDecision === 'UNDECIDED' && playerPosition !== gameState.winningBidderPosition;
+  } else if (gameState.phase === 'DECLARING_TRUMP') {
+    // In trump selection phase, only the winning bidder selects trump
+    isPlayersTurn = gameState.winningBidderPosition === playerPosition;
   }
 
   if (!isPlayersTurn) {
@@ -422,6 +425,25 @@ async function sendAIAnalysis(
       };
 
       console.log(`[AI Analysis] Sent fold analysis for ${analyses.length} options to game ${gameId}`);
+    } else if (gameState.phase === 'DECLARING_TRUMP') {
+      const analyses = await analyzeTrumpSelection(gameState, playerPosition as any, analysisConfig);
+
+      if (analyses.length === 0) {
+        console.log(`[AI Analysis] No trump suit analysis available for player ${playerPosition}`);
+        return;
+      }
+
+      const bestSuit = getBestSuit(analyses);
+
+      analysisEvent = {
+        playerPosition: playerPosition as any,
+        analysisType: 'suit',
+        suits: analyses,
+        totalSimulations: analysisConfig.simulations,
+        bestSuit: bestSuit ?? undefined,
+      };
+
+      console.log(`[AI Analysis] Sent suit analysis for ${analyses.length} suits to game ${gameId}`);
     } else {
       return;
     }
