@@ -46,6 +46,9 @@ export class MCTSNode {
   /** Sum of squared simulation values (for variance calculation) */
   totalValueSquared: number = 0;
 
+  /** Count of simulations that resulted in getting bucked (+5 score penalty) */
+  buckedCount: number = 0;
+
   /** Parent node (null for root) */
   parent: MCTSNode | null;
 
@@ -115,6 +118,16 @@ export class MCTSNode {
   getStandardError(): number {
     if (this.visits === 0) return 0;
     return this.getStdDev() / Math.sqrt(this.visits);
+  }
+
+  /**
+   * Get probability of getting bucked (receiving +5 score penalty)
+   *
+   * @returns Probability (0-1) of getting bucked based on simulations
+   */
+  getBuckProbability(): number {
+    if (this.visits === 0) return 0;
+    return this.buckedCount / this.visits;
   }
 
   /**
@@ -240,14 +253,19 @@ export class MCTSNode {
    * Backpropagate simulation result up the tree
    *
    * @param value - Simulation result value
+   * @param wasBucked - Whether this simulation resulted in getting bucked
    */
-  backpropagate(value: number): void {
+  backpropagate(value: number, wasBucked: boolean = false): void {
     this.visits++;
     this.totalValue += value;
     this.totalValueSquared += value * value;
 
+    if (wasBucked) {
+      this.buckedCount++;
+    }
+
     if (this.parent) {
-      this.parent.backpropagate(value);
+      this.parent.backpropagate(value, wasBucked);
     }
   }
 
@@ -310,6 +328,7 @@ export class MCTSNode {
       action: Action;
       stdError: number;
       confidenceInterval: { lower: number; upper: number; width: number };
+      buckProbability: number;
     }
   > {
     const stats = new Map();
@@ -322,6 +341,7 @@ export class MCTSNode {
           action: child.action,
           stdError: child.getStandardError(),
           confidenceInterval: child.getConfidenceInterval(),
+          buckProbability: child.getBuckProbability(),
         });
       }
     }
