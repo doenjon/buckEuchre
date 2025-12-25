@@ -6,6 +6,7 @@
 import { Button } from '@/components/ui/button';
 import { useGame } from '@/hooks/useGame';
 import { useGameStore } from '@/stores/gameStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 
 interface BiddingPanelProps {
   currentBid: number | null;
@@ -16,6 +17,7 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
   const { placeBid } = useGame();
   const isGameStartNotification = useGameStore((state) => state.isGameStartNotification);
   const getBidAnalysis = useGameStore((state) => state.getBidAnalysis);
+  const showCardOverlay = useSettingsStore((state) => state.showCardOverlay);
 
   // Disable bidding if "Let's play!" notification is showing
   const isDisabled = isMyTurn && isGameStartNotification;
@@ -71,7 +73,7 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
               >
                 Bid {bid}
               </Button>
-              {analysis && !isDisabled && (
+              {analysis && !isDisabled && showCardOverlay && (
                 <div className="absolute -top-16 left-0 right-0 bg-gradient-to-b from-black/95 to-black/30 rounded-lg p-2 pointer-events-none shadow-lg">
                   <div className="flex flex-col gap-1 text-[10px] font-bold">
                     <div className="flex items-center justify-between">
@@ -110,7 +112,7 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
           </Button>
           {(() => {
             const passAnalysis = getBidAnalysis('PASS');
-            return passAnalysis && !isDisabled ? (
+            return passAnalysis && !isDisabled && showCardOverlay ? (
               <div className="absolute -top-16 left-0 right-0 bg-gradient-to-b from-black/95 to-black/30 rounded-lg p-2 pointer-events-none shadow-lg">
                 <div className="flex flex-col gap-1 text-[10px] font-bold">
                   <div className="flex items-center justify-between">

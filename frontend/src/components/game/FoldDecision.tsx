@@ -6,6 +6,7 @@
 import { Button } from '@/components/ui/button';
 import { useGame } from '@/hooks/useGame';
 import { useGameStore } from '@/stores/gameStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import type { GameState } from '@buck-euchre/shared';
 
 interface FoldDecisionProps {
@@ -17,6 +18,7 @@ interface FoldDecisionProps {
 export function FoldDecision({ gameState, myPosition, isMyTurn }: FoldDecisionProps) {
   const { makeFoldDecision } = useGame();
   const { getFoldAnalysis } = useGameStore();
+  const showCardOverlay = useSettingsStore((state) => state.showCardOverlay);
 
   if (!isMyTurn) {
     return (
@@ -65,7 +67,7 @@ export function FoldDecision({ gameState, myPosition, isMyTurn }: FoldDecisionPr
           >
             Stay in
           </Button>
-          {stayAnalysis && (
+          {stayAnalysis && showCardOverlay && (
             <div className="absolute -top-16 left-0 right-0 bg-gradient-to-b from-black/95 to-black/30 rounded-lg p-2 pointer-events-none shadow-lg">
               <div className="flex flex-col gap-1 text-[10px] font-bold">
                 <div className="flex items-center justify-between">
@@ -100,7 +102,7 @@ export function FoldDecision({ gameState, myPosition, isMyTurn }: FoldDecisionPr
           >
             Fold
           </Button>
-          {foldAnalysis && canFold && (
+          {foldAnalysis && canFold && showCardOverlay && (
             <div className="absolute -top-16 left-0 right-0 bg-gradient-to-b from-black/95 to-black/30 rounded-lg p-2 pointer-events-none shadow-lg">
               <div className="flex flex-col gap-1 text-[10px] font-bold">
                 <div className="flex items-center justify-between">
