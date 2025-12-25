@@ -160,6 +160,13 @@ export async function analyzeHand(
       const varianceAvgValue = (stats.stdError * stats.stdError) * Math.max(1, stats.visits);
       const varianceScore = varianceAvgValue * 100;
 
+      // Debug logging for confidence intervals
+      if (mergedConfig.verbose) {
+        console.log(`[Analysis] Card ${card.id}: visits=${stats.visits}, avgValue=${stats.avgValue.toFixed(3)}, ` +
+          `stdError=${stats.stdError.toFixed(4)}, CI=[${stats.confidenceInterval.lower.toFixed(3)}, ${stats.confidenceInterval.upper.toFixed(3)}], ` +
+          `ciWidth=${ciWidth.toFixed(3)}, expectedScore=${expectedScoreChange.toFixed(2)}`);
+      }
+
       analyses.push({
         cardId: card.id,
         winProbability,

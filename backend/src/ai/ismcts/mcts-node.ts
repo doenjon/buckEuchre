@@ -92,12 +92,26 @@ export class MCTSNode {
    * Calculate variance of simulation values
    *
    * Variance = E[X²] - E[X]²
+   *
+   * For ISMCTS with discrete outcomes from rollouts, the empirical variance
+   * may be very low if determinizations lead to similar outcomes. We add
+   * a minimum variance floor based on the number of visits to ensure
+   * confidence intervals reflect epistemic uncertainty (not just aleatoric).
    */
   getVariance(): number {
     if (this.visits === 0) return 0;
     const mean = this.averageValue;
     const meanOfSquares = this.totalValueSquared / this.visits;
-    return meanOfSquares - mean * mean;
+    const empiricalVariance = meanOfSquares - mean * mean;
+
+    // Add minimum variance floor to account for epistemic uncertainty
+    // (model uncertainty) even when aleatoric uncertainty (outcome variance) is low.
+    // For avgValue in [0,1], we use a floor of (0.05)^2 = 0.0025
+    // This ensures SE >= 0.05/sqrt(n), giving meaningful confidence intervals
+    // even when rollout outcomes are very consistent.
+    const minVariance = 0.0025; // Equivalent to ±0.5 on the score scale
+
+    return Math.max(empiricalVariance, minVariance);
   }
 
   /**

@@ -531,18 +531,15 @@ export function PlayerHand({
                       className={`drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] ${
                         analysis.expectedScore < 0 ? 'text-green-300' : analysis.expectedScore > 0 ? 'text-red-300' : 'text-yellow-300'
                       }`}
-                      title={`Expected score change: ${analysis.expectedScore.toFixed(1)} (negative is good)`}
+                      title={`Expected score change: ${analysis.expectedScore.toFixed(1)} ± ${analysis.confidenceInterval ? (analysis.confidenceInterval.width / 2).toFixed(1) : '?'} (95% CI: [${analysis.confidenceInterval?.lower.toFixed(1)}, ${analysis.confidenceInterval?.upper.toFixed(1)}])`}
                     >
                       {analysis.expectedScore > 0 ? '+' : ''}{analysis.expectedScore.toFixed(1)}
+                      {analysis.confidenceInterval && (
+                        <span className="text-blue-300">
+                          {' '}±{(analysis.confidenceInterval.width / 2).toFixed(1)}
+                        </span>
+                      )}
                     </span>
-                    {analysis.confidenceInterval && (
-                      <span
-                        className="text-blue-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
-                        title={`MCTS uncertainty (95% CI): [${analysis.confidenceInterval.lower.toFixed(1)}, ${analysis.confidenceInterval.upper.toFixed(1)}]`}
-                      >
-                        ±{(analysis.confidenceInterval.width / 2).toFixed(1)}
-                      </span>
-                    )}
                     {typeof analysis.variance === 'number' && (
                       <span
                         className="text-indigo-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
