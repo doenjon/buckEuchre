@@ -3,7 +3,7 @@
  * @description Main game board component
  */
 
-import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, RotateCcw, LogOut, Trophy, X, Settings } from 'lucide-react';
 import { Scoreboard } from './Scoreboard';
@@ -22,7 +22,7 @@ import { createRematchGame } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { GAME_TIMEOUTS } from '@buck-euchre/shared';
 import type { GameState } from '@buck-euchre/shared';
-import { canPlayCard } from '@/utils/gameValidation';
+import { canPlayCard, getPlayableCards } from '@/utils/gameValidation';
 
 interface GameBoardProps {
   gameState: GameState;
@@ -53,6 +53,12 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       return false; // Don't show loading for invalid selections
     }
   }, [gameState, myPosition, playCard]);
+
+  // Calculate playable cards to hide overlay on illegal moves
+  const playableCardIds = useMemo(() => {
+    const playableCards = getPlayableCards(gameState, myPosition as 0 | 1 | 2 | 3);
+    return new Set(playableCards.map(card => card.id));
+  }, [gameState, myPosition]);
 
   // Setup game notifications
   useGameNotifications(gameState, myPosition);
@@ -675,6 +681,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                   onCardClick={isMyTurn && phase === 'PLAYING' ? handleCardClick : undefined}
                   disabled={!isMyTurn || phase !== 'PLAYING'}
                   trumpSuit={gameState.trumpSuit}
+                  playableCardIds={playableCardIds}
                 />
               </>
             ) : (
