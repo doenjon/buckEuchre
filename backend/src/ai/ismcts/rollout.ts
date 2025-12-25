@@ -390,18 +390,30 @@ export function evaluateTerminalState(scoreChange: number): number {
 }
 
 /**
+ * Result of a simulation
+ */
+export interface SimulationResult {
+  /** Normalized value (0-1, higher is better) */
+  value: number;
+  /** Whether this simulation resulted in getting bucked (+5 score penalty) */
+  wasBucked: boolean;
+}
+
+/**
  * Perform a complete simulation from current state
  *
  * @param state - Current game state
  * @param playerPosition - Player to evaluate from
  * @param character - Optional character traits for varied play styles
- * @returns Normalized value (0-1, higher is better)
+ * @returns Simulation result with normalized value and buck status
  */
 export function simulate(
   state: GameState,
   playerPosition: PlayerPosition,
   character?: AICharacter
-): number {
+): SimulationResult {
   const scoreChange = rollout(state, playerPosition, character);
-  return evaluateTerminalState(scoreChange);
+  const wasBucked = scoreChange === 5; // +5 score change means bucked
+  const value = evaluateTerminalState(scoreChange);
+  return { value, wasBucked };
 }

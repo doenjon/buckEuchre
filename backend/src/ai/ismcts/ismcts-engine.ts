@@ -9,7 +9,7 @@
 import { GameState, Card, Suit, BidAmount, PlayerPosition } from '@buck-euchre/shared';
 import { MCTSNode, Action, serializeAction } from './mcts-node';
 import { determinize } from './determinize';
-import { simulate } from './rollout';
+import { simulate, SimulationResult } from './rollout';
 import { applyBid, applyTrumpDeclaration, applyFoldDecision, applyCardPlay } from '../../game/state';
 import { canPlayCard } from '../../game/validation';
 
@@ -244,14 +244,19 @@ export class ISMCTSEngine {
 
     // SIMULATION: Play out rest of hand using rollout
     let value: number;
+    let wasBucked: boolean;
     if (this.isTerminal(state)) {
-      value = this.evaluateState(state, playerPosition);
+      const result = this.evaluateState(state, playerPosition);
+      value = result.value;
+      wasBucked = result.wasBucked;
     } else {
-      value = simulate(state, playerPosition, this.config.character);
+      const result = simulate(state, playerPosition, this.config.character);
+      value = result.value;
+      wasBucked = result.wasBucked;
     }
 
     // BACKPROPAGATION: Update statistics up to root
-    node.backpropagate(value);
+    node.backpropagate(value, wasBucked);
   }
 
   /**
@@ -298,7 +303,7 @@ export class ISMCTSEngine {
    * before running a rollout. Since we only simulate one hand at a time,
    * we need to evaluate based on the score change for that hand.
    */
-  private evaluateState(state: GameState, playerPosition: PlayerPosition): number {
+  private evaluateState(state: GameState, playerPosition: PlayerPosition): SimulationResult {
     // If we're at ROUND_OVER, we need to finish the round to get final scores
     // Note: The state passed in might not have scores calculated yet
     // For now, just use the simulate() function which handles this correctly
@@ -314,7 +319,7 @@ export class ISMCTSEngine {
     playerPosition: PlayerPosition
   ): {
     bestAction: Action;
-    statistics: Map<string, { visits: number; avgValue: number; action: Action; stdError: number; confidenceInterval: { lower: number; upper: number; width: number } }>;
+    statistics: Map<string, { visits: number; avgValue: number; action: Action; stdError: number; confidenceInterval: { lower: number; upper: number; width: number }; buckProbability: number }>;
     totalSimulations: number;
   } {
     // Run normal search
