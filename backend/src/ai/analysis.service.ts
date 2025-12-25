@@ -262,7 +262,7 @@ export async function analyzeBids(
 
     // Convert to BidAnalysis array
     const analyses: BidAnalysis[] = [];
-    const possibleBids: BidAmount[] = ['PASS', 3, 4, 5];
+    const possibleBids: BidAmount[] = ['PASS', 2, 3, 4, 5];
 
     for (const bidAmount of possibleBids) {
       const stats = bidStats.get(bidAmount);
