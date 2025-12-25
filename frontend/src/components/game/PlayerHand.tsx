@@ -535,6 +535,14 @@ export function PlayerHand({
                     >
                       {analysis.expectedScore > 0 ? '+' : ''}{analysis.expectedScore.toFixed(1)}
                     </span>
+                    {analysis.confidenceInterval && (
+                      <span
+                        className="text-blue-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+                        title={`95% Confidence Interval: [${analysis.confidenceInterval.lower.toFixed(1)}, ${analysis.confidenceInterval.upper.toFixed(1)}]`}
+                      >
+                        ±{(analysis.confidenceInterval.width / 2).toFixed(1)}
+                      </span>
+                    )}
                     <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="MCTS visits (exploration count)">
                       {analysis.visits}
                     </span>
