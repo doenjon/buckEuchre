@@ -45,8 +45,8 @@ COPY frontend/index.html ./
 COPY frontend/public ./public
 COPY frontend/src ./src
 
-# Build for production
-RUN npm run build
+# Build for production (skip type checking for faster builds)
+RUN npm run build:prod
 
 # ------------------------------------------------------------------------------
 # Stage 3: Production (nginx)
