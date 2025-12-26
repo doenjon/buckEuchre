@@ -284,7 +284,7 @@ export async function checkAndTriggerAI(
             console.error(`[AI Trigger] Error:`, err)
           );
         } else {
-          // Human needs analysis - send it
+          // Human needs analysis - send it (FOLDING_DECISION phase analysis runs on server)
           console.log(`[AI Trigger] Sending fold analysis for human player ${player.name} at position ${pos}`);
           sendAIAnalysis(gameId, pos, io).catch(err =>
             console.error(`[AI Trigger] Analysis error:`, err)
@@ -339,11 +339,17 @@ export async function checkAndTriggerAI(
           console.error(`[AI Trigger] Error stack:`, err.stack);
         });
     } else {
-      // Human needs analysis - send it
-      console.log(`[AI Trigger] 👤 Human player - sending analysis for ${currentPlayer.name} at position ${currentPlayer.position}`);
-      sendAIAnalysis(gameId, currentPlayer.position, io).catch(err =>
-        console.error(`[AI Trigger] ❌ Analysis error:`, err)
-      );
+      // Human player - only send server analysis for non-PLAYING phases
+      // PLAYING phase (hand analysis) should run locally on the client
+      if (gameState.phase === 'PLAYING') {
+        console.log(`[AI Trigger] 👤 Human player in PLAYING phase - skipping server analysis (should run locally)`);
+      } else {
+        // For BIDDING, FOLDING_DECISION, DECLARING_TRUMP phases, send server analysis
+        console.log(`[AI Trigger] 👤 Human player - sending server analysis for ${currentPlayer.name} at position ${currentPlayer.position} in phase ${gameState.phase}`);
+        sendAIAnalysis(gameId, currentPlayer.position, io).catch(err =>
+          console.error(`[AI Trigger] ❌ Analysis error:`, err)
+        );
+      }
     }
   } catch (error: any) {
     console.error(`[AI Trigger] ❌ FATAL ERROR in checkAndTriggerAI:`, error);
