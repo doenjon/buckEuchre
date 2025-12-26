@@ -11,7 +11,7 @@ import { GameState, AIAnalysisEvent } from '@buck-euchre/shared';
 import { isAIPlayerByName, isAIPlayerAsync } from '../services/ai-player.service';
 import { executeAITurn } from './executor';
 import { analyzeHand, getBestCard, analyzeBids, getBestBid, analyzeFoldDecision, getBestFoldDecision, analyzeTrumpSelection, getBestSuit } from './analysis.service';
-import { getUserSettings } from '../services/settings.service';
+import { getActiveGameState } from '../services/state.service';
 
 /**
  * Track last analysis sent to prevent duplicate sends
@@ -21,47 +21,6 @@ import { getUserSettings } from '../services/settings.service';
  * player is thinking don't repeatedly trigger expensive MCTS.
  */
 const lastAnalysisKey = new Map<string, number>();
-
-/**
- * Cache `showCardOverlay` per userId so we don't hit the DB on every state update.
- * This directly controls whether we run *human* analysis (advisory overlays).
- *
- * Bot AI decisions are NOT gated by this flag.
- */
-const overlayEnabledCache = new Map<string, { value: boolean; ts: number }>();
-const OVERLAY_CACHE_TTL_MS = 15_000;
-
-async function isOverlayEnabledForUser(userId: string): Promise<boolean> {
-  if (!userId) return false;
-  const now = Date.now();
-  const cached = overlayEnabledCache.get(userId);
-  if (cached && now - cached.ts < OVERLAY_CACHE_TTL_MS) {
-    return cached.value;
-  }
-
-  try {
-    const settings = await getUserSettings(userId);
-    const value = settings.showCardOverlay === true;
-    overlayEnabledCache.set(userId, { value, ts: now });
-
-    // Prevent unbounded growth
-    if (overlayEnabledCache.size > 500) {
-      const entries = Array.from(overlayEnabledCache.entries());
-      entries.sort((a, b) => b[1].ts - a[1].ts);
-      overlayEnabledCache.clear();
-      entries.slice(0, 250).forEach(([k, v]) => overlayEnabledCache.set(k, v));
-    }
-
-    return value;
-  } catch (err) {
-    console.warn('[AI Trigger] Failed to load user settings for overlay gate; defaulting showCardOverlay=false', {
-      userId,
-      error: (err as any)?.message || err,
-    });
-    overlayEnabledCache.set(userId, { value: false, ts: now });
-    return false;
-  }
-}
 
 function getAnalysisSituationKey(gameId: string, gameState: GameState, playerPosition: number): string {
   switch (gameState.phase) {
@@ -82,11 +41,10 @@ function getAnalysisSituationKey(gameId: string, gameState: GameState, playerPos
     case 'FOLDING_DECISION': {
       const round = gameState.round;
       const winningBidder = gameState.winningBidderPosition ?? -1;
-      const player = gameState.players[playerPosition];
-      // Only include THIS player's decision state in the key, not all players
-      // This ensures the key is stable until THIS player makes a decision
-      const thisPlayerDecision = player?.foldDecision?.[0] ?? 'U';
-      return `${gameId}:FOLDING:p${playerPosition}:r${round}:wb${winningBidder}:d${thisPlayerDecision}`;
+      // Compact signature of fold decisions + folded flags to change key when decisions update
+      const decisionsSig = gameState.players.map(p => p.foldDecision[0]).join('');
+      const foldedSig = gameState.players.map(p => (p.folded ? '1' : '0')).join('');
+      return `${gameId}:FOLDING:p${playerPosition}:r${round}:wb${winningBidder}:d${decisionsSig}:f${foldedSig}`;
     }
     default:
       return `${gameId}:${gameState.phase}:p${playerPosition}:v${gameState.version}`;
@@ -181,42 +139,6 @@ function getAIPlayersNeedingFoldDecision(gameState: GameState): string[] {
 }
 
 /**
- * Returns true only if the player is at a real decision point for the current phase.
- * This prevents analysis from running during transitional states (e.g., right after Pass before
- * FOLDING_DECISION actually begins).
- */
-function isDecisionPoint(gameState: GameState, playerPosition: number): boolean {
-  switch (gameState.phase) {
-    case 'BIDDING': {
-      return gameState.currentBidder === playerPosition;
-    }
-    case 'DECLARING_TRUMP': {
-      // Only the winning bidder declares trump
-      return gameState.winningBidderPosition === playerPosition && gameState.highestBid !== null;
-    }
-    case 'FOLDING_DECISION': {
-      // Only non-bidders who haven't decided yet; ensure trump is chosen and bidder exists
-      if (gameState.winningBidderPosition === null || !gameState.trumpSuit) {
-        return false;
-      }
-      const player = gameState.players[playerPosition];
-      if (!player) return false;
-      return playerPosition !== gameState.winningBidderPosition && player.foldDecision === 'UNDECIDED';
-    }
-    case 'PLAYING': {
-      // Current player, not folded, has cards to play
-      if (gameState.currentPlayerPosition !== playerPosition) return false;
-      const player = gameState.players[playerPosition];
-      if (!player) return false;
-      if (player.folded) return false;
-      return Array.isArray(player.hand) && player.hand.length > 0;
-    }
-    default:
-      return false;
-  }
-}
-
-/**
  * Check if analysis should be sent for a player
  *
  * This function checks the cooldown and marks analysis as sent if it should run.
@@ -227,25 +149,33 @@ function isDecisionPoint(gameState: GameState, playerPosition: number): boolean 
  * @param playerPosition - Position of the player
  * @returns true if analysis should be sent, false if already sent recently
  */
-const ANALYSIS_RESEND_TTL_MS = 10_000; // allow resend after 10s (helps reconnects)
-
 function shouldSendAnalysis(
   gameId: string,
   gameState: GameState,
   playerPosition: number
 ): boolean {
   // Only analyze during specific phases
-  if (
-    gameState.phase !== 'PLAYING' &&
-    gameState.phase !== 'BIDDING' &&
-    gameState.phase !== 'FOLDING_DECISION' &&
-    gameState.phase !== 'DECLARING_TRUMP'
-  ) {
+  if (gameState.phase !== 'PLAYING' && gameState.phase !== 'BIDDING' && gameState.phase !== 'FOLDING_DECISION' && gameState.phase !== 'DECLARING_TRUMP') {
     return false;
   }
 
-  // Strict decision-point guard to avoid running analysis during transitions
-  if (!isDecisionPoint(gameState, playerPosition)) {
+  // Check if it's actually this player's turn based on phase
+  const currentPlayerPos = gameState.currentPlayerPosition ?? gameState.currentBidder ?? -1;
+  let isPlayersTurn = false;
+  if (gameState.phase === 'PLAYING') {
+    isPlayersTurn = currentPlayerPos === playerPosition;
+  } else if (gameState.phase === 'BIDDING') {
+    isPlayersTurn = gameState.currentBidder === playerPosition;
+  } else if (gameState.phase === 'FOLDING_DECISION') {
+    // In folding phase, check if this player needs to make a decision
+    const player = gameState.players[playerPosition];
+    isPlayersTurn = player.foldDecision === 'UNDECIDED' && playerPosition !== gameState.winningBidderPosition;
+  } else if (gameState.phase === 'DECLARING_TRUMP') {
+    // In trump selection phase, only the winning bidder selects trump
+    isPlayersTurn = gameState.winningBidderPosition === playerPosition;
+  }
+
+  if (!isPlayersTurn) {
     return false;
   }
 
@@ -257,10 +187,8 @@ function shouldSendAnalysis(
   const now = Date.now();
 
   if (lastSent) {
-    // If we sent very recently, skip; otherwise allow resend for clients that reconnected
-    if ((now - lastSent) < ANALYSIS_RESEND_TTL_MS) {
-      return false;
-    }
+    // Already sent analysis for this decision point - skip
+    return false;
   }
 
   // Mark that we're sending analysis for this key NOW (before it actually runs)
@@ -285,6 +213,7 @@ function shouldSendAnalysis(
  * if an AI player needs to take an action.
  *
  * IMPORTANT: Always fetches fresh state from memory to avoid stale state issues.
+ * This prevents race conditions where passed state is outdated (e.g., after async delays).
  * The gameState parameter is kept for backwards compatibility but is ignored.
  *
  * @param gameId - ID of the game
@@ -298,7 +227,7 @@ export async function checkAndTriggerAI(
 ): Promise<void> {
   try {
     // Always use fresh state from memory to avoid stale state issues
-    // This prevents race conditions where passed state is outdated
+    // This prevents race conditions where passed state is outdated (e.g., after async delays)
     const gameState = getActiveGameState(gameId);
     if (!gameState) {
       console.log(`[AI Trigger] Game ${gameId} not found in memory, skipping trigger`);
@@ -357,6 +286,30 @@ export async function checkAndTriggerAI(
         });
       }
 
+      // ALSO send analysis to any human players who are currently deciding to fold/stay.
+      // (Previously we returned early and never emitted fold analysis events for humans.)
+      for (let pos = 0; pos < 4; pos++) {
+        const player = gameState.players[pos];
+
+        // Skip bidder and already-decided players
+        if (pos === gameState.winningBidderPosition || player.foldDecision !== 'UNDECIDED') {
+          continue;
+        }
+
+        // Skip AI players (they'll act automatically)
+        if (isAIPlayerByName(player.name)) {
+          continue;
+        }
+
+        if (shouldSendAnalysis(gameId, gameState, pos as any)) {
+          setTimeout(() => {
+            sendAIAnalysis(gameId, gameState, pos, io).catch(err => {
+              console.error(`[AI Trigger] Error sending fold analysis:`, err);
+            });
+          }, 0);
+        }
+      }
+
       return;
     }
 
@@ -389,7 +342,23 @@ export async function checkAndTriggerAI(
     console.log(`[AI Trigger] Current acting player: ${currentPlayer.name} (${currentPlayerId}), isAI: ${isAI}`);
 
     if (!isAI) {
-      // Human analysis overlays are computed client-side now (to reduce server CPU).
+      // Current player is human, send AI analysis.
+      // IMPORTANT: Don't await analysis here — it can be expensive (MCTS simulations) and will
+      // block the event loop, causing noticeable lag after actions like PLAY_CARD.
+      console.log(`[AI Trigger] Current player ${currentPlayer.name} is human, checking if analysis needed`);
+
+      // Check cooldown BEFORE scheduling to prevent race condition
+      // where multiple analyses are scheduled before any execute
+      if (shouldSendAnalysis(gameId, gameState, currentPlayer.position)) {
+        console.log(`[AI Trigger] Scheduling AI analysis for player ${currentPlayer.name}`);
+        setTimeout(() => {
+          sendAIAnalysis(gameId, gameState, currentPlayer.position, io).catch(err => {
+            console.error(`[AI Trigger] Error sending AI analysis:`, err);
+          });
+        }, 0);
+      } else {
+        console.log(`[AI Trigger] Analysis already sent recently for this situation, skipping`);
+      }
       return;
     }
 
@@ -425,10 +394,8 @@ async function sendAIAnalysis(
   playerPosition: number,
   io: Server
 ): Promise<void> {
-  const startTime = Date.now();
-  const player = gameState.players[playerPosition];
   try {
-    console.log(`[AI Analysis] STARTING analysis for player ${player?.name || 'unknown'} (pos ${playerPosition}) in phase ${gameState.phase} at ${new Date().toISOString()}`);
+    console.log(`[AI Analysis] Analyzing for player at position ${playerPosition} in phase ${gameState.phase}`);
 
     // Run analysis with high quality (5000 simulations)
     const analysisConfig = {
@@ -440,7 +407,6 @@ async function sendAIAnalysis(
 
     // Analyze based on game phase
     if (gameState.phase === 'PLAYING') {
-      console.log(`[AI Analysis] Running analyzeHand with ${analysisConfig.simulations} simulations...`);
       const analyses = await analyzeHand(gameState, playerPosition as any, analysisConfig);
 
       if (analyses.length === 0) {
@@ -460,10 +426,7 @@ async function sendAIAnalysis(
 
       console.log(`[AI Analysis] Sent card analysis for ${analyses.length} cards to game ${gameId}`);
     } else if (gameState.phase === 'BIDDING') {
-      console.log(`[AI Analysis] Running analyzeBids with ${analysisConfig.simulations} simulations...`);
-      const bidStartTime = Date.now();
       const analyses = await analyzeBids(gameState, playerPosition as any, analysisConfig);
-      console.log(`[AI Analysis] analyzeBids completed in ${Date.now() - bidStartTime}ms`);
 
       if (analyses.length === 0) {
         console.log(`[AI Analysis] No bid analysis available for player ${playerPosition}`);
@@ -499,12 +462,7 @@ async function sendAIAnalysis(
         bestFoldDecision: bestFold ?? undefined,
       };
 
-      console.log(`[AI Analysis] Sent fold analysis for ${analyses.length} options to game ${gameId}`, {
-        playerPosition,
-        playerName: player?.name,
-        playerId: player?.id,
-        analyses: analyses.map(a => ({ fold: a.fold, winProb: a.winProbability, isBest: a.isBest })),
-      });
+      console.log(`[AI Analysis] Sent fold analysis for ${analyses.length} options to game ${gameId}`);
     } else if (gameState.phase === 'DECLARING_TRUMP') {
       const analyses = await analyzeTrumpSelection(gameState, playerPosition as any, analysisConfig);
 
@@ -529,21 +487,9 @@ async function sendAIAnalysis(
     }
 
     // Broadcast to the game room
-    const room = io.sockets.adapter.rooms.get(`game:${gameId}`);
-    const clientCount = room ? room.size : 0;
-    console.log(`[AI Analysis] Emitting AI_ANALYSIS_UPDATE to game:${gameId}`, {
-      playerPosition: analysisEvent.playerPosition,
-      analysisType: analysisEvent.analysisType,
-      hasFoldOptions: analysisEvent.analysisType === 'fold' && !!analysisEvent.foldOptions,
-      foldOptionsCount: analysisEvent.analysisType === 'fold' ? analysisEvent.foldOptions?.length : 0,
-      clientsInRoom: clientCount,
-    });
     io.to(`game:${gameId}`).emit('AI_ANALYSIS_UPDATE', analysisEvent);
-    const duration = Date.now() - startTime;
-    console.log(`[AI Analysis] COMPLETED analysis for player ${player?.name || 'unknown'} (pos ${playerPosition}) in ${duration}ms`);
   } catch (error: any) {
-    const duration = Date.now() - startTime;
-    console.error(`[AI Analysis] ERROR after ${duration}ms:`, error.message || error);
+    console.error(`[AI Analysis] Error sending analysis:`, error.message || error);
   }
 }
 
