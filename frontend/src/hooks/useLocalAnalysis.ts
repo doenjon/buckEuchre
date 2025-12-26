@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore } from '@/stores/gameStore';
 import { ISMCTSEngine } from '@/ai/ismcts';
-import type { GameState, CardAnalysis } from '@buck-euchre/shared';
+import type { GameState, CardAnalysis, BidAnalysis, FoldAnalysis, SuitAnalysis, BidAmount, Suit } from '@buck-euchre/shared';
 
 export interface AnalysisProgress {
   simulations: number;
@@ -21,7 +21,7 @@ const ANALYSIS_STAGES = [5000, 10000, 15000, 20000];
  * Hook for running client-side MCTS analysis with progress tracking
  */
 export function useLocalAnalysis() {
-  const { gameState, myPosition, setAIAnalysis, nextPlayerPosition } = useGameStore();
+  const { gameState, myPosition, setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis } = useGameStore();
   const [isThinking, setIsThinking] = useState(false);
   const [progress, setProgress] = useState<AnalysisProgress | null>(null);
   const analysisRef = useRef<{ gameStateId: string; position: number; abortController: AbortController } | null>(null);
@@ -32,90 +32,174 @@ export function useLocalAnalysis() {
     abortController: AbortController,
     onProgress?: (progress: AnalysisProgress) => void
   ) => {
-    // Only analyze during PLAYING phase
-    if (state.phase !== 'PLAYING') {
-      return null;
+    // Check if it's the player's turn for the current phase
+    let shouldAnalyze = false;
+    if (state.phase === 'PLAYING' && state.currentPlayerPosition === position) {
+      shouldAnalyze = true;
+    } else if (state.phase === 'BIDDING' && state.currentBidder === position) {
+      shouldAnalyze = true;
+    } else if (state.phase === 'DECLARING_TRUMP' && state.winningBidderPosition === position) {
+      shouldAnalyze = true;
+    } else if (state.phase === 'FOLDING_DECISION') {
+      const player = state.players[position];
+      if (position !== state.winningBidderPosition && player.foldDecision === 'UNDECIDED') {
+        shouldAnalyze = true;
+      }
     }
 
-    const player = state.players[position];
-    if (!player || !player.hand || player.hand.length === 0) {
+    if (!shouldAnalyze) {
       return null;
     }
 
     setIsThinking(true);
 
     try {
-      // Helper to convert results to CardAnalysis format
-      const convertToCardAnalysis = (results: Record<string, any>): CardAnalysis[] => {
-        const entries = Object.entries(results);
-
-        // Sort by expected score (negative is better) to compute ranks
-        const sorted = [...entries].sort(([, a], [, b]) => a.value - b.value);
-        const ranks = new Map(sorted.map(([cardId], index) => [cardId, index + 1]));
-
-        return entries.map(([cardId, stats]) => ({
-          cardId,
-          expectedScore: stats.value,
-          visits: stats.visits,
-          winProbability: 0, // Not computed in flat MCTS
-          expectedTricks: 0, // Not computed in flat MCTS
-          confidence: stats.confidence ?
-            Math.min(1, stats.visits / 1000) : // Confidence based on visit count
-            Math.min(1, stats.visits / 1000),
-          rank: ranks.get(cardId) || 0,
-          buckProbability: stats.buckProbability || 0,
-          confidenceInterval: stats.confidence ? {
-            lower: stats.confidence.lower,
-            upper: stats.confidence.upper,
-            width: stats.confidence.upper - stats.confidence.lower
-          } : undefined,
-        }));
-      };
-
-      // Create a single engine with max iterations (20k)
+      // Create engine with 20k iterations
       const maxIterations = ANALYSIS_STAGES[ANALYSIS_STAGES.length - 1]; // 20000
       const engine = new ISMCTSEngine({
         simulations: maxIterations,
         verbose: false,
       });
 
-      // Run continuous analysis with a single MCTS tree
-      // Intermediate results will update every 1000 iterations automatically
-      const results = await engine.analyzeHandWithProgress(
-        state,
-        position as any,
-        (simulations: number, total: number) => {
-          // Check if aborted
-          if (abortController.signal.aborted) {
-            return;
+      // For non-PLAYING phases, use searchWithAnalysis (synchronous)
+      if (state.phase !== 'PLAYING') {
+        const result = engine.searchWithAnalysis(state, position as any);
+        
+        // Convert statistics to appropriate analysis format based on phase
+        const statistics = result.statistics;
+        
+        if (state.phase === 'BIDDING') {
+          // Convert to BidAnalysis
+          const bidStats = new Map<BidAmount, any>();
+          for (const [key, stat] of statistics) {
+            if (stat.action.type === 'BID') {
+              bidStats.set(stat.action.amount, stat);
+            }
           }
-
-          const progressPercent = Math.round((simulations / total) * 100);
-          const progressInfo = {
-            simulations,
-            totalSimulations: total,
-            progress: progressPercent
-          };
-          setProgress(progressInfo);
-          onProgress?.(progressInfo);
-        },
-        (intermediateResults) => {
-          // Update UI with intermediate results every 1000 simulations
+          
+          const entries = Array.from(bidStats.entries());
+          const sorted = [...entries].sort(([, a], [, b]) => b.avgValue - a.avgValue);
+          const ranks = new Map(sorted.map(([bid], index) => [bid, index + 1]));
+          
+          const bidAnalysis: BidAnalysis[] = entries.map(([bidAmount, stat]) => ({
+            bidAmount,
+            winProbability: stat.avgValue,
+            expectedScore: stat.avgValue,
+            confidence: Math.min(1, stat.visits / 1000),
+            visits: stat.visits,
+            rank: ranks.get(bidAmount) || 0,
+            buckProbability: stat.buckProbability || 0,
+          }));
+          
           if (!abortController.signal.aborted) {
-            const cardAnalysis = convertToCardAnalysis(intermediateResults);
+            setBidAnalysis(bidAnalysis);
+          }
+        } else if (state.phase === 'FOLDING_DECISION') {
+          // Convert to FoldAnalysis
+          const foldStats = new Map<boolean, any>();
+          for (const [key, stat] of statistics) {
+            if (stat.action.type === 'FOLD') {
+              foldStats.set(stat.action.fold, stat);
+            }
+          }
+          
+          const entries = Array.from(foldStats.entries());
+          const sorted = [...entries].sort(([, a], [, b]) => b.avgValue - a.avgValue);
+          const bestFold = sorted[0]?.[0] ?? false;
+          
+          const foldAnalysis: FoldAnalysis[] = entries.map(([fold, stat]) => ({
+            fold,
+            winProbability: stat.avgValue,
+            expectedScore: stat.avgValue,
+            confidence: Math.min(1, stat.visits / 1000),
+            visits: stat.visits,
+            isBest: fold === bestFold,
+            buckProbability: stat.buckProbability || 0,
+          }));
+          
+          if (!abortController.signal.aborted) {
+            setFoldAnalysis(foldAnalysis);
+          }
+        } else if (state.phase === 'DECLARING_TRUMP') {
+          // Convert to SuitAnalysis
+          const suitStats = new Map<Suit, any>();
+          for (const [key, stat] of statistics) {
+            if (stat.action.type === 'TRUMP') {
+              suitStats.set(stat.action.suit, stat);
+            }
+          }
+          
+          const entries = Array.from(suitStats.entries());
+          const sorted = [...entries].sort(([, a], [, b]) => b.avgValue - a.avgValue);
+          const ranks = new Map(sorted.map(([suit], index) => [suit, index + 1]));
+          
+          const suitAnalysis: SuitAnalysis[] = entries.map(([suit, stat]) => ({
+            suit,
+            winProbability: stat.avgValue,
+            expectedScore: stat.avgValue,
+            confidence: Math.min(1, stat.visits / 1000),
+            visits: stat.visits,
+            rank: ranks.get(suit) || 0,
+            buckProbability: stat.buckProbability || 0,
+          }));
+          
+          if (!abortController.signal.aborted) {
+            setSuitAnalysis(suitAnalysis);
+          }
+        }
+      } else {
+        // For PLAYING phase, use the optimized analyzeHandWithProgress
+        const player = state.players[position];
+        if (player && player.hand && player.hand.length > 0) {
+          const convertToCardAnalysis = (results: Record<string, any>): CardAnalysis[] => {
+            const entries = Object.entries(results);
+            const sorted = [...entries].sort(([, a], [, b]) => a.value - b.value);
+            const ranks = new Map(sorted.map(([cardId], index) => [cardId, index + 1]));
+
+            return entries.map(([cardId, stats]) => ({
+              cardId,
+              expectedScore: stats.value,
+              visits: stats.visits,
+              winProbability: 0,
+              expectedTricks: 0,
+              confidence: Math.min(1, stats.visits / 1000),
+              rank: ranks.get(cardId) || 0,
+              buckProbability: stats.buckProbability || 0,
+              confidenceInterval: stats.confidence ? {
+                lower: stats.confidence.lower,
+                upper: stats.confidence.upper,
+                width: stats.confidence.upper - stats.confidence.lower
+              } : undefined,
+            }));
+          };
+
+          const results = await engine.analyzeHandWithProgress(
+            state,
+            position as any,
+            (simulations: number, total: number) => {
+              if (abortController.signal.aborted) return;
+              const progressPercent = Math.round((simulations / total) * 100);
+              const progressInfo = { simulations, totalSimulations: total, progress: progressPercent };
+              setProgress(progressInfo);
+              onProgress?.(progressInfo);
+            },
+            (intermediateResults) => {
+              if (!abortController.signal.aborted) {
+                const cardAnalysis = convertToCardAnalysis(intermediateResults);
+                setAIAnalysis(cardAnalysis);
+              }
+            },
+            abortController.signal
+          );
+
+          if (!abortController.signal.aborted) {
+            const cardAnalysis = convertToCardAnalysis(results);
             setAIAnalysis(cardAnalysis);
           }
-        },
-        abortController.signal
-      );
-
-      // Set final results
-      if (!abortController.signal.aborted) {
-        const cardAnalysis = convertToCardAnalysis(results);
-        setAIAnalysis(cardAnalysis);
+        }
       }
 
-      return null; // Results are already set via setAIAnalysis
+      return null;
     } catch (error) {
       console.error('[useLocalAnalysis] Analysis failed:', error);
       return null;
@@ -123,7 +207,7 @@ export function useLocalAnalysis() {
       setIsThinking(false);
       setProgress(null);
     }
-  }, [setAIAnalysis]);
+  }, [setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis]);
 
   // Auto-trigger analysis when it's my turn
   useEffect(() => {
@@ -131,17 +215,29 @@ export function useLocalAnalysis() {
       return;
     }
 
-    // Only analyze when it's actually my current turn
-    // Since 20k iterations takes <1s, we don't need the early start during trick pause
-    const shouldAnalyze =
-      gameState.phase === 'PLAYING' &&
-      gameState.currentPlayerPosition === myPosition;
+    // Check if it's my turn for the current phase
+    let shouldAnalyze = false;
+    if (gameState.phase === 'PLAYING' && gameState.currentPlayerPosition === myPosition) {
+      shouldAnalyze = true;
+    } else if (gameState.phase === 'BIDDING' && gameState.currentBidder === myPosition) {
+      shouldAnalyze = true;
+    } else if (gameState.phase === 'DECLARING_TRUMP' && gameState.winningBidderPosition === myPosition) {
+      shouldAnalyze = true;
+    } else if (gameState.phase === 'FOLDING_DECISION') {
+      const myPlayer = gameState.players[myPosition];
+      if (myPosition !== gameState.winningBidderPosition && myPlayer.foldDecision === 'UNDECIDED') {
+        shouldAnalyze = true;
+      }
+    }
 
     if (!shouldAnalyze) {
-      // Clear analysis when not my turn and abort ongoing analysis
+      // Clear all analysis when not my turn and abort ongoing analysis
       if (analysisRef.current) {
         analysisRef.current.abortController.abort();
         setAIAnalysis(null);
+        setBidAnalysis(null);
+        setFoldAnalysis(null);
+        setSuitAnalysis(null);
         analysisRef.current = null;
       }
       return;
@@ -164,11 +260,11 @@ export function useLocalAnalysis() {
     const abortController = new AbortController();
     analysisRef.current = { gameStateId: stateId, position: myPosition, abortController };
 
-    console.log('[useLocalAnalysis] Starting 20k iteration analysis');
+    console.log(`[useLocalAnalysis] Starting 20k iteration analysis for phase ${gameState.phase}`);
 
     // Run analysis asynchronously
     void runAnalysis(gameState, myPosition, abortController);
-  }, [gameState, myPosition, runAnalysis, setAIAnalysis]);
+  }, [gameState, myPosition, runAnalysis, setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis]);
 
   // Cleanup on unmount
   useEffect(() => {
