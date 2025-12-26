@@ -253,11 +253,14 @@ export async function checkAndTriggerAI(
   io: Server
 ): Promise<void> {
   try {
+    console.log(`[AI Trigger] 🔍 ENTRY: gameId=${gameId}`);
     // Always fetch fresh state
     const gameState = getActiveGameState(gameId);
     if (!gameState) {
+      console.log(`[AI Trigger] ❌ Game ${gameId} not found in memory`);
       return;
     }
+    console.log(`[AI Trigger] 📊 Game state: phase=${gameState.phase}, version=${gameState.version}`);
 
     // Special handling for FOLDING_DECISION phase
     if (gameState.phase === 'FOLDING_DECISION') {
@@ -292,36 +295,59 @@ export async function checkAndTriggerAI(
 
     // For other phases, check current acting player
     const currentPlayerId = getCurrentActingPlayer(gameState);
+    console.log(`[AI Trigger] 🎯 Current acting player ID: ${currentPlayerId || 'NONE'}`);
+    
     if (!currentPlayerId) {
+      console.log(`[AI Trigger] ⚠️ No current acting player (phase: ${gameState.phase})`);
+      if (gameState.phase === 'PLAYING') {
+        console.log(`[AI Trigger] PLAYING phase details: currentPlayerPosition=${gameState.currentPlayerPosition}, players=${gameState.players.map(p => `${p.name}(${p.position})`).join(', ')}`);
+      } else if (gameState.phase === 'BIDDING') {
+        console.log(`[AI Trigger] BIDDING phase details: currentBidder=${gameState.currentBidder}, players=${gameState.players.map(p => `${p.name}(${p.position})`).join(', ')}`);
+      }
       return; // No one needs to act
     }
 
     const currentPlayer = gameState.players.find(p => p.id === currentPlayerId);
     if (!currentPlayer) {
+      console.error(`[AI Trigger] ❌ Current player ${currentPlayerId} not found in game state`);
+      console.error(`[AI Trigger] Available players: ${gameState.players.map(p => `${p.id}(${p.name})`).join(', ')}`);
       return;
     }
 
+    console.log(`[AI Trigger] 👤 Current player: ${currentPlayer.name} (${currentPlayerId}) at position ${currentPlayer.position}`);
+
     // Check if AI (try name first, then database)
     let isAI = isAIPlayerByName(currentPlayer.name);
+    console.log(`[AI Trigger] 🤖 isAIPlayerByName("${currentPlayer.name}") = ${isAI}`);
+    
     if (!isAI) {
+      console.log(`[AI Trigger] 🔍 Checking database for player ${currentPlayerId}...`);
       isAI = await isAIPlayerAsync(currentPlayerId);
+      console.log(`[AI Trigger] 🤖 isAIPlayerAsync("${currentPlayerId}") = ${isAI}`);
     }
 
     if (isAI) {
       // AI needs to act - trigger it (no delay, no throttle - game state prevents duplicates)
-      console.log(`[AI Trigger] Triggering AI turn for ${currentPlayer.name} (${currentPlayerId}) in phase ${gameState.phase}`);
-      executeAITurn(gameId, currentPlayerId, io).catch(err =>
-        console.error(`[AI Trigger] Error:`, err)
-      );
+      console.log(`[AI Trigger] ✅ AI player detected - triggering turn for ${currentPlayer.name} (${currentPlayerId}) in phase ${gameState.phase}`);
+      executeAITurn(gameId, currentPlayerId, io)
+        .then(() => {
+          console.log(`[AI Trigger] ✅ AI turn promise resolved for ${currentPlayer.name}`);
+        })
+        .catch(err => {
+          console.error(`[AI Trigger] ❌ AI turn promise rejected for ${currentPlayer.name}:`, err);
+          console.error(`[AI Trigger] Error stack:`, err.stack);
+        });
     } else {
       // Human needs analysis - send it
-      console.log(`[AI Trigger] Sending analysis for human player ${currentPlayer.name} at position ${currentPlayer.position}`);
+      console.log(`[AI Trigger] 👤 Human player - sending analysis for ${currentPlayer.name} at position ${currentPlayer.position}`);
       sendAIAnalysis(gameId, currentPlayer.position, io).catch(err =>
-        console.error(`[AI Trigger] Analysis error:`, err)
+        console.error(`[AI Trigger] ❌ Analysis error:`, err)
       );
     }
   } catch (error: any) {
-    console.error(`[AI Trigger] Error:`, error);
+    console.error(`[AI Trigger] ❌ FATAL ERROR in checkAndTriggerAI:`, error);
+    console.error(`[AI Trigger] Error message:`, error.message);
+    console.error(`[AI Trigger] Error stack:`, error.stack);
   }
 }
 

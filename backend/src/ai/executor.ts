@@ -83,80 +83,101 @@ export async function executeAITurn(
 ): Promise<void> {
   const startTime = Date.now();
   try {
-    console.log(`[AI Executor] Starting AI turn for player ${aiPlayerId} in game ${gameId}`);
+    console.log(`[AI Executor] 🚀 STARTING AI turn for player ${aiPlayerId} in game ${gameId}`);
     const initialState = getActiveGameState(gameId);
     if (!initialState) {
-      console.error(`[AI] Game ${gameId} not found`);
+      console.error(`[AI Executor] ❌ Game ${gameId} not found in memory`);
       return;
     }
 
     const initialPosition = findPlayerPosition(initialState, aiPlayerId);
     if (initialPosition === null) {
-      console.error(`[AI] Player ${aiPlayerId} not found in game ${gameId}`);
+      console.error(`[AI Executor] ❌ Player ${aiPlayerId} not found in game ${gameId}`);
+      console.error(`[AI Executor] Available players: ${initialState.players.map(p => `${p.id}(${p.name})`).join(', ')}`);
       return;
     }
 
     const initialPlayer = initialState.players[initialPosition];
     const initialPhase = initialState.phase;
 
-    console.log(`[AI] ${initialPlayer.name} is thinking (phase: ${initialPhase})...`);
+    console.log(`[AI Executor] 💭 ${initialPlayer.name} is thinking (phase: ${initialPhase}, position: ${initialPosition})...`);
 
     // Simulate thinking time
     const thinkingTime = getThinkingDelay();
+    console.log(`[AI Executor] ⏱️ Thinking delay: ${thinkingTime}ms`);
     await delay(thinkingTime);
 
     const state = getActiveGameState(gameId);
     if (!state) {
-      console.error(`[AI] Game ${gameId} not found after delay`);
+      console.error(`[AI Executor] ❌ Game ${gameId} not found after delay`);
       return;
     }
 
     const aiPosition = findPlayerPosition(state, aiPlayerId);
     if (aiPosition === null) {
-      console.error(`[AI] Player ${aiPlayerId} not found in game ${gameId}`);
+      console.error(`[AI Executor] ❌ Player ${aiPlayerId} not found after delay`);
       return;
     }
 
     const aiPlayer = state.players[aiPosition];
     const phase = state.phase;
 
+    console.log(`[AI Executor] 📊 After delay: phase=${phase}, aiPosition=${aiPosition}, currentBidder=${state.currentBidder}, currentPlayer=${state.currentPlayerPosition}`);
+
     // Execute action based on current phase
     switch (phase) {
       case 'BIDDING':
+        console.log(`[AI Executor] 🎯 BIDDING phase: aiPosition=${aiPosition}, currentBidder=${state.currentBidder}`);
         if (state.currentBidder === aiPosition) {
+          console.log(`[AI Executor] ✅ Executing bid for AI at position ${aiPosition}`);
           await executeAIBid(gameId, aiPlayerId, io);
+        } else {
+          console.log(`[AI Executor] ⚠️ AI at position ${aiPosition} but currentBidder is ${state.currentBidder} - skipping`);
         }
         break;
 
       case 'DECLARING_TRUMP':
+        console.log(`[AI Executor] 🎯 DECLARING_TRUMP phase: aiPosition=${aiPosition}, winningBidder=${state.winningBidderPosition}`);
         if (state.winningBidderPosition === aiPosition) {
+          console.log(`[AI Executor] ✅ Executing trump declaration for AI at position ${aiPosition}`);
           await executeAIDeclareTrump(gameId, aiPlayerId, io);
+        } else {
+          console.log(`[AI Executor] ⚠️ AI at position ${aiPosition} but winningBidder is ${state.winningBidderPosition} - skipping`);
         }
         break;
 
       case 'FOLDING_DECISION':
+        console.log(`[AI Executor] 🎯 FOLDING_DECISION phase: aiPosition=${aiPosition}, winningBidder=${state.winningBidderPosition}, foldDecision=${aiPlayer.foldDecision}`);
         if (state.winningBidderPosition !== aiPosition && aiPlayer.foldDecision === 'UNDECIDED') {
+          console.log(`[AI Executor] ✅ Executing fold decision for AI at position ${aiPosition}`);
           await executeAIFoldDecision(gameId, aiPlayerId, io);
+        } else {
+          console.log(`[AI Executor] ⚠️ AI cannot fold: winningBidder=${state.winningBidderPosition}, foldDecision=${aiPlayer.foldDecision}`);
         }
         break;
 
       case 'PLAYING':
+        console.log(`[AI Executor] 🎯 PLAYING phase: aiPosition=${aiPosition}, currentPlayer=${state.currentPlayerPosition}`);
         if (state.currentPlayerPosition === aiPosition) {
+          console.log(`[AI Executor] ✅ Executing card play for AI at position ${aiPosition}`);
           await executeAICardPlay(gameId, aiPlayerId, io);
+        } else {
+          console.log(`[AI Executor] ⚠️ AI at position ${aiPosition} but currentPlayer is ${state.currentPlayerPosition} - skipping`);
         }
         break;
 
       default:
-        // AI doesn't need to act in other phases
-        console.log(`[AI Executor] ${aiPlayer.name} doesn't need to act in phase ${phase}`);
+        console.log(`[AI Executor] ⚠️ ${aiPlayer.name} doesn't need to act in phase ${phase}`);
         break;
     }
     
     const duration = Date.now() - startTime;
-    console.log(`[AI Executor] ✅ Completed AI turn for player ${aiPlayerId} in ${duration}ms`);
+    console.log(`[AI Executor] ✅ COMPLETED AI turn for player ${aiPlayerId} in ${duration}ms`);
   } catch (error: any) {
     const duration = Date.now() - startTime;
-    console.error(`[AI Executor] ❌ Error executing AI turn for player ${aiPlayerId} after ${duration}ms:`, error.message || error, error.stack);
+    console.error(`[AI Executor] ❌ FATAL ERROR executing AI turn for player ${aiPlayerId} after ${duration}ms:`);
+    console.error(`[AI Executor] Error message:`, error.message);
+    console.error(`[AI Executor] Error stack:`, error.stack);
     throw error;
   }
 }
