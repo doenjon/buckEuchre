@@ -844,7 +844,8 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
         
         io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
           trick: completedTrick,
-          delayMs: 3000
+          delayMs: 3000,
+          nextPlayerPosition: null // Round is over, no next player
         });
         console.log(`[TRICK_COMPLETE] Emitted for final trick ${completedTrick.number} (round complete)`, {
           winner: completedTrick.winner,
@@ -858,11 +859,13 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
         const completedTrick = nextState.tricks[nextState.tricks.length - 1];
         io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
           trick: completedTrick,
-          delayMs: 3000
+          delayMs: 3000,
+          nextPlayerPosition: nextState.currentPlayerPosition // Next player to act
         });
         console.log(`[TRICK_COMPLETE] Emitted for trick ${completedTrick.number}`, {
           winner: completedTrick.winner,
           cardsPlayed: completedTrick.cards.length,
+          nextPlayer: nextState.currentPlayerPosition,
         });
         trickWasCompleted = true;
       }

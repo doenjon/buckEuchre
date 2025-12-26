@@ -23,6 +23,7 @@ export interface GameNotification {
 export interface GameStoreState {
   gameState: GameState | null;
   myPosition: number | null;
+  nextPlayerPosition: number | null; // Set during trick completion pause to enable early analysis
   error: string | null;
   waitingInfo: WaitingInfo | null;
   currentNotification: GameNotification | null;
@@ -36,6 +37,7 @@ export interface GameStoreState {
 export interface GameStoreActions {
   setGameState: (state: GameState) => void;
   setMyPosition: (position: number) => void;
+  setNextPlayerPosition: (position: number | null) => void;
   setError: (error: string | null) => void;
   clearGame: () => void;
   setWaitingInfo: (info: WaitingInfo | null) => void;
@@ -62,6 +64,7 @@ export type GameStore = GameStoreState & GameStoreActions;
 const initialState: GameStoreState = {
   gameState: null,
   myPosition: null,
+  nextPlayerPosition: null,
   error: null,
   waitingInfo: null,
   currentNotification: null,
@@ -81,7 +84,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
   setGameState: (gameState) => {
     const currentState = get().gameState;
     const currentPosition = get().myPosition;
-    
+
     // If switching to a different game, reset myPosition to prevent stale data
     if (currentState && currentState.gameId !== gameState.gameId) {
       console.log('[GameStore] Switching games, resetting myPosition', {
@@ -89,14 +92,19 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         newGameId: gameState.gameId,
         oldPosition: currentPosition
       });
-      set({ gameState, myPosition: null, error: null, waitingInfo: null });
+      set({ gameState, myPosition: null, nextPlayerPosition: null, error: null, waitingInfo: null });
     } else {
-      set({ gameState, error: null, waitingInfo: null });
+      // Clear nextPlayerPosition when new state arrives (trick pause is over)
+      set({ gameState, nextPlayerPosition: null, error: null, waitingInfo: null });
     }
   },
 
   setMyPosition: (position) => {
     set({ myPosition: position });
+  },
+
+  setNextPlayerPosition: (position) => {
+    set({ nextPlayerPosition: position });
   },
 
   setError: (error) => {

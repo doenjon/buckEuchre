@@ -25,7 +25,7 @@ import {
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
   const { token } = useAuthStore();
-  const { setGameState, setError, setWaitingInfo, setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis } = useGameStore();
+  const { setGameState, setError, setWaitingInfo, setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis, setNextPlayerPosition } = useGameStore();
   const { setConnected, setNotification } = useUIStore();
 
   // Initialize socket connection
@@ -196,10 +196,10 @@ export function useSocket() {
       
       onTrickComplete: (data) => {
         console.log('Trick complete:', data);
-        // Trigger early analysis during the 3-second pause
-        if (data.trick) {
-          const nextTrickNumber = (data.trick.number || 0) + 1;
-          // Trick complete - backend handles analysis automatically
+        // Set nextPlayerPosition to enable early analysis during the 3-second pause
+        if (data.nextPlayerPosition !== null && data.nextPlayerPosition !== undefined) {
+          console.log('[onTrickComplete] Setting next player position to trigger early analysis:', data.nextPlayerPosition);
+          setNextPlayerPosition(data.nextPlayerPosition);
         }
       },
       
@@ -272,7 +272,7 @@ export function useSocket() {
       cleanupSocketListeners(socket);
       socket.disconnect();
     };
-  }, [token, setGameState, setError, setConnected, setNotification, setWaitingInfo, setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis]);
+  }, [token, setGameState, setError, setConnected, setNotification, setWaitingInfo, setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis, setNextPlayerPosition]);
 
   // Socket event emitters wrapped in callbacks
   const joinGame = useCallback((gameId: string) => {
