@@ -148,10 +148,16 @@ export async function executeAITurn(
 
       default:
         // AI doesn't need to act in other phases
+        console.log(`[AI Executor] ${aiPlayer.name} doesn't need to act in phase ${phase}`);
         break;
     }
+    
+    const duration = Date.now() - startTime;
+    console.log(`[AI Executor] ✅ Completed AI turn for player ${aiPlayerId} in ${duration}ms`);
   } catch (error: any) {
-    console.error(`[AI] Error executing turn for ${aiPlayerId}:`, error.message || error);
+    const duration = Date.now() - startTime;
+    console.error(`[AI Executor] ❌ Error executing AI turn for player ${aiPlayerId} after ${duration}ms:`, error.message || error, error.stack);
+    throw error;
   }
 }
 
