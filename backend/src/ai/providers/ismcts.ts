@@ -238,6 +238,8 @@ export class ISMCTSAIProvider implements AIProvider {
         return `FOLD:${action.fold}`;
       case 'CARD':
         return `CARD:${action.card.id}`;
+      default:
+        return 'UNKNOWN';
     }
   }
 
@@ -251,6 +253,9 @@ export class ISMCTSAIProvider implements AIProvider {
         return action.fold;
       case 'CARD':
         return action.card;
+      default:
+        // TypeScript requires a default case for exhaustiveness checking
+        throw new Error(`Unknown action type`);
     }
   }
 }
