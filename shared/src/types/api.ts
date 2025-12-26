@@ -202,6 +202,15 @@ export interface ReconnectedEvent {
 }
 
 /**
+ * Trick complete event (sent when a trick finishes)
+ */
+export interface TrickCompleteEvent {
+  trick: any; // The completed trick
+  delayMs: number; // Delay before transitioning to next state
+  nextPlayerPosition: PlayerPosition | null; // Next player to act (null if round is over)
+}
+
+/**
  * AI analysis for a single card
  */
 export interface CardAnalysis {
