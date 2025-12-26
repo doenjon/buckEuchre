@@ -5,7 +5,7 @@
  * Exports all ISMCTS components.
  */
 
-export * from '@buck-euchre/shared/ai/ismcts/ismcts-engine';
-export * from '@buck-euchre/shared/ai/ismcts/mcts-node';
-export * from '@buck-euchre/shared/ai/ismcts/determinize';
-export * from '@buck-euchre/shared/ai/ismcts/rollout';
+export * from './determinize';
+export * from './mcts-node';
+export * from './rollout';
+export * from './ismcts-engine';

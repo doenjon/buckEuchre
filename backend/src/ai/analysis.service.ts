@@ -6,10 +6,9 @@
  * statistics like win probability and expected tricks for each card.
  */
 
-import { GameState, PlayerPosition, Card, BidAmount, Suit } from '@buck-euchre/shared';
+import { GameState, PlayerPosition, Card, BidAmount, Suit, CardAnalysis, BidAnalysis, FoldAnalysis, SuitAnalysis } from '@buck-euchre/shared';
 import { ISMCTSEngine } from './ismcts/ismcts-engine';
 import { Action, serializeAction } from './ismcts/mcts-node';
-import { CardAnalysis, BidAnalysis, FoldAnalysis, SuitAnalysis } from '@buck-euchre/shared';
 
 /**
  * Configuration for AI analysis

@@ -17,6 +17,3 @@ export * from './validators';
 
 // Export shared utilities
 export * from './utils';
-
-// NOTE: Game and AI modules are accessed via subpath exports (e.g., '@buck-euchre/shared/game/state')
-// They are not exported from the main index to avoid circular dependencies

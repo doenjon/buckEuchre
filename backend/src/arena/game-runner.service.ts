@@ -10,7 +10,7 @@ import { prisma } from '../db/client';
 import { createAIPlayer } from '../services/ai-player.service';
 import { createGame } from '../services/game.service';
 import { joinGame } from '../services/game.service';
-import { initializeGame, dealNewRound, applyBid, applyTrumpDeclaration, applyFoldDecision, applyCardPlay, finishRound, startNextRound } from '@buck-euchre/shared/game/state';
+import { initializeGame, dealNewRound, applyBid, applyTrumpDeclaration, applyFoldDecision, applyCardPlay, finishRound, startNextRound } from '../game/state';
 import { aiProviderCache } from '../ai/provider-cache';
 import type { ArenaConfig } from './types';
 import type { AIConfig } from '../ai/types';

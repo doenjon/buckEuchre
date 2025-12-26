@@ -2,7 +2,7 @@ import { Server } from 'socket.io';
 import type { GameState } from '@buck-euchre/shared';
 import { executeGameAction, getActiveGameState } from './state.service';
 import { getConnectedPlayersInGame } from './connection.service';
-import { startNextRound, dealNewRound } from '@buck-euchre/shared/game/state';
+import { startNextRound, dealNewRound } from '../game/state';
 
 const AUTO_START_DELAY_MS = 5000;
 const autoStartTimers = new Map<string, NodeJS.Timeout>();

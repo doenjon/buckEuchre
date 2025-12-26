@@ -10,9 +10,7 @@
  */
 
 import { Card, Suit, BidAmount, GameState, PlayerPosition } from '@buck-euchre/shared';
-import { getEffectiveSuit, isSameColor } from '../game/deck';
-import { canPlayCard } from '../game/validation';
-import { getRankValue } from '../game/cards';
+import { getEffectiveSuit, isSameColor, canPlayCard, getRankValue } from '@buck-euchre/shared';
 
 /**
  * Count how many trump cards are in a hand (including Left Bower)

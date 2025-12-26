@@ -1,7 +1,7 @@
 import { prisma } from '../db/client';
 import { Game, GameStatus, GamePlayer } from '@prisma/client';
 import { GameState, Player } from '@buck-euchre/shared';
-import { initializeGame, dealNewRound } from '@buck-euchre/shared/game/state';
+import { initializeGame, dealNewRound } from '../game/state';
 import { executeGameActionWithInit, getActiveGameState, loadGameState, setActiveGameState } from './state.service';
 
 // Lightweight in-memory cache to reduce DB load when many clients poll the lobby.

@@ -8,8 +8,7 @@
 
 import { Card, Suit, BidAmount, GameState, PlayerPosition } from '@buck-euchre/shared';
 import { AIProvider, AIConfig, AIDifficulty, AIAnalysis } from '../types';
-import { ISMCTSEngine, ISMCTSConfig, AICharacter } from '../ismcts/ismcts-engine';
-import { Action } from '../ismcts/mcts-node';
+import { ISMCTSEngine, ISMCTSConfig, AICharacter, Action } from '@buck-euchre/shared';
 import { getCharacterPreset } from '../character';
 
 /**

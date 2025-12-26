@@ -32,11 +32,11 @@ import {
   dealNewRound,
   finishRound,
   startNextRound
-} from '@buck-euchre/shared/game/state';
+} from '../game/state';
 import { displayStateManager } from '../game/display';
 import { statsQueue } from '../services/stats-queue.service';
-import { canPlayCard, canPlaceBid, canFold } from '@buck-euchre/shared/game/validation';
-import { getEffectiveSuit } from '@buck-euchre/shared/game/deck';
+import { canPlayCard, canPlaceBid, canFold } from '../game/validation';
+import { getEffectiveSuit } from '../game/deck';
 import { GameState, PlayerPosition, Player, Card } from '../../../shared/src/types/game';
 import { checkAndTriggerAI } from '../ai/trigger';
 import { scheduleAutoStartNextRound, cancelAutoStartNextRound, hasAutoStartTimer } from '../services/round.service';

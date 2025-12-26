@@ -8,54 +8,6 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./game/state": {
-      "types": "./dist/game/state.d.ts",
-      "default": "./dist/game/state.js"
-    },
-    "./game/validation": {
-      "types": "./dist/game/validation.d.ts",
-      "default": "./dist/game/validation.js"
-    },
-    "./game/deck": {
-      "types": "./dist/game/deck.d.ts",
-      "default": "./dist/game/deck.js"
-    },
-    "./game/cards": {
-      "types": "./dist/game/cards.d.ts",
-      "default": "./dist/game/cards.js"
-    },
-    "./game/trick": {
-      "types": "./dist/game/trick.d.ts",
-      "default": "./dist/game/trick.js"
-    },
-    "./game/scoring": {
-      "types": "./dist/game/scoring.d.ts",
-      "default": "./dist/game/scoring.js"
-    },
-    "./game/random": {
-      "types": "./dist/game/random.d.ts",
-      "default": "./dist/game/random.js"
-    },
-    "./ai/ismcts/ismcts-engine": {
-      "types": "./dist/ai/ismcts/ismcts-engine.d.ts",
-      "default": "./dist/ai/ismcts/ismcts-engine.js"
-    },
-    "./ai/ismcts/mcts-node": {
-      "types": "./dist/ai/ismcts/mcts-node.d.ts",
-      "default": "./dist/ai/ismcts/mcts-node.js"
-    },
-    "./ai/ismcts/determinize": {
-      "types": "./dist/ai/ismcts/determinize.d.ts",
-      "default": "./dist/ai/ismcts/determinize.js"
-    },
-    "./ai/ismcts/rollout": {
-      "types": "./dist/ai/ismcts/rollout.d.ts",
-      "default": "./dist/ai/ismcts/rollout.js"
-    },
-    "./ai/analysis": {
-      "types": "./dist/ai/analysis.d.ts",
-      "default": "./dist/ai/analysis.js"
     }
   },
   "scripts": {

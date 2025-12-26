@@ -5,7 +5,7 @@
 
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { executeGameAction, getActiveGameState } from './state.service';
-import { applyFoldDecision } from '@buck-euchre/shared/game/state';
+import { applyFoldDecision } from '../game/state';
 import type { PlayerPosition } from '@buck-euchre/shared/types/game';
 
 /**
