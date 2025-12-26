@@ -36,7 +36,7 @@ export function useLocalAnalysis() {
     let shouldAnalyze = false;
     if (state.phase === 'PLAYING' && state.currentPlayerPosition === position) {
       shouldAnalyze = true;
-    } else if (state.phase === 'BIDDING' && state.currentBidder === position) {
+    } else if (state.phase === 'BIDDING' && state.currentBidder !== null && state.currentBidder === position) {
       shouldAnalyze = true;
     } else if (state.phase === 'DECLARING_TRUMP' && state.winningBidderPosition === position) {
       shouldAnalyze = true;
@@ -262,6 +262,9 @@ export function useLocalAnalysis() {
   // Auto-trigger analysis when it's my turn
   useEffect(() => {
     if (!gameState || myPosition === null) {
+      if (gameState?.phase === 'BIDDING') {
+        console.log(`[useLocalAnalysis] ⚠️ Cannot analyze BIDDING - gameState=${!!gameState}, myPosition=${myPosition}`);
+      }
       return;
     }
 
@@ -269,8 +272,9 @@ export function useLocalAnalysis() {
     let shouldAnalyze = false;
     if (gameState.phase === 'PLAYING' && gameState.currentPlayerPosition === myPosition) {
       shouldAnalyze = true;
-    } else if (gameState.phase === 'BIDDING' && gameState.currentBidder === myPosition) {
+    } else if (gameState.phase === 'BIDDING' && gameState.currentBidder !== null && gameState.currentBidder === myPosition) {
       shouldAnalyze = true;
+      console.log(`[useLocalAnalysis] ✅ BIDDING phase - currentBidder=${gameState.currentBidder}, myPosition=${myPosition}, shouldAnalyze=${shouldAnalyze}`);
     } else if (gameState.phase === 'DECLARING_TRUMP' && gameState.winningBidderPosition === myPosition) {
       shouldAnalyze = true;
     } else if (gameState.phase === 'FOLDING_DECISION') {
@@ -281,6 +285,9 @@ export function useLocalAnalysis() {
     }
 
     if (!shouldAnalyze) {
+      if (gameState.phase === 'BIDDING') {
+        console.log(`[useLocalAnalysis] ❌ Not analyzing BIDDING - currentBidder=${gameState.currentBidder}, myPosition=${myPosition}, phase=${gameState.phase}`);
+      }
       // Clear all analysis when not my turn and abort ongoing analysis
       if (analysisRef.current) {
         analysisRef.current.abortController.abort();
