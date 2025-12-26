@@ -7,7 +7,7 @@
  */
 
 import { GameState, Card, Suit, BidAmount, PlayerPosition } from '@buck-euchre/shared';
-import { MCTSNode, Action, serializeAction } from './mcts-node';
+import { MCTSNode, Action, serializeAction, AICharacter } from './mcts-node';
 import { determinize } from './determinize';
 import { simulate, SimulationResult } from './rollout';
 import { applyBid, applyTrumpDeclaration, applyFoldDecision, applyCardPlay } from '../../game/state';
@@ -28,20 +28,6 @@ export interface ISMCTSConfig {
 
   /** Character/personality traits for varied play styles */
   character?: AICharacter;
-}
-
-/**
- * AI Character traits that affect play style
- */
-export interface AICharacter {
-  /** Bidding aggressiveness (0.5 = conservative, 1.0 = balanced, 1.5 = aggressive) */
-  biddingAggressiveness?: number;
-
-  /** Risk-taking in card play (0.5 = safe, 1.0 = balanced, 1.5 = risky) */
-  riskTaking?: number;
-
-  /** Fold threshold modifier (0.5 = fold more, 1.0 = balanced, 1.5 = fold less) */
-  foldThreshold?: number;
 }
 
 /**

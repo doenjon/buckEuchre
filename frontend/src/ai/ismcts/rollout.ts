@@ -17,7 +17,7 @@ import {
 import { canPlayCard } from '../../game/validation';
 import { getEffectiveSuit } from '../../game/deck';
 import { getRankValue } from '../../game/cards';
-import type { AICharacter } from './ismcts-engine';
+import type { AICharacter } from './mcts-node';
 
 /**
  * Fast heuristic for bidding
