@@ -41,6 +41,9 @@ COPY backend/prisma ./prisma
 # Generate Prisma Client
 RUN npx prisma generate
 
+# Copy fix script
+COPY backend/scripts ./scripts
+
 # Build TypeScript
 RUN npm run build
 
@@ -92,4 +95,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start application
-CMD ["node", "dist/app/src/index.js"]
+CMD ["node", "dist/src/index.js"]

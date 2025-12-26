@@ -99,7 +99,6 @@ export function useSocket() {
         // Validate that we have a valid game state
         if (!data.gameState || !data.gameState.gameId) {
           console.error('Received invalid game state update:', data);
-          // Don't clear state - just log the error and request fresh state if we have a gameId
           const currentState = useGameStore.getState().gameState;
           if (socketRef.current && currentState?.gameId) {
             console.log('Requesting fresh state due to invalid update');
@@ -108,31 +107,47 @@ export function useSocket() {
           return;
         }
 
-        // Version and timestamp check: ensure we don't apply stale updates
+        // Version check: only update if newer
         const currentState = useGameStore.getState().gameState;
         const newVersion = data.gameState.version || 0;
         const currentVersion = currentState?.version || 0;
-        const newUpdatedAt = data.gameState.updatedAt || 0;
-        const currentUpdatedAt = currentState?.updatedAt || 0;
 
-        // Accept if newer version OR (same version but newer timestamp for display transitions)
-        if (newVersion > currentVersion ||
-            (newVersion === currentVersion && newUpdatedAt > currentUpdatedAt)) {
-          // Apply update immediately (backend handles delays)
+        if (newVersion > currentVersion) {
+          // Newer version - update state
+          const oldPhase = currentState?.phase;
+          const newPhase = data.gameState.phase;
+          const oldTurn = currentState?.currentPlayerPosition;
+          const newTurn = data.gameState.currentPlayerPosition;
+
           setGameState(data.gameState);
+
+          // Only clear analysis when situation actually changes
+          const phaseChanged = oldPhase !== newPhase;
+          const turnChanged = oldTurn !== newTurn && newPhase === 'PLAYING';
+
+          if (phaseChanged) {
+            // Phase changed - clear all analysis
+            console.log('[useSocket] Phase changed, clearing all analysis');
+            setAIAnalysis(null);
+            setBidAnalysis(null);
+            setFoldAnalysis(null);
+            setSuitAnalysis(null);
+          } else if (turnChanged) {
+            // New turn in playing phase - clear card analysis only
+            console.log('[useSocket] Turn changed in playing phase, clearing card analysis');
+            setAIAnalysis(null);
+          }
+          // Otherwise keep existing analysis - it's still valid!
         } else if (newVersion < currentVersion) {
           console.warn('Received stale update (old version), requesting fresh state');
           if (socketRef.current && data.gameState.gameId) {
             emitRequestState(socketRef.current, data.gameState.gameId);
           }
         } else {
-          // Same version and same/older timestamp - duplicate
-          // Only update if we don't have a current state (shouldn't happen, but be safe)
+          // Same version - duplicate, ignore
           if (!currentState) {
-            console.log('Applying state update with same version (no current state)');
+            // No current state, apply it anyway
             setGameState(data.gameState);
-          } else {
-            console.log('Ignoring duplicate state update (same version and timestamp)');
           }
         }
       },
@@ -227,27 +242,15 @@ export function useSocket() {
 
         if (derivedMyPosition !== null && data.playerPosition === derivedMyPosition) {
           console.log('[useSocket] ✅ Storing analysis for current player');
-          // Handle different analysis types
+          // Store analysis - don't clear other types (they might still be valid)
           if (data.analysisType === 'card' && data.cards) {
             setAIAnalysis(data.cards);
-            setBidAnalysis(null);
-            setFoldAnalysis(null);
-            setSuitAnalysis(null);
           } else if (data.analysisType === 'bid' && data.bids) {
             setBidAnalysis(data.bids);
-            setAIAnalysis(null);
-            setFoldAnalysis(null);
-            setSuitAnalysis(null);
           } else if (data.analysisType === 'fold' && data.foldOptions) {
             setFoldAnalysis(data.foldOptions);
-            setAIAnalysis(null);
-            setBidAnalysis(null);
-            setSuitAnalysis(null);
           } else if (data.analysisType === 'suit' && data.suits) {
             setSuitAnalysis(data.suits);
-            setAIAnalysis(null);
-            setBidAnalysis(null);
-            setFoldAnalysis(null);
           }
         } else {
           console.log('[useSocket] ❌ Ignoring analysis - not for current player');
