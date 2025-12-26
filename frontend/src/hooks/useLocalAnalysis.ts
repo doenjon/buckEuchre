@@ -131,16 +131,11 @@ export function useLocalAnalysis() {
       return;
     }
 
-    // Check if it's my turn (either current turn or next turn during trick pause)
-    const isMyCurrentTurn =
+    // Only analyze when it's actually my current turn
+    // Since 20k iterations takes <1s, we don't need the early start during trick pause
+    const shouldAnalyze =
       gameState.phase === 'PLAYING' &&
       gameState.currentPlayerPosition === myPosition;
-
-    const isMyNextTurn =
-      gameState.phase === 'PLAYING' &&
-      nextPlayerPosition === myPosition;
-
-    const shouldAnalyze = isMyCurrentTurn || isMyNextTurn;
 
     if (!shouldAnalyze) {
       // Clear analysis when not my turn and abort ongoing analysis
@@ -153,8 +148,7 @@ export function useLocalAnalysis() {
     }
 
     // Create a unique ID for this game state + position combination
-    // Include nextPlayerPosition in the ID to ensure we run analysis during trick pause
-    const stateId = `${gameState.gameId}-${gameState.version}-${gameState.phase}-${myPosition}-next:${nextPlayerPosition ?? 'none'}`;
+    const stateId = `${gameState.gameId}-${gameState.version}-${gameState.phase}-${myPosition}`;
 
     // Skip if we've already analyzed this exact state
     if (analysisRef.current?.gameStateId === stateId) {
@@ -170,17 +164,11 @@ export function useLocalAnalysis() {
     const abortController = new AbortController();
     analysisRef.current = { gameStateId: stateId, position: myPosition, abortController };
 
-    console.log('[useLocalAnalysis] Triggering analysis', {
-      isMyCurrentTurn,
-      isMyNextTurn,
-      currentPlayerPosition: gameState.currentPlayerPosition,
-      nextPlayerPosition,
-      myPosition
-    });
+    console.log('[useLocalAnalysis] Starting 20k iteration analysis');
 
     // Run analysis asynchronously
     void runAnalysis(gameState, myPosition, abortController);
-  }, [gameState, myPosition, nextPlayerPosition, runAnalysis, setAIAnalysis]);
+  }, [gameState, myPosition, runAnalysis, setAIAnalysis]);
 
   // Cleanup on unmount
   useEffect(() => {
