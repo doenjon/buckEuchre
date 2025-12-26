@@ -118,12 +118,15 @@ export function useSocket() {
           const newPhase = data.gameState.phase;
           const oldTurn = currentState?.currentPlayerPosition;
           const newTurn = data.gameState.currentPlayerPosition;
+          const oldBidder = currentState?.currentBidder;
+          const newBidder = data.gameState.currentBidder;
 
           setGameState(data.gameState);
 
           // Only clear analysis when situation actually changes
           const phaseChanged = oldPhase !== newPhase;
           const turnChanged = oldTurn !== newTurn && newPhase === 'PLAYING';
+          const bidderChanged = oldBidder !== newBidder && newPhase === 'BIDDING';
 
           if (phaseChanged) {
             // Phase changed - clear all analysis
@@ -136,6 +139,10 @@ export function useSocket() {
             // New turn in playing phase - clear card analysis only
             console.log('[useSocket] Turn changed in playing phase, clearing card analysis');
             setAIAnalysis(null);
+          } else if (bidderChanged) {
+            // New bidder in bidding phase - clear bid analysis only
+            console.log('[useSocket] Bidder changed in bidding phase, clearing bid analysis');
+            setBidAnalysis(null);
           }
           // Otherwise keep existing analysis - it's still valid!
         } else if (newVersion < currentVersion) {

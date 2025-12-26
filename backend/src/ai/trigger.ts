@@ -143,29 +143,36 @@ async function sendAIAnalysis(
       return;
     }
 
-    // Check if we should send (state-aware TTL cache)
-    if (!shouldSendAnalysis(gameId, playerPosition, gameState)) {
-      return; // Already sent recently for this exact situation
-    }
-
-    // Validate player still needs analysis
+    // Validate player still needs analysis FIRST (before cache check)
+    // This prevents caching analysis for situations that are no longer valid
     if (gameState.phase === 'FOLDING_DECISION') {
       const player = gameState.players[playerPosition];
       if (playerPosition === gameState.winningBidderPosition || player.foldDecision !== 'UNDECIDED') {
+        console.log(`[AI Analysis] Player ${playerPosition} no longer needs fold analysis`);
         return; // No longer needs analysis
       }
     } else if (gameState.phase === 'PLAYING') {
       if (gameState.currentPlayerPosition !== playerPosition) {
+        console.log(`[AI Analysis] Player ${playerPosition} not current player (current: ${gameState.currentPlayerPosition})`);
         return; // Not this player's turn anymore
       }
     } else if (gameState.phase === 'BIDDING') {
       if (gameState.currentBidder !== playerPosition) {
+        console.log(`[AI Analysis] Player ${playerPosition} not current bidder (current: ${gameState.currentBidder})`);
         return; // Not this player's turn anymore
       }
     } else if (gameState.phase === 'DECLARING_TRUMP') {
       if (gameState.winningBidderPosition !== playerPosition) {
+        console.log(`[AI Analysis] Player ${playerPosition} not winning bidder (winner: ${gameState.winningBidderPosition})`);
         return; // Not this player's turn anymore
       }
+    }
+
+    // Check if we should send (state-aware TTL cache)
+    // Only check cache AFTER validating the player still needs analysis
+    if (!shouldSendAnalysis(gameId, playerPosition, gameState)) {
+      console.log(`[AI Analysis] Analysis already cached for player ${playerPosition} in phase ${gameState.phase}`);
+      return; // Already sent recently for this exact situation
     }
 
     console.log(`[AI Analysis] Analyzing for player at position ${playerPosition} in phase ${gameState.phase}`);
