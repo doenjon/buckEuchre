@@ -135,10 +135,23 @@ function applyAction(gameState: GameState, action: Action, playerPosition: Playe
 }
 
 /**
+ * Helper to yield control to event loop periodically
+ * This prevents blocking and allows other events (like button presses) to be processed
+ */
+function yieldToEventLoop(): Promise<void> {
+  return new Promise(resolve => setImmediate(resolve));
+}
+
+/**
  * ISMCTS Engine
  */
 export class ISMCTSEngine {
   private config: ISMCTSConfig;
+  /** Number of simulations to run before yielding to event loop
+   *  This makes MCTS "nice" - allows other events (like button presses) to be processed
+   *  Yielding every 500 simulations balances responsiveness with performance
+   */
+  private readonly YIELD_INTERVAL = 500;
 
   constructor(config: ISMCTSConfig) {
     this.config = config;
@@ -151,7 +164,7 @@ export class ISMCTSEngine {
    * @param playerPosition - Our player position
    * @returns Best action to take
    */
-  search(gameState: GameState, playerPosition: PlayerPosition): Action {
+  async search(gameState: GameState, playerPosition: PlayerPosition): Promise<Action> {
     const startTime = Date.now();
 
     // Get legal actions at root
@@ -169,13 +182,19 @@ export class ISMCTSEngine {
     // Create root node
     const root = new MCTSNode(null, null, legalActions);
 
-    // Run simulations
+    // Run simulations with periodic yields to prevent blocking event loop
     for (let i = 0; i < this.config.simulations; i++) {
       // 1. DETERMINIZE: Sample opponent hands
       const determinizedState = determinize(gameState, playerPosition);
 
       // 2-5. Run one simulation on determinized state
       this.runSimulation(root, determinizedState, playerPosition);
+
+      // Yield to event loop periodically to allow other events to be processed
+      // This makes MCTS "nice" and prevents blocking button presses
+      if ((i + 1) % this.YIELD_INTERVAL === 0) {
+        await yieldToEventLoop();
+      }
     }
 
     const elapsed = Date.now() - startTime;
@@ -314,14 +333,14 @@ export class ISMCTSEngine {
   /**
    * Get analysis of all actions (for teaching features)
    */
-  searchWithAnalysis(
+  async searchWithAnalysis(
     gameState: GameState,
     playerPosition: PlayerPosition
-  ): {
+  ): Promise<{
     bestAction: Action;
     statistics: Map<string, { visits: number; avgValue: number; action: Action; stdError: number; confidenceInterval: { lower: number; upper: number; width: number }; buckProbability: number }>;
     totalSimulations: number;
-  } {
+  }> {
     // Run normal search
     const legalActions = getLegalActions(gameState, playerPosition);
     if (legalActions.length === 0) {
@@ -344,6 +363,12 @@ export class ISMCTSEngine {
           console.error(`[ISMCTS] Simulation ${i} failed:`, error.message || error, error.stack);
         }
         // Continue with next simulation
+      }
+
+      // Yield to event loop periodically to allow other events to be processed
+      // This makes MCTS "nice" and prevents blocking button presses
+      if ((i + 1) % this.YIELD_INTERVAL === 0) {
+        await yieldToEventLoop();
       }
     }
 

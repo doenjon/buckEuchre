@@ -78,7 +78,7 @@ export async function analyzeHand(
     });
 
     // Run analysis
-    const { bestAction, statistics, totalSimulations } = engine.searchWithAnalysis(
+    const { bestAction, statistics, totalSimulations } = await engine.searchWithAnalysis(
       gameState,
       playerPosition
     );
@@ -239,7 +239,7 @@ export async function analyzeBids(
     });
 
     // Run analysis
-    const { bestAction, statistics, totalSimulations } = engine.searchWithAnalysis(
+    const { bestAction, statistics, totalSimulations } = await engine.searchWithAnalysis(
       gameState,
       playerPosition
     );
@@ -366,7 +366,7 @@ export async function analyzeFoldDecision(
     });
 
     // Run analysis
-    const { bestAction, statistics, totalSimulations } = engine.searchWithAnalysis(
+    const { bestAction, statistics, totalSimulations } = await engine.searchWithAnalysis(
       gameState,
       playerPosition
     );
@@ -488,7 +488,7 @@ export async function analyzeTrumpSelection(
     });
 
     // Run analysis
-    const { bestAction, statistics, totalSimulations } = engine.searchWithAnalysis(
+    const { bestAction, statistics, totalSimulations } = await engine.searchWithAnalysis(
       gameState,
       playerPosition
     );

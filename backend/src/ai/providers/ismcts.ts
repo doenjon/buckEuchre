@@ -78,12 +78,12 @@ export class ISMCTSAIProvider implements AIProvider {
     );
   }
 
-  decideBid(
+  async decideBid(
     hand: Card[],
     turnUpCard: Card,
     currentBid: number | null,
     gameState: GameState
-  ): BidAmount {
+  ): Promise<BidAmount> {
     if (!this.engine) {
       throw new Error('[ISMCTS AI] Engine not initialized');
     }
@@ -94,7 +94,7 @@ export class ISMCTSAIProvider implements AIProvider {
       throw new Error('[ISMCTS AI] No current bidder');
     }
 
-    const action = this.engine.search(gameState, myPosition);
+    const action = await this.engine.search(gameState, myPosition);
 
     if (action.type !== 'BID') {
       console.warn(`[ISMCTS AI] Expected BID action, got ${action.type}`);
@@ -104,7 +104,7 @@ export class ISMCTSAIProvider implements AIProvider {
     return action.amount;
   }
 
-  decideTrump(hand: Card[], turnUpCard: Card, gameState: GameState): Suit {
+  async decideTrump(hand: Card[], turnUpCard: Card, gameState: GameState): Promise<Suit> {
     if (!this.engine) {
       throw new Error('[ISMCTS AI] Engine not initialized');
     }
@@ -115,7 +115,7 @@ export class ISMCTSAIProvider implements AIProvider {
       throw new Error('[ISMCTS AI] No winning bidder');
     }
 
-    const action = this.engine.search(gameState, myPosition);
+    const action = await this.engine.search(gameState, myPosition);
 
     if (action.type !== 'TRUMP') {
       console.warn(`[ISMCTS AI] Expected TRUMP action, got ${action.type}`);
@@ -136,12 +136,12 @@ export class ISMCTSAIProvider implements AIProvider {
     return action.suit;
   }
 
-  decideFold(
+  async decideFold(
     hand: Card[],
     trumpSuit: Suit,
     isClubs: boolean,
     gameState: GameState
-  ): boolean {
+  ): Promise<boolean> {
     if (!this.engine) {
       throw new Error('[ISMCTS AI] Engine not initialized');
     }
@@ -160,7 +160,7 @@ export class ISMCTSAIProvider implements AIProvider {
       throw new Error('[ISMCTS AI] No undecided player found');
     }
 
-    const action = this.engine.search(gameState, myPosition);
+    const action = await this.engine.search(gameState, myPosition);
 
     if (action.type !== 'FOLD') {
       console.warn(`[ISMCTS AI] Expected FOLD action, got ${action.type}`);
@@ -170,12 +170,12 @@ export class ISMCTSAIProvider implements AIProvider {
     return action.fold;
   }
 
-  decideCardToPlay(gameState: GameState, aiPosition: PlayerPosition): Card {
+  async decideCardToPlay(gameState: GameState, aiPosition: PlayerPosition): Promise<Card> {
     if (!this.engine) {
       throw new Error('[ISMCTS AI] Engine not initialized');
     }
 
-    const action = this.engine.search(gameState, aiPosition);
+    const action = await this.engine.search(gameState, aiPosition);
 
     if (action.type !== 'CARD') {
       console.warn(`[ISMCTS AI] Expected CARD action, got ${action.type}`);
@@ -187,13 +187,13 @@ export class ISMCTSAIProvider implements AIProvider {
     return action.card;
   }
 
-  analyze(gameState: GameState, aiPosition: PlayerPosition): AIAnalysis {
+  async analyze(gameState: GameState, aiPosition: PlayerPosition): Promise<AIAnalysis> {
     if (!this.engine) {
       throw new Error('[ISMCTS AI] Engine not initialized');
     }
 
     // Run search with full statistics
-    const result = this.engine.searchWithAnalysis(gameState, aiPosition);
+    const result = await this.engine.searchWithAnalysis(gameState, aiPosition);
 
     // Convert to AIAnalysis format
     type StatValue = { visits: number; avgValue: number; action: Action; stdError: number; confidenceInterval: { lower: number; upper: number; width: number }; buckProbability: number };
