@@ -754,26 +754,15 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       </div>
 
       {/* AI Analysis Progress Indicator - Bottom Right */}
-      {isThinking && (
+      {isThinking && progress && (
         <div className="fixed bottom-2 right-2 z-40">
           <div className="rounded-lg border-white/20 bg-black/70 backdrop-blur px-3 py-2 shadow-lg">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2">
               <Loader2 className="h-3 w-3 animate-spin text-emerald-300" />
-              <span className="text-emerald-200/90 font-medium text-xs">Analyzing...</span>
+              <span className="text-emerald-200/90 font-medium text-sm tabular-nums">
+                {progress.simulations.toLocaleString()} iterations
+              </span>
             </div>
-            {progress && (
-              <div className="flex flex-col gap-1">
-                <div className="w-32 h-1 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-400 transition-all duration-200"
-                    style={{ width: `${progress.progress}%` }}
-                  />
-                </div>
-                <div className="text-[10px] text-emerald-300/70 tabular-nums">
-                  {progress.simulations}/{progress.totalSimulations} ({progress.progress}%)
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

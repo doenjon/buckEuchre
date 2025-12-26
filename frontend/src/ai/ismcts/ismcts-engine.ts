@@ -6,8 +6,8 @@
  * Handles imperfect information by determinizing and building a search tree.
  */
 
-import { GameState, Card, Suit, BidAmount, PlayerPosition } from '@buck-euchre/shared';
-import { MCTSNode, Action, serializeAction, AICharacter } from './mcts-node';
+import { GameState, Suit, PlayerPosition } from '@buck-euchre/shared';
+import { MCTSNode, Action, AICharacter } from './mcts-node';
 import { determinize } from './determinize';
 import { simulate, SimulationResult } from './rollout';
 import { applyBid, applyTrumpDeclaration, applyFoldDecision, applyCardPlay } from '../../game/state';
@@ -367,7 +367,8 @@ export class ISMCTSEngine {
   async analyzeHandWithProgress(
     gameState: GameState,
     playerPosition: PlayerPosition,
-    onProgress?: (simulations: number, total: number) => void
+    onProgress?: (simulations: number, total: number) => void,
+    onIntermediateResults?: (results: Record<string, { visits: number; value: number; confidence?: { lower: number; upper: number }; buckProbability?: number }>) => void
   ): Promise<Record<string, { visits: number; value: number; confidence?: { lower: number; upper: number }; buckProbability?: number }>> {
     const legalActions = getLegalActions(gameState, playerPosition);
     if (legalActions.length === 0) {
@@ -377,6 +378,29 @@ export class ISMCTSEngine {
     const root = new MCTSNode(null, null, legalActions);
     const totalSimulations = this.config.simulations;
     const progressInterval = 100; // Update progress every 100 simulations
+    const intermediateResultsInterval = 1000; // Send intermediate results every 1000 simulations
+
+    // Helper to convert current tree state to results
+    const getResults = () => {
+      const statistics = root.getChildStatistics();
+      const results: Record<string, any> = {};
+
+      for (const [key, stat] of statistics) {
+        // Extract card ID from action key (format: "CARD:SUIT_RANK")
+        const match = key.match(/^CARD:(.+)$/);
+        if (match) {
+          const cardId = match[1];
+          results[cardId] = {
+            visits: stat.visits,
+            value: stat.avgValue,
+            confidence: stat.confidenceInterval,
+            buckProbability: stat.buckProbability
+          };
+        }
+      }
+
+      return results;
+    };
 
     // Run simulations with progress updates
     for (let i = 0; i < totalSimulations; i++) {
@@ -387,35 +411,26 @@ export class ISMCTSEngine {
         // Skip failed simulations
       }
 
+      const currentSim = i + 1;
+
+      // Report intermediate results every 1000 simulations
+      if (onIntermediateResults && currentSim % intermediateResultsInterval === 0) {
+        const intermediateResults = getResults();
+        onIntermediateResults(intermediateResults);
+      }
+
       // Report progress
-      if (onProgress && (i % progressInterval === 0 || i === totalSimulations - 1)) {
-        onProgress(i + 1, totalSimulations);
+      if (onProgress && (currentSim % progressInterval === 0 || currentSim === totalSimulations)) {
+        onProgress(currentSim, totalSimulations);
 
         // Yield control to browser to keep UI responsive
-        if (i % progressInterval === 0) {
+        if (currentSim % progressInterval === 0) {
           await new Promise(resolve => setTimeout(resolve, 0));
         }
       }
     }
 
-    // Convert child statistics to card-based results
-    const statistics = root.getChildStatistics();
-    const results: Record<string, any> = {};
-
-    for (const [key, stat] of statistics) {
-      // Extract card ID from action key (format: "CARD:SUIT_RANK")
-      const match = key.match(/^CARD:(.+)$/);
-      if (match) {
-        const cardId = match[1];
-        results[cardId] = {
-          visits: stat.visits,
-          value: stat.avgValue,
-          confidence: stat.confidenceInterval,
-          buckProbability: stat.buckProbability
-        };
-      }
-    }
-
-    return results;
+    // Return final results
+    return getResults();
   }
 }
