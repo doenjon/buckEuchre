@@ -398,4 +398,85 @@ export class ISMCTSEngine {
       totalSimulations: root.visits,
     };
   }
+
+  /**
+   * Analyze hand with progress callbacks for UI updates
+   * Returns statistics for all playable cards
+   */
+  async analyzeHandWithProgress(
+    gameState: GameState,
+    playerPosition: PlayerPosition,
+    onProgress?: (simulations: number, total: number) => void,
+    onIntermediateResults?: (results: Record<string, { visits: number; value: number; confidence?: { lower: number; upper: number }; buckProbability?: number }>) => void,
+    abortSignal?: AbortSignal
+  ): Promise<Record<string, { visits: number; value: number; confidence?: { lower: number; upper: number }; buckProbability?: number }>> {
+    const legalActions = getLegalActions(gameState, playerPosition);
+    if (legalActions.length === 0) {
+      return {};
+    }
+
+    const root = new MCTSNode(null, null, legalActions);
+    const totalSimulations = this.config.simulations;
+    const progressInterval = 100; // Update progress every 100 simulations
+    const intermediateResultsInterval = 1000; // Send intermediate results every 1000 simulations
+
+    // Helper to convert current tree state to results
+    const getResults = () => {
+      const statistics = root.getChildStatistics();
+      const results: Record<string, any> = {};
+
+      for (const [key, stat] of statistics) {
+        // Extract card ID from action key (format: "CARD:SUIT_RANK")
+        const match = key.match(/^CARD:(.+)$/);
+        if (match) {
+          const cardId = match[1];
+          results[cardId] = {
+            visits: stat.visits,
+            value: stat.avgValue, // Normalized value [0, 1]
+            confidence: stat.confidenceInterval,
+            buckProbability: stat.buckProbability
+          };
+        }
+      }
+
+      return results;
+    };
+
+    // Run simulations with progress updates
+    for (let i = 0; i < totalSimulations; i++) {
+      // Check if aborted
+      if (abortSignal?.aborted) {
+        console.log(`[ISMCTS] Analysis aborted after ${i} simulations`);
+        break;
+      }
+
+      try {
+        const determinizedState = determinize(gameState, playerPosition);
+        this.runSimulation(root, determinizedState, playerPosition);
+      } catch (error) {
+        // Skip failed simulations
+      }
+
+      const currentSim = i + 1;
+
+      // Report intermediate results periodically
+      if (onIntermediateResults && currentSim % intermediateResultsInterval === 0) {
+        const intermediateResults = getResults();
+        onIntermediateResults(intermediateResults);
+      }
+
+      // Report progress
+      if (onProgress && (currentSim % progressInterval === 0 || currentSim === totalSimulations)) {
+        onProgress(currentSim, totalSimulations);
+      }
+
+      // Yield to event loop periodically to keep UI responsive
+      if (currentSim % this.YIELD_INTERVAL === 0) {
+        await yieldToEventLoop();
+      }
+    }
+
+    // Return final results
+    return getResults();
+  }
 }

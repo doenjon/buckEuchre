@@ -148,80 +148,103 @@ export function useLocalAnalysis() {
           }
         }
       } else {
-        // For PLAYING phase, use searchWithAnalysis (same as other phases for consistency)
+        // For PLAYING phase, use analyzeHandWithProgress for progress updates
         const player = state.players[position];
         if (player && player.hand && player.hand.length > 0) {
-          const result = await engine.searchWithAnalysis(state, position as any);
-          const statistics = result.statistics;
+          const playerHand = player.hand; // Capture for use in closure
           
-          // Convert to CardAnalysis format (same as backend analysis.service.ts)
-          const cardStats = new Map<string, any>();
-          for (const [key, stat] of statistics) {
-            if (stat.action.type === 'CARD') {
-              cardStats.set(stat.action.card.id, stat);
-            }
-          }
-          
-          const analyses: CardAnalysis[] = [];
-          for (const card of player.hand) {
-            const stats = cardStats.get(card.id);
+          // Helper to convert results to CardAnalysis format (same as backend)
+          const convertToCardAnalysis = (results: Record<string, any>): CardAnalysis[] => {
+            const entries = Object.entries(results);
+            const analyses: CardAnalysis[] = [];
             
-            if (!stats) {
+            for (const card of playerHand) {
+              const stats = results[card.id];
+              
+              if (!stats) {
+                analyses.push({
+                  cardId: card.id,
+                  winProbability: 0,
+                  expectedTricks: 0,
+                  expectedScore: 5, // Worst case
+                  confidence: 0,
+                  visits: 0,
+                  rank: playerHand.length,
+                });
+                continue;
+              }
+              
+              // Calculate metrics from MCTS values (same as backend)
+              // stats.value is normalized [0, 1] where:
+              //   1.0 = best outcome (-5 score: took all 5 tricks)
+              //   0.5 = neutral outcome (0 score change)
+              //   0.0 = worst outcome (+5 score: got set/failed)
+              const normalizedValue = stats.value;
+              const winProbability = normalizedValue;
+              const confidence = Math.min(stats.visits / 200, 1);
+              const expectedScoreChange = -(normalizedValue * 10 - 5); // Reverse the normalization
+              const remainingTricks = 5 - (state.tricks?.length || 0);
+              const expectedTricks = Math.max(0, Math.min(remainingTricks, -expectedScoreChange));
+              
+              // Convert confidence interval from normalized [0,1] to score [-5,+5]
+              let confidenceInterval;
+              if (stats.confidence) {
+                const ciLowerScore = -(stats.confidence.upper * 10 - 5);
+                const ciUpperScore = -(stats.confidence.lower * 10 - 5);
+                const ciWidth = Math.abs(ciLowerScore - ciUpperScore);
+                confidenceInterval = {
+                  lower: Math.min(ciLowerScore, ciUpperScore),
+                  upper: Math.max(ciLowerScore, ciUpperScore),
+                  width: ciWidth,
+                };
+              }
+              
               analyses.push({
                 cardId: card.id,
-                winProbability: 0,
-                expectedTricks: 0,
-                expectedScore: 5, // Worst case
-                confidence: 0,
-                visits: 0,
-                rank: player.hand.length,
+                winProbability,
+                expectedTricks,
+                expectedScore: expectedScoreChange,
+                confidence,
+                visits: stats.visits,
+                rank: 0, // Will be set after sorting
+                buckProbability: stats.buckProbability || 0,
+                confidenceInterval,
               });
-              continue;
             }
             
-            // Calculate metrics from MCTS values (same as backend)
-            // avgValue is normalized score change where:
-            //   1.0 = best outcome (-5 score: took all 5 tricks)
-            //   0.5 = neutral outcome (0 score change)
-            //   0.0 = worst outcome (+5 score: got set/failed)
-            const winProbability = stats.avgValue;
-            const confidence = Math.min(stats.visits / 200, 1);
-            const expectedScoreChange = -(winProbability * 10 - 5); // Reverse the normalization
-            const remainingTricks = 5 - (state.tricks?.length || 0);
-            const expectedTricks = Math.max(0, Math.min(remainingTricks, -expectedScoreChange));
-            
-            // Convert confidence interval from avgValue scale to expectedScore scale
-            const ciLowerScore = -(stats.confidenceInterval.lower * 10 - 5);
-            const ciUpperScore = -(stats.confidenceInterval.upper * 10 - 5);
-            const ciWidth = Math.abs(ciLowerScore - ciUpperScore);
-            const stdErrorScore = stats.stdError * 10;
-            
-            analyses.push({
-              cardId: card.id,
-              winProbability,
-              expectedTricks,
-              expectedScore: expectedScoreChange,
-              confidence,
-              visits: stats.visits,
-              rank: 0, // Will be set after sorting
-              buckProbability: stats.buckProbability,
-              standardError: stdErrorScore,
-              confidenceInterval: {
-                lower: Math.min(ciLowerScore, ciUpperScore),
-                upper: Math.max(ciLowerScore, ciUpperScore),
-                width: ciWidth,
-              },
+            // Sort by win probability (descending) and assign ranks
+            analyses.sort((a, b) => b.winProbability - a.winProbability);
+            analyses.forEach((analysis, index) => {
+              analysis.rank = index + 1;
             });
-          }
-          
-          // Sort by win probability (descending) and assign ranks
-          analyses.sort((a, b) => b.winProbability - a.winProbability);
-          analyses.forEach((analysis, index) => {
-            analysis.rank = index + 1;
-          });
-          
+            
+            return analyses;
+          };
+
+          const results = await engine.analyzeHandWithProgress(
+            state,
+            position as any,
+            (simulations: number, total: number) => {
+              if (abortController.signal.aborted) return;
+              const progressPercent = Math.round((simulations / total) * 100);
+              const progressInfo = { simulations, totalSimulations: total, progress: progressPercent };
+              setProgress(progressInfo);
+              onProgress?.(progressInfo);
+            },
+            (intermediateResults) => {
+              // Update UI with intermediate results every 1000 simulations
+              if (!abortController.signal.aborted) {
+                const cardAnalysis = convertToCardAnalysis(intermediateResults);
+                setAIAnalysis(cardAnalysis);
+              }
+            },
+            abortController.signal
+          );
+
+          // Set final results
           if (!abortController.signal.aborted) {
-            setAIAnalysis(analyses);
+            const cardAnalysis = convertToCardAnalysis(results);
+            setAIAnalysis(cardAnalysis);
           }
         }
       }
