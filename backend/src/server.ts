@@ -8,7 +8,7 @@ import { createServer, Server as HTTPServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
-import apiRoutes from './api.js';
+import apiRoutes from './api';
 import { handleConnection } from './sockets/connection.js';
 import { setSocketServer } from './utils/socketManager.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';

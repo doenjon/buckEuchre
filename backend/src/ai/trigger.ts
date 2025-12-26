@@ -254,16 +254,13 @@ export async function checkAndTriggerAI(
 ): Promise<void> {
   try {
     console.log(`[AI Trigger] 🔍 ENTRY: gameId=${gameId}`);
-    logToFile(`[AI Trigger] 🔍 ENTRY: gameId=${gameId}`);
     // Always fetch fresh state
     const gameState = getActiveGameState(gameId);
     if (!gameState) {
       console.log(`[AI Trigger] ❌ Game ${gameId} not found in memory`);
-      logToFile(`[AI Trigger] ❌ Game ${gameId} not found in memory`);
       return;
     }
     console.log(`[AI Trigger] 📊 Game state: phase=${gameState.phase}, version=${gameState.version}`);
-    logToFile(`[AI Trigger] 📊 Game state: phase=${gameState.phase}, version=${gameState.version}`);
 
     // Special handling for FOLDING_DECISION phase
     if (gameState.phase === 'FOLDING_DECISION') {

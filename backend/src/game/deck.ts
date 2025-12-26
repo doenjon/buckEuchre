@@ -5,11 +5,12 @@
  * All functions in this module are pure (no I/O, no mutations, no side effects)
  */
 
-import { Card } from '../../../shared/src/types/game.js';
-import { FULL_DECK, CARDS_PER_PLAYER, BLIND_SIZE, PLAYER_COUNT } from '@buck-euchre/shared';
-import { getShuffleSeed } from './random.js';
+import { Card } from '@buck-euchre/shared';
+import { FULL_DECK, CARDS_PER_PLAYER, BLIND_SIZE, PLAYER_COUNT } from '../../../shared/src/constants/cards';
+import { getShuffleSeed } from './random';
+import { getEffectiveSuit, isSameColor } from '../../../shared/src/utils/cards';
 
-export { getEffectiveSuit, isSameColor } from '../../../shared/src/utils/cards.js';
+export { getEffectiveSuit, isSameColor };
 
 /**
  * Creates a fresh 24-card deck

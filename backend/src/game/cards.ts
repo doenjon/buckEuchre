@@ -6,7 +6,7 @@
  */
 
 import { Card, Suit, Rank } from '../../../shared/src/types/game.js';
-import { TRUMP_RANK_VALUES, NON_TRUMP_RANK_VALUES } from '../../../shared/src/constants/cards.js';
+import { TRUMP_RANK_VALUES, NON_TRUMP_RANK_VALUES } from '../../../shared/src/constants/cards';
 import { getEffectiveSuit, isSameColor } from './deck.js';
 
 /**

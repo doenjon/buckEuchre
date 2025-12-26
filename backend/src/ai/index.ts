@@ -17,7 +17,7 @@ export * from './provider-cache.js';
 export * from './setup.js';
 
 // Provider implementations
-export * from './providers.js';
+export * from './providers/index.js';
 
 // Execution infrastructure (existing)
 export * from './executor.js';

@@ -2,7 +2,6 @@
   "name": "@buck-euchre/backend",
   "version": "1.0.0",
   "description": "Backend server for Buck Euchre game",
-  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
