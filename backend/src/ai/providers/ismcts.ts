@@ -8,7 +8,8 @@
 
 import { Card, Suit, BidAmount, GameState, PlayerPosition } from '@buck-euchre/shared';
 import { AIProvider, AIConfig, AIDifficulty, AIAnalysis } from '../types';
-import { ISMCTSEngine, ISMCTSConfig, AICharacter, Action } from '@buck-euchre/shared';
+import { ISMCTSEngine, ISMCTSConfig, AICharacter } from '../ismcts/ismcts-engine';
+import { Action } from '../ismcts/mcts-node';
 import { getCharacterPreset } from '../character';
 
 /**
@@ -195,11 +196,12 @@ export class ISMCTSAIProvider implements AIProvider {
     const result = this.engine.searchWithAnalysis(gameState, aiPosition);
 
     // Convert to AIAnalysis format
-    const alternatives = Array.from(result.statistics.values())
-      .filter(s => s.action !== result.bestAction)
-      .sort((a, b) => b.avgValue - a.avgValue)
+    type StatValue = { visits: number; avgValue: number; action: Action; stdError: number; confidenceInterval: { lower: number; upper: number; width: number }; buckProbability: number };
+    const alternatives = Array.from(result.statistics.values() as IterableIterator<StatValue>)
+      .filter((s: StatValue) => s.action !== result.bestAction)
+      .sort((a: StatValue, b: StatValue) => b.avgValue - a.avgValue)
       .slice(0, 3) // Top 3 alternatives
-      .map(s => ({
+      .map((s: StatValue) => ({
         action: this.actionToValue(s.action),
         score: s.avgValue,
         probability: s.visits / result.totalSimulations,

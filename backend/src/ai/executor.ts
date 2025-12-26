@@ -14,12 +14,10 @@ import {
   applyFoldDecision,
   applyCardPlay,
   finishRound,
-  canFold,
-  canPlaceBid,
-  canPlayCard
-} from '@buck-euchre/shared';
+} from '../game/state';
 import { displayStateManager } from '../game/display';
 import { Server } from 'socket.io';
+import { canFold, canPlaceBid, canPlayCard } from '../game/validation';
 import { checkAndTriggerAI } from './trigger';
 import { scheduleAutoStartNextRound } from '../services/round.service';
 import { aiProviderCache } from './provider-cache';
