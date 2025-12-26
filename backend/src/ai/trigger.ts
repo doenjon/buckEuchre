@@ -284,11 +284,8 @@ export async function checkAndTriggerAI(
             console.error(`[AI Trigger] Error:`, err)
           );
         } else {
-          // Human needs analysis - send it (FOLDING_DECISION phase analysis runs on server)
-          console.log(`[AI Trigger] Sending fold analysis for human player ${player.name} at position ${pos}`);
-          sendAIAnalysis(gameId, pos, io).catch(err =>
-            console.error(`[AI Trigger] Analysis error:`, err)
-          );
+          // Human needs analysis - skip server analysis (should run locally on the client)
+          console.log(`[AI Trigger] 👤 Human player ${player.name} at position ${pos} in FOLDING_DECISION phase - skipping server analysis (should run locally)`);
         }
       }
       return;
@@ -339,17 +336,9 @@ export async function checkAndTriggerAI(
           console.error(`[AI Trigger] Error stack:`, err.stack);
         });
     } else {
-      // Human player - only send server analysis for non-PLAYING phases
-      // PLAYING phase (hand analysis) should run locally on the client
-      if (gameState.phase === 'PLAYING') {
-        console.log(`[AI Trigger] 👤 Human player in PLAYING phase - skipping server analysis (should run locally)`);
-      } else {
-        // For BIDDING, FOLDING_DECISION, DECLARING_TRUMP phases, send server analysis
-        console.log(`[AI Trigger] 👤 Human player - sending server analysis for ${currentPlayer.name} at position ${currentPlayer.position} in phase ${gameState.phase}`);
-        sendAIAnalysis(gameId, currentPlayer.position, io).catch(err =>
-          console.error(`[AI Trigger] ❌ Analysis error:`, err)
-        );
-      }
+      // Human player - skip all server analysis (should run locally on the client)
+      // Analysis for all phases (PLAYING, BIDDING, FOLDING_DECISION, DECLARING_TRUMP) should run locally
+      console.log(`[AI Trigger] 👤 Human player in ${gameState.phase} phase - skipping server analysis (should run locally)`);
     }
   } catch (error: any) {
     console.error(`[AI Trigger] ❌ FATAL ERROR in checkAndTriggerAI:`, error);
