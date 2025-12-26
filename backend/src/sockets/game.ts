@@ -39,6 +39,7 @@ import { canPlayCard, canPlaceBid, canFold } from '../game/validation.js';
 import { getEffectiveSuit } from '../game/deck.js';
 import { GameState, PlayerPosition, Player, Card } from '@buck-euchre/shared';
 import { checkAndTriggerAI } from '../ai/trigger.js';
+import { isAIPlayerByName } from '../services/ai-player.service.js';
 import { scheduleAutoStartNextRound, cancelAutoStartNextRound, hasAutoStartTimer } from '../services/round.service.js';
 import {
   updateRoundStats,
@@ -914,7 +915,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
         // Only delay if next player is AI (to slow down AI play)
         // Skip delay if next player is human (they can play when ready)
         const nextPlayerPos = nextState.currentPlayerPosition;
-        const nextPlayerIsAI = nextPlayerPos !== null && nextState.players[nextPlayerPos]?.isAI;
+        const nextPlayerIsAI = nextPlayerPos !== null && nextState.players[nextPlayerPos] ? isAIPlayerByName(nextState.players[nextPlayerPos].name) : false;
         const delayMs = nextPlayerIsAI ? 3000 : 0;
 
         io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
@@ -969,7 +970,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
     if (trickWasCompleted) {
       // Calculate delay based on next player - only delay for AI players
       const nextPlayerPos = finalState.currentPlayerPosition;
-      const nextPlayerIsAI = nextPlayerPos !== null && finalState.players[nextPlayerPos]?.isAI;
+      const nextPlayerIsAI = nextPlayerPos !== null && finalState.players[nextPlayerPos] ? isAIPlayerByName(finalState.players[nextPlayerPos].name) : false;
       const trickCompleteDelay = nextPlayerIsAI ? 3000 : 0;
 
       // Create display state showing completed trick

@@ -23,11 +23,15 @@ export interface AnalysisConfig {
 
 /**
  * Default analysis configuration
+ * Used for all continuous analysis: hand, bids, fold decisions, and trump selection
  */
-const DEFAULT_CONFIG: Required<AnalysisConfig> = {
-  simulations: 5000,  // Balanced number for good analysis performance
+export const DEFAULT_ANALYSIS_CONFIG: Required<AnalysisConfig> = {
+  simulations: 20000,  // Higher quality continuous analysis for human players
   verbose: false,
 };
+
+// Keep DEFAULT_CONFIG for backward compatibility
+const DEFAULT_CONFIG = DEFAULT_ANALYSIS_CONFIG;
 
 /**
  * Analyze player's hand using ISMCTS
