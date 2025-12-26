@@ -198,7 +198,14 @@ export function useSocket() {
       },
 
       onAIAnalysisUpdate: (data) => {
-        console.log('AI Analysis update:', data);
+        console.log('[useSocket] AI Analysis update received:', {
+          analysisType: data.analysisType,
+          playerPosition: data.playerPosition,
+          ...(data.analysisType === 'fold' && { foldOptionsCount: data.foldOptions?.length ?? 0 }),
+          ...(data.analysisType === 'card' && { cardsCount: data.cards?.length ?? 0 }),
+          ...(data.analysisType === 'bid' && { bidsCount: data.bids?.length ?? 0 }),
+          ...(data.analysisType === 'suit' && { suitsCount: data.suits?.length ?? 0 }),
+        });
         // Only store analysis if it's for the current player.
         // Note: analysis events are broadcast to the whole game room, so every client receives them.
         // We gate on *our* seat position. If myPosition hasn't been set yet, derive it from auth+gameState.
@@ -210,7 +217,16 @@ export function useSocket() {
             ? (gameStore.gameState.players.find((p) => p.id === authState.userId)?.position ?? null)
             : null);
 
+        console.log('[useSocket] Position check:', {
+          derivedMyPosition,
+          analysisPlayerPosition: data.playerPosition,
+          matches: derivedMyPosition !== null && data.playerPosition === derivedMyPosition,
+          gameStoreMyPosition: gameStore.myPosition,
+          authUserId: authState.userId,
+        });
+
         if (derivedMyPosition !== null && data.playerPosition === derivedMyPosition) {
+          console.log('[useSocket] ✅ Storing analysis for current player');
           // Handle different analysis types
           if (data.analysisType === 'card' && data.cards) {
             setAIAnalysis(data.cards);
@@ -233,6 +249,8 @@ export function useSocket() {
             setBidAnalysis(null);
             setFoldAnalysis(null);
           }
+        } else {
+          console.log('[useSocket] ❌ Ignoring analysis - not for current player');
         }
       },
     });

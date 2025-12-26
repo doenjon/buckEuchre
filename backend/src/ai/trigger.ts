@@ -41,10 +41,11 @@ function getAnalysisSituationKey(gameId: string, gameState: GameState, playerPos
     case 'FOLDING_DECISION': {
       const round = gameState.round;
       const winningBidder = gameState.winningBidderPosition ?? -1;
-      // Compact signature of fold decisions + folded flags to change key when decisions update
-      const decisionsSig = gameState.players.map(p => p.foldDecision[0]).join('');
-      const foldedSig = gameState.players.map(p => (p.folded ? '1' : '0')).join('');
-      return `${gameId}:FOLDING:p${playerPosition}:r${round}:wb${winningBidder}:d${decisionsSig}:f${foldedSig}`;
+      // For folding decisions, we only care about THIS player's decision state, not others
+      // This prevents the key from changing when other players decide, which would cause
+      // the analysis to be re-sent unnecessarily or blocked incorrectly
+      const thisPlayerDecision = gameState.players[playerPosition]?.foldDecision ?? 'UNDECIDED';
+      return `${gameId}:FOLDING:p${playerPosition}:r${round}:wb${winningBidder}:d${thisPlayerDecision}`;
     }
     default:
       return `${gameId}:${gameState.phase}:p${playerPosition}:v${gameState.version}`;
@@ -302,11 +303,14 @@ export async function checkAndTriggerAI(
         }
 
         if (shouldSendAnalysis(gameId, gameState, pos as any)) {
+          console.log(`[AI Trigger] Scheduling fold analysis for human player at position ${pos}`);
           setTimeout(() => {
             sendAIAnalysis(gameId, gameState, pos, io).catch(err => {
               console.error(`[AI Trigger] Error sending fold analysis:`, err);
             });
           }, 0);
+        } else {
+          console.log(`[AI Trigger] Fold analysis already sent recently for player at position ${pos}, skipping`);
         }
       }
 
@@ -350,14 +354,14 @@ export async function checkAndTriggerAI(
       // Check cooldown BEFORE scheduling to prevent race condition
       // where multiple analyses are scheduled before any execute
       if (shouldSendAnalysis(gameId, gameState, currentPlayer.position)) {
-        console.log(`[AI Trigger] Scheduling AI analysis for player ${currentPlayer.name}`);
+        console.log(`[AI Trigger] Scheduling AI analysis for player ${currentPlayer.name} at position ${currentPlayer.position}`);
         setTimeout(() => {
           sendAIAnalysis(gameId, gameState, currentPlayer.position, io).catch(err => {
             console.error(`[AI Trigger] Error sending AI analysis:`, err);
           });
         }, 0);
       } else {
-        console.log(`[AI Trigger] Analysis already sent recently for this situation, skipping`);
+        console.log(`[AI Trigger] Analysis already sent recently for player ${currentPlayer.name} at position ${currentPlayer.position}, skipping`);
       }
       return;
     }
@@ -390,11 +394,28 @@ export async function checkAndTriggerAI(
  */
 async function sendAIAnalysis(
   gameId: string,
-  gameState: GameState,
+  _gameState: GameState, // Deprecated - fetch fresh state from memory
   playerPosition: number,
   io: Server
 ): Promise<void> {
   try {
+    // Always fetch fresh state from memory to avoid stale state issues
+    // This prevents race conditions where state changes between scheduling and execution
+    const gameState = getActiveGameState(gameId);
+    if (!gameState) {
+      console.log(`[AI Analysis] Game ${gameId} not found in memory, skipping analysis`);
+      return;
+    }
+
+    // Double-check that we're still in the right phase and it's still this player's turn
+    if (gameState.phase === 'FOLDING_DECISION') {
+      const player = gameState.players[playerPosition];
+      if (playerPosition === gameState.winningBidderPosition || player.foldDecision !== 'UNDECIDED') {
+        console.log(`[AI Analysis] Player ${playerPosition} no longer needs fold analysis (already decided or is bidder)`);
+        return;
+      }
+    }
+
     console.log(`[AI Analysis] Analyzing for player at position ${playerPosition} in phase ${gameState.phase}`);
 
     // Run analysis with high quality (5000 simulations)
@@ -487,6 +508,14 @@ async function sendAIAnalysis(
     }
 
     // Broadcast to the game room
+    console.log(`[AI Analysis] Broadcasting ${analysisEvent.analysisType} analysis to game ${gameId}`, {
+      playerPosition: analysisEvent.playerPosition,
+      analysisType: analysisEvent.analysisType,
+      ...(analysisEvent.analysisType === 'fold' && { foldOptionsCount: analysisEvent.foldOptions?.length ?? 0 }),
+      ...(analysisEvent.analysisType === 'card' && { cardsCount: analysisEvent.cards?.length ?? 0 }),
+      ...(analysisEvent.analysisType === 'bid' && { bidsCount: analysisEvent.bids?.length ?? 0 }),
+      ...(analysisEvent.analysisType === 'suit' && { suitsCount: analysisEvent.suits?.length ?? 0 }),
+    });
     io.to(`game:${gameId}`).emit('AI_ANALYSIS_UPDATE', analysisEvent);
   } catch (error: any) {
     console.error(`[AI Analysis] Error sending analysis:`, error.message || error);
