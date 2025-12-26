@@ -1,7 +1,7 @@
 import { prisma } from '../db/client';
 import { Game, GameStatus, GamePlayer } from '@prisma/client';
 import { GameState, Player } from '@buck-euchre/shared';
-import { initializeGame, dealNewRound } from '../game/state';
+import { initializeGame, dealNewRound } from '@buck-euchre/shared/game/state';
 import { executeGameActionWithInit, getActiveGameState, loadGameState, setActiveGameState } from './state.service';
 
 // Lightweight in-memory cache to reduce DB load when many clients poll the lobby.
@@ -308,7 +308,7 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
           console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - initial state created phase=${initialState.phase}`);
 
           // Update player names from database
-          initialState.players = initialState.players.map((p, index) => {
+          initialState.players = initialState.players.map((p: Player, index: number) => {
             const gamePlayer = game.players[index];
             const displayName = gamePlayer.user?.displayName || gamePlayer.guestName || `Player ${index + 1}`;
             return {
@@ -563,7 +563,7 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
         console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - initial state created phase=${initialState.phase}`);
     
     // Update player names from database
-    initialState.players = initialState.players.map((p, index) => {
+    initialState.players = initialState.players.map((p: Player, index: number) => {
       const gamePlayer = updatedGame.players[index];
       const displayName = gamePlayer.user?.displayName || gamePlayer.guestName || `Player ${index + 1}`;
       
