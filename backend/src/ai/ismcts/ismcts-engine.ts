@@ -7,11 +7,11 @@
  */
 
 import { GameState, Card, Suit, BidAmount, PlayerPosition } from '@buck-euchre/shared';
-import { MCTSNode, Action, serializeAction } from './mcts-node';
-import { determinize } from './determinize';
-import { simulate, SimulationResult } from './rollout';
-import { applyBid, applyTrumpDeclaration, applyFoldDecision, applyCardPlay } from '../../game/state';
-import { canPlayCard } from '../../game/validation';
+import { MCTSNode, Action, serializeAction } from './mcts-node.js';
+import { determinize } from './determinize.js';
+import { simulate, SimulationResult } from './rollout.js';
+import { applyBid, applyTrumpDeclaration, applyFoldDecision, applyCardPlay } from '../../game/state.js';
+import { canPlayCard } from '../../game/validation.js';
 
 /**
  * ISMCTS configuration

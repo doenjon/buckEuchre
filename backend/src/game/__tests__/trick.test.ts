@@ -2,8 +2,8 @@
  * @jest-environment node
  */
 
-import { determineTrickWinner } from '../trick';
-import { Trick, Card, Suit, PlayerPosition } from '../../../../shared/src/types/game';
+import { determineTrickWinner } from '../trick.js';
+import { Trick, Card, Suit, PlayerPosition } from '../../../../shared/src/types/game.js';
 
 describe('trick.ts - Trick Evaluation', () => {
   const trumpSuit: Suit = 'HEARTS';

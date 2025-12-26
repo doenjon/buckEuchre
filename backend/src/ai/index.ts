@@ -7,18 +7,18 @@
  */
 
 // Core types
-export * from './types';
+export * from './types.js';
 
 // Registry system
-export * from './registry';
-export * from './provider-cache';
+export * from './registry.js';
+export * from './provider-cache.js';
 
 // Setup and configuration
-export * from './setup';
+export * from './setup.js';
 
 // Provider implementations
-export * from './providers';
+export * from './providers.js';
 
 // Execution infrastructure (existing)
-export * from './executor';
-export * from './trigger';
+export * from './executor.js';
+export * from './trigger.js';

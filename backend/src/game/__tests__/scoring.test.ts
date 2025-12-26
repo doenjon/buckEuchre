@@ -2,8 +2,8 @@
  * @jest-environment node
  */
 
-import { calculateRoundScores, checkWinCondition } from '../scoring';
-import { Player, PlayerPosition } from '../../../../shared/src/types/game';
+import { calculateRoundScores, checkWinCondition } from '../scoring.js';
+import { Player, PlayerPosition } from '../../../../shared/src/types/game.js';
 
 describe('scoring.ts - Scoring Logic', () => {
   const createPlayer = (position: PlayerPosition, tricksTaken: number, folded: boolean): Player => ({

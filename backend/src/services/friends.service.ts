@@ -3,7 +3,7 @@
  */
 
 import { Friendship, FriendshipStatus } from '@prisma/client';
-import { prisma } from '../db/client';
+import { prisma } from '../db/client.js';
 
 /**
  * Send a friend request

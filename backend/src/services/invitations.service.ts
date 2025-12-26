@@ -3,8 +3,8 @@
  */
 
 import { GameInvitation, InvitationStatus } from '@prisma/client';
-import { prisma } from '../db/client';
-import { areFriends } from './friends.service';
+import { prisma } from '../db/client.js';
+import { areFriends } from './friends.service.js';
 
 const INVITATION_EXPIRY_HOURS = 24;
 

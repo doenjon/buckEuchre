@@ -12,10 +12,10 @@ import {
   applyCardPlay,
   finishRound,
   startNextRound,
-} from '../state';
-import { setCustomDeck } from '../random';
-import { FULL_DECK } from '../../../../shared/src/constants/cards';
-import { GameState, PlayerPosition } from '../../../../shared/src/types/game';
+} from '../state.js';
+import { setCustomDeck } from '../random.js';
+import { FULL_DECK } from '../../../../shared/src/constants/cards.js';
+import { GameState, PlayerPosition } from '../../../../shared/src/types/game.js';
 
 const TURN_UP_INDEX = 20;
 const NON_CLUB_TURN_UP = 'SPADES_ACE';

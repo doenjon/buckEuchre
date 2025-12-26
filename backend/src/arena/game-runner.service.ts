@@ -6,14 +6,14 @@
  */
 
 import { GameState } from '@buck-euchre/shared';
-import { prisma } from '../db/client';
-import { createAIPlayer } from '../services/ai-player.service';
-import { createGame } from '../services/game.service';
-import { joinGame } from '../services/game.service';
-import { initializeGame, dealNewRound, applyBid, applyTrumpDeclaration, applyFoldDecision, applyCardPlay, finishRound, startNextRound } from '../game/state';
-import { aiProviderCache } from '../ai/provider-cache';
-import type { ArenaConfig } from './types';
-import type { AIConfig } from '../ai/types';
+import { prisma } from '../db/client.js';
+import { createAIPlayer } from '../services/ai-player.service.js';
+import { createGame } from '../services/game.service.js';
+import { joinGame } from '../services/game.service.js';
+import { initializeGame, dealNewRound, applyBid, applyTrumpDeclaration, applyFoldDecision, applyCardPlay, finishRound, startNextRound } from '../game/state.js';
+import { aiProviderCache } from '../ai/provider-cache.js';
+import type { ArenaConfig } from './types.js';
+import type { AIConfig } from '../ai/types.js';
 
 /**
  * Result of a headless game

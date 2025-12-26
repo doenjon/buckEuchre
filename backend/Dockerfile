@@ -41,9 +41,6 @@ COPY backend/prisma ./prisma
 # Generate Prisma Client
 RUN npx prisma generate
 
-# Copy fix script
-COPY backend/scripts ./scripts
-
 # Build TypeScript
 RUN npm run build
 

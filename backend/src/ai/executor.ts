@@ -7,22 +7,22 @@
  */
 
 import { GameState, PlayerPosition, BidAmount, Suit, Card, Player } from '@buck-euchre/shared';
-import { executeGameAction, getActiveGameState } from '../services/state.service';
+import { executeGameAction, getActiveGameState } from '../services/state.service.js';
 import {
   applyBid,
   applyTrumpDeclaration,
   applyFoldDecision,
   applyCardPlay,
   finishRound,
-} from '../game/state';
-import { displayStateManager } from '../game/display';
+} from '../game/state.js';
+import { displayStateManager } from '../game/display.js';
 import { Server } from 'socket.io';
-import { canFold, canPlaceBid, canPlayCard } from '../game/validation';
-import { checkAndTriggerAI } from './trigger';
-import { scheduleAutoStartNextRound } from '../services/round.service';
-import { aiProviderCache } from './provider-cache';
-import type { AIProvider } from './types';
-import { buildRoundCompletionPayload, persistRoundCompletionStats } from '../sockets/game';
+import { canFold, canPlaceBid, canPlayCard } from '../game/validation.js';
+import { checkAndTriggerAI } from './trigger.js';
+import { scheduleAutoStartNextRound } from '../services/round.service.js';
+import { aiProviderCache } from './provider-cache.js';
+import type { AIProvider } from './types.js';
+import { buildRoundCompletionPayload, persistRoundCompletionStats } from '../sockets/game.js';
 
 /**
  * Delay for a specified amount of time

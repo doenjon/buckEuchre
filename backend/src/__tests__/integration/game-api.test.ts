@@ -6,9 +6,9 @@
 
 import request from 'supertest';
 import express from 'express';
-import authRouter from '../../api/auth.routes';
-import gameRouter from '../../api/game.routes';
-import { authenticateToken } from '../../auth/middleware';
+import authRouter from '../../api/auth.routes.js';
+import gameRouter from '../../api/game.routes.js';
+import { authenticateToken } from '../../auth/middleware.js';
 
 // Create a test app with auth and game routes
 const createTestApp = () => {

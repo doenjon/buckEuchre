@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { getLeaderboard, getFriendsLeaderboard } from '../services/stats.service';
-import { authenticateToken, optionalAuth } from '../auth/middleware';
+import { getLeaderboard, getFriendsLeaderboard } from '../services/stats.service.js';
+import { authenticateToken, optionalAuth } from '../auth/middleware.js';
 
 const router = Router();
 

@@ -7,8 +7,8 @@
  */
 
 import { GameState, PlayerPosition, Card, BidAmount, Suit, CardAnalysis, BidAnalysis, FoldAnalysis, SuitAnalysis } from '@buck-euchre/shared';
-import { ISMCTSEngine } from './ismcts/ismcts-engine';
-import { Action, serializeAction } from './ismcts/mcts-node';
+import { ISMCTSEngine } from './ismcts/ismcts-engine.js';
+import { Action, serializeAction } from './ismcts/mcts-node.js';
 
 /**
  * Configuration for AI analysis

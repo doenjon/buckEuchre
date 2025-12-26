@@ -13,11 +13,11 @@ import {
   applyFoldDecision,
   applyCardPlay,
   finishRound,
-} from '../../game/state';
-import { canPlayCard } from '../../game/validation';
-import { getEffectiveSuit } from '../../game/deck';
-import { getRankValue } from '../../game/cards';
-import type { AICharacter } from './ismcts-engine';
+} from '../../game/state.js';
+import { canPlayCard } from '../../game/validation.js';
+import { getEffectiveSuit } from '../../game/deck.js';
+import { getRankValue } from '../../game/cards.js';
+import type { AICharacter } from './ismcts-engine.js';
 
 /**
  * Fast heuristic for bidding

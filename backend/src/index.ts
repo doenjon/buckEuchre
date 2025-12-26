@@ -5,15 +5,37 @@
 
 import dotenv from 'dotenv';
 import path from 'path';
-import { createAppServer } from './server';
-import { connectDatabase, disconnectDatabase } from './db/client';
-import { loadActiveGamesFromDatabase, persistAllActiveGames } from './services/state.service';
-import { validateEnv } from './config/env';
-import { setupAIProviders } from './ai';
-import { initializeArenaConfigs } from './arena/arena.service';
+import * as fs from 'fs';
+import { createAppServer } from './server.js';
+import { connectDatabase, disconnectDatabase } from './db/client.js';
+import { loadActiveGamesFromDatabase, persistAllActiveGames } from './services/state.service.js';
+import { validateEnv } from './config/env.js';
+import { setupAIProviders } from './ai/index.js';
+import { initializeArenaConfigs } from './arena/arena.service.js';
 
 // Load environment variables from backend/.env explicitly (not from parent directory)
 dotenv.config({ path: path.join(process.cwd(), '.env') });
+
+// Setup file logging for debugging
+const LOG_FILE = path.join(process.cwd(), 'backend-debug.log');
+const originalLog = console.log;
+const originalError = console.error;
+console.log = (...args: any[]) => {
+  originalLog(...args);
+  try {
+    fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')}\n`);
+  } catch (e) {
+    // Ignore file write errors
+  }
+};
+console.error = (...args: any[]) => {
+  originalError(...args);
+  try {
+    fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ERROR: ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')}\n`);
+  } catch (e) {
+    // Ignore file write errors
+  }
+};
 
 // Debug: Log DATABASE_URL (without password)
 console.log('🔍 DATABASE_URL loaded:', process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@') || 'NOT SET');

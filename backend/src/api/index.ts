@@ -1,14 +1,14 @@
 import { Router } from 'express';
-import healthRoutes from './health.routes';
-import authRoutes from './auth.routes';
-import gameRoutes from './game.routes';
-import friendsRoutes from './friends.routes';
-import invitationsRoutes from './invitations.routes';
-import leaderboardRoutes from './leaderboard.routes';
-import testRoutes from './test.routes';
-import arenaRoutes from './arena.routes';
-import settingsRoutes from './settings.routes';
-import bugsRoutes from './bugs.routes';
+import healthRoutes from './health.routes.js';
+import authRoutes from './auth.routes.js';
+import gameRoutes from './game.routes.js';
+import friendsRoutes from './friends.routes.js';
+import invitationsRoutes from './invitations.routes.js';
+import leaderboardRoutes from './leaderboard.routes.js';
+import testRoutes from './test.routes.js';
+import arenaRoutes from './arena.routes.js';
+import settingsRoutes from './settings.routes.js';
+import bugsRoutes from './bugs.routes.js';
 
 const router = Router();
 

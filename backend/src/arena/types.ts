@@ -5,7 +5,7 @@
  * with ELO rating tracking.
  */
 
-import type { AIDifficulty } from '../ai/types';
+import type { AIDifficulty } from '../ai/types.js';
 
 /**
  * Arena AI configuration

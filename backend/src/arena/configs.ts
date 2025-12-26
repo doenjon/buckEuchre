@@ -10,7 +10,7 @@
  * All configs start with an ELO rating of 1500 (standard chess rating).
  */
 
-import type { AIDifficulty } from '../ai/types';
+import type { AIDifficulty } from '../ai/types.js';
 
 export interface PredefinedArenaConfig {
   id: string;

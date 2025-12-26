@@ -1,7 +1,7 @@
-import { prisma } from '../db/client';
+import { prisma } from '../db/client.js';
 import { User } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
-import { joinGame } from './game.service';
+import { joinGame } from './game.service.js';
 import { GameState } from '@buck-euchre/shared';
 
 /**

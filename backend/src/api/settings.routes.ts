@@ -4,8 +4,8 @@ import {
   getUserSettings,
   updateUserSettings,
   resetUserSettings,
-} from '../services/settings.service';
-import { authenticateToken } from '../auth/middleware';
+} from '../services/settings.service.js';
+import { authenticateToken } from '../auth/middleware.js';
 
 const router = Router();
 

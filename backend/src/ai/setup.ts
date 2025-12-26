@@ -6,9 +6,9 @@
  * to register all available AI providers.
  */
 
-import { aiRegistry } from './registry';
-import { RuleBasedAIMetadata } from './providers/rule-based';
-import { ISMCTSAIMetadata } from './providers/ismcts';
+import { aiRegistry } from './registry.js';
+import { RuleBasedAIMetadata } from './providers/rule-based.js';
+import { ISMCTSAIMetadata } from './providers/ismcts.js';
 
 /**
  * Register all available AI providers

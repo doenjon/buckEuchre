@@ -1,6 +1,6 @@
 import { Socket } from 'socket.io';
 import type { ExtendedError } from 'socket.io';
-import { validateSession } from '../services/user.service';
+import { validateSession } from '../services/user.service.js';
 
 /**
  * Socket.io middleware for authentication

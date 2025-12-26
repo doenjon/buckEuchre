@@ -6,8 +6,8 @@
  * Maps player IDs to their AI providers.
  */
 
-import { AIProvider, AIConfig, AIDifficulty } from './types';
-import { aiRegistry } from './registry';
+import { AIProvider, AIConfig, AIDifficulty } from './types.js';
+import { aiRegistry } from './registry.js';
 
 /**
  * Cache of AI providers by player ID

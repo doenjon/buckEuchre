@@ -9,8 +9,8 @@
  * - Graceful degradation (logs errors without blocking gameplay)
  */
 
-import { prisma } from '../db/client';
-import { RoundStatsUpdate, GameStatsUpdate } from './stats.service';
+import { prisma } from '../db/client.js';
+import { RoundStatsUpdate, GameStatsUpdate } from './stats.service.js';
 
 interface StatsTask {
   gameId: string;

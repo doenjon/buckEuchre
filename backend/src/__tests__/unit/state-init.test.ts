@@ -22,13 +22,13 @@ jest.mock('../../db/client', () => {
   };
 });
 
-import { initializeGame, dealNewRound } from '../../game/state';
+import { initializeGame, dealNewRound } from '../../game/state.js';
 import {
   cleanupGameState,
   executeGameAction,
   executeGameActionWithInit,
   getActiveGameState,
-} from '../../services/state.service';
+} from '../../services/state.service.js';
 
 describe('state.service initialization + queue', () => {
   afterEach(() => {

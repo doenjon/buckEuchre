@@ -2,9 +2,9 @@
  * @jest-environment node
  */
 
-import { createDeck, shuffleDeck, dealCards, getEffectiveSuit, isSameColor } from '../deck';
-import { Card, Suit } from '../../../../shared/src/types/game';
-import { DECK_SIZE, CARDS_PER_PLAYER, BLIND_SIZE, PLAYER_COUNT } from '../../../../shared/src/constants/cards';
+import { createDeck, shuffleDeck, dealCards, getEffectiveSuit, isSameColor } from '../deck.js';
+import { Card, Suit } from '../../../../shared/src/types/game.js';
+import { DECK_SIZE, CARDS_PER_PLAYER, BLIND_SIZE, PLAYER_COUNT } from '../../../../shared/src/constants/cards.js';
 
 describe('deck.ts - Deck Operations', () => {
   describe('createDeck', () => {

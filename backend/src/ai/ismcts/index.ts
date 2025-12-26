@@ -5,7 +5,7 @@
  * Exports all ISMCTS components.
  */
 
-export * from './determinize';
-export * from './mcts-node';
-export * from './rollout';
-export * from './ismcts-engine';
+export * from './determinize.js';
+export * from './mcts-node.js';
+export * from './rollout.js';
+export * from './ismcts-engine.js';

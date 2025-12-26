@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authenticateToken } from '../auth/middleware';
+import { authenticateToken } from '../auth/middleware.js';
 import {
   createGame,
   listAvailableGames,
@@ -8,10 +8,10 @@ import {
   getUserActiveGames,
   leaveGame,
   createRematchGame
-} from '../services/game.service';
-import { addAIToGame } from '../services/ai-player.service';
-import { getSocketServer } from '../utils/socketManager';
-import { checkAndTriggerAI } from '../ai/trigger';
+} from '../services/game.service.js';
+import { addAIToGame } from '../services/ai-player.service.js';
+import { getSocketServer } from '../utils/socketManager.js';
+import { checkAndTriggerAI } from '../ai/trigger.js';
 import type { AddAIPlayerResponse } from '@buck-euchre/shared';
 
 const router = Router();

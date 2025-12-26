@@ -5,9 +5,9 @@
  * All functions in this module are pure (no I/O, no mutations, no side effects)
  */
 
-import { Card, Suit, Rank } from '../../../shared/src/types/game';
-import { TRUMP_RANK_VALUES, NON_TRUMP_RANK_VALUES } from '../../../shared/src/constants/cards';
-import { getEffectiveSuit, isSameColor } from './deck';
+import { Card, Suit, Rank } from '../../../shared/src/types/game.js';
+import { TRUMP_RANK_VALUES, NON_TRUMP_RANK_VALUES } from '../../../shared/src/constants/cards.js';
+import { getEffectiveSuit, isSameColor } from './deck.js';
 
 /**
  * Gets the numeric rank value of a card

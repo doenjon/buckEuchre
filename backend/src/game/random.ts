@@ -3,8 +3,7 @@
  * @description Helpers for deterministic shuffling during tests
  */
 
-import { Card } from '../../../shared/src/types/game';
-import { FULL_DECK } from '../../../shared/src/constants/cards';
+import { Card, FULL_DECK } from '@buck-euchre/shared';
 
 let shuffleSeed: string | null = process.env.SHUFFLE_SEED ?? null;
 let customDeck: Card[] | null = null;

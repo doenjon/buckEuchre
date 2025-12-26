@@ -2,8 +2,8 @@
  * @jest-environment node
  */
 
-import { getRankValue, isHigherCard } from '../cards';
-import { Card, Suit } from '../../../../shared/src/types/game';
+import { getRankValue, isHigherCard } from '../cards.js';
+import { Card, Suit } from '../../../../shared/src/types/game.js';
 
 describe('cards.ts - Card Ranking & Comparison', () => {
   describe('getRankValue', () => {

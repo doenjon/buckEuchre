@@ -8,10 +8,10 @@
 
 import { Server } from 'socket.io';
 import { GameState, AIAnalysisEvent } from '@buck-euchre/shared';
-import { isAIPlayerByName, isAIPlayerAsync } from '../services/ai-player.service';
-import { executeAITurn } from './executor';
-import { analyzeHand, getBestCard, analyzeBids, getBestBid, analyzeFoldDecision, getBestFoldDecision, analyzeTrumpSelection, getBestSuit } from './analysis.service';
-import { getActiveGameState } from '../services/state.service';
+import { isAIPlayerByName, isAIPlayerAsync } from '../services/ai-player.service.js';
+import { executeAITurn } from './executor.js';
+import { analyzeHand, getBestCard, analyzeBids, getBestBid, analyzeFoldDecision, getBestFoldDecision, analyzeTrumpSelection, getBestSuit } from './analysis.service.js';
+import { getActiveGameState } from '../services/state.service.js';
 
 /**
  * Simple analysis cache with TTL
@@ -254,13 +254,16 @@ export async function checkAndTriggerAI(
 ): Promise<void> {
   try {
     console.log(`[AI Trigger] 🔍 ENTRY: gameId=${gameId}`);
+    logToFile(`[AI Trigger] 🔍 ENTRY: gameId=${gameId}`);
     // Always fetch fresh state
     const gameState = getActiveGameState(gameId);
     if (!gameState) {
       console.log(`[AI Trigger] ❌ Game ${gameId} not found in memory`);
+      logToFile(`[AI Trigger] ❌ Game ${gameId} not found in memory`);
       return;
     }
     console.log(`[AI Trigger] 📊 Game state: phase=${gameState.phase}, version=${gameState.version}`);
+    logToFile(`[AI Trigger] 📊 Game state: phase=${gameState.phase}, version=${gameState.version}`);
 
     // Special handling for FOLDING_DECISION phase
     if (gameState.phase === 'FOLDING_DECISION') {

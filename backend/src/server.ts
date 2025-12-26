@@ -8,10 +8,10 @@ import { createServer, Server as HTTPServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
-import apiRoutes from './api';
-import { handleConnection } from './sockets/connection';
-import { setSocketServer } from './utils/socketManager';
-import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import apiRoutes from './api.js';
+import { handleConnection } from './sockets/connection.js';
+import { setSocketServer } from './utils/socketManager.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 /**
  * Create and configure Express + Socket.IO server

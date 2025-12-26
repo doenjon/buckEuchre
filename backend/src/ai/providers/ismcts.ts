@@ -7,10 +7,10 @@
  */
 
 import { Card, Suit, BidAmount, GameState, PlayerPosition } from '@buck-euchre/shared';
-import { AIProvider, AIConfig, AIDifficulty, AIAnalysis } from '../types';
-import { ISMCTSEngine, ISMCTSConfig, AICharacter } from '../ismcts/ismcts-engine';
-import { Action } from '../ismcts/mcts-node';
-import { getCharacterPreset } from '../character';
+import { AIProvider, AIConfig, AIDifficulty, AIAnalysis } from '../types.js';
+import { ISMCTSEngine, ISMCTSConfig, AICharacter } from '../ismcts/ismcts-engine.js';
+import { Action } from '../ismcts/mcts-node.js';
+import { getCharacterPreset } from '../character.js';
 
 /**
  * Map difficulty to simulation count

@@ -6,7 +6,7 @@
 
 import request from 'supertest';
 import express from 'express';
-import authRouter from '../../api/auth.routes';
+import authRouter from '../../api/auth.routes.js';
 
 // Create a test app with just auth routes
 const createTestApp = () => {

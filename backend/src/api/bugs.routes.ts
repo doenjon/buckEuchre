@@ -5,9 +5,9 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { submitBugReport } from '../services/bugs.service';
-import { authenticateToken } from '../auth/middleware';
-import { getUserById } from '../services/user.service';
+import { submitBugReport } from '../services/bugs.service.js';
+import { authenticateToken } from '../auth/middleware.js';
+import { getUserById } from '../services/user.service.js';
 
 const router = Router();
 

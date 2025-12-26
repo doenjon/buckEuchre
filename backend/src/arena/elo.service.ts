@@ -12,7 +12,7 @@
  * Each player's rating change is the sum of all pairwise rating changes.
  */
 
-import type { MatchResult, EloUpdate } from './types';
+import type { MatchResult, EloUpdate } from './types.js';
 
 /**
  * ELO K-factor (determines how much ratings change per game)

@@ -7,8 +7,8 @@ import {
   getInvitations,
   getGameInvitations,
   cancelInvitation,
-} from '../services/invitations.service';
-import { authenticateToken } from '../auth/middleware';
+} from '../services/invitations.service.js';
+import { authenticateToken } from '../auth/middleware.js';
 
 const router = Router();
 

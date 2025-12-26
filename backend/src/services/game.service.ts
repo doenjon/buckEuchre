@@ -1,8 +1,8 @@
-import { prisma } from '../db/client';
+import { prisma } from '../db/client.js';
 import { Game, GameStatus, GamePlayer } from '@prisma/client';
 import { GameState, Player } from '@buck-euchre/shared';
-import { initializeGame, dealNewRound } from '../game/state';
-import { executeGameActionWithInit, getActiveGameState, loadGameState, setActiveGameState } from './state.service';
+import { initializeGame, dealNewRound } from '../game/state.js';
+import { executeGameActionWithInit, getActiveGameState, loadGameState, setActiveGameState } from './state.service.js';
 
 // Lightweight in-memory cache to reduce DB load when many clients poll the lobby.
 // Short TTL keeps the list fresh while preventing stampedes during overload.

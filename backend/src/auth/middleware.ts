@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { extractTokenFromHeader, verifyToken, TokenPayload } from './jwt';
-import { validateSession } from '../services/user.service';
+import { extractTokenFromHeader, verifyToken, TokenPayload } from './jwt.js';
+import { validateSession } from '../services/user.service.js';
 
 /**
  * Extend Express Request to include authenticated user info

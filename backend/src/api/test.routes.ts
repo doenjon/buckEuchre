@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { setCustomDeck, setDealerOverride, setShuffleSeed } from '../game/random';
+import { setCustomDeck, setDealerOverride, setShuffleSeed } from '../game/random.js';
 
 const router = Router();
 

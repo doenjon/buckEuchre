@@ -8,7 +8,7 @@
  * - Fold thresholds
  */
 
-import type { AICharacter } from './ismcts/ismcts-engine';
+import type { AICharacter } from './ismcts/ismcts-engine.js';
 
 /**
  * Character preset definitions

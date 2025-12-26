@@ -20,10 +20,10 @@ import {
   PlayCardSchema,
   StartNextRoundSchema,
   RequestStateSchema
-} from '../../../shared/src/validators/game';
-import { executeGameAction, getActiveGameState } from '../services/state.service';
-import { joinGame, leaveGame, getGame } from '../services/game.service';
-import { updateConnectionGame } from '../services/connection.service';
+} from '../../../shared/src/validators/game.js';
+import { executeGameAction, getActiveGameState } from '../services/state.service.js';
+import { joinGame, leaveGame, getGame } from '../services/game.service.js';
+import { updateConnectionGame } from '../services/connection.service.js';
 import { 
   applyBid,
   applyTrumpDeclaration,
@@ -32,20 +32,20 @@ import {
   dealNewRound,
   finishRound,
   startNextRound
-} from '../game/state';
-import { displayStateManager } from '../game/display';
-import { statsQueue } from '../services/stats-queue.service';
-import { canPlayCard, canPlaceBid, canFold } from '../game/validation';
-import { getEffectiveSuit } from '../game/deck';
-import { GameState, PlayerPosition, Player, Card } from '../../../shared/src/types/game';
-import { checkAndTriggerAI } from '../ai/trigger';
-import { scheduleAutoStartNextRound, cancelAutoStartNextRound, hasAutoStartTimer } from '../services/round.service';
+} from '../game/state.js';
+import { displayStateManager } from '../game/display.js';
+import { statsQueue } from '../services/stats-queue.service.js';
+import { canPlayCard, canPlaceBid, canFold } from '../game/validation.js';
+import { getEffectiveSuit } from '../game/deck.js';
+import { GameState, PlayerPosition, Player, Card } from '../../../shared/src/types/game.js';
+import { checkAndTriggerAI } from '../ai/trigger.js';
+import { scheduleAutoStartNextRound, cancelAutoStartNextRound, hasAutoStartTimer } from '../services/round.service.js';
 import {
   updateRoundStats,
   updateGameStats,
   RoundStatsUpdate,
   GameStatsUpdate,
-} from '../services/stats.service';
+} from '../services/stats.service.js';
 
 interface RoundCompletionPayload {
   gameId: string;

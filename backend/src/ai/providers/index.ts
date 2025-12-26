@@ -6,9 +6,9 @@
  * plugged into the game. Each provider implements the AIProvider interface.
  */
 
-export * from './rule-based';
-export * from './ismcts';
+export * from './rule-based.js';
+export * from './ismcts.js';
 
 // Future providers will be exported here:
-// export * from './pimc';
-// export * from './neural';
+// export * from './pimc.js';
+// export * from './neural.js';

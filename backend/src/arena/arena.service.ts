@@ -8,12 +8,12 @@
  * - Statistics aggregation
  */
 
-import { prisma } from '../db/client';
-import type { ArenaConfig, ArenaMatch, MatchResult, ArenaStats, MatchLauncherOptions } from './types';
-import type { AIDifficulty } from '../ai/types';
-import { ARENA_CONFIGS, DEFAULT_ELO_RATING } from './configs';
-import { calculateEloUpdates, findSimilarRatings } from './elo.service';
-import { runHeadlessGame } from './game-runner.service';
+import { prisma } from '../db/client.js';
+import type { ArenaConfig, ArenaMatch, MatchResult, ArenaStats, MatchLauncherOptions } from './types.js';
+import type { AIDifficulty } from '../ai/types.js';
+import { ARENA_CONFIGS, DEFAULT_ELO_RATING } from './configs.js';
+import { calculateEloUpdates, findSimilarRatings } from './elo.service.js';
+import { runHeadlessGame } from './game-runner.service.js';
 
 /**
  * Initialize arena configs in database

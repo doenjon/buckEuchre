@@ -5,9 +5,9 @@
  * All functions in this module are pure (no I/O, no mutations, no side effects)
  */
 
-import { Trick, Suit, PlayerPosition } from '../../../shared/src/types/game';
-import { getEffectiveSuit } from './deck';
-import { isHigherCard } from './cards';
+import { Trick, Suit, PlayerPosition } from '../../../shared/src/types/game.js';
+import { getEffectiveSuit } from './deck.js';
+import { isHigherCard } from './cards.js';
 
 /**
  * Determines the winner of a completed trick

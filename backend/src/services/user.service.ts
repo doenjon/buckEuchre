@@ -4,8 +4,8 @@
 
 import { User, Session } from '@prisma/client';
 import bcrypt from 'bcrypt';
-import { generateToken } from '../auth/jwt';
-import { prisma } from '../db/client';
+import { generateToken } from '../auth/jwt.js';
+import { prisma } from '../db/client.js';
 
 const SALT_ROUNDS = 10;
 const SESSION_EXPIRY_HOURS = 24;

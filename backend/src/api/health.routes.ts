@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { isDatabaseHealthy } from '../db/client';
+import { isDatabaseHealthy } from '../db/client.js';
 
 const router = Router();
 

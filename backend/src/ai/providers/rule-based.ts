@@ -7,13 +7,13 @@
  */
 
 import { Card, Suit, BidAmount, GameState, PlayerPosition } from '@buck-euchre/shared';
-import { AIProvider, AIConfig, AIDifficulty, AIAnalysis } from '../types';
+import { AIProvider, AIConfig, AIDifficulty, AIAnalysis } from '../types.js';
 import {
   decideBid as originalDecideBid,
   decideTrump as originalDecideTrump,
   decideFold as originalDecideFold,
   decideCardToPlay as originalDecideCardToPlay,
-} from '../decision-engine';
+} from '../decision-engine.js';
 
 /**
  * Rule-based AI provider

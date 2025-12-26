@@ -9,9 +9,9 @@ import {
   getSentRequests,
   removeFriend,
   blockUser,
-} from '../services/friends.service';
-import { searchUsers } from '../services/user.service';
-import { authenticateToken } from '../auth/middleware';
+} from '../services/friends.service.js';
+import { searchUsers } from '../services/user.service.js';
+import { authenticateToken } from '../auth/middleware.js';
 
 const router = Router();
 

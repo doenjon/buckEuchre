@@ -2,8 +2,8 @@
  * @jest-environment node
  */
 
-import { canPlayCard, canPlaceBid, canFold } from '../validation';
-import { Card, Trick, Suit } from '../../../../shared/src/types/game';
+import { canPlayCard, canPlaceBid, canFold } from '../validation.js';
+import { Card, Trick, Suit } from '../../../../shared/src/types/game.js';
 
 describe('validation.ts - Move Validation', () => {
   describe('canPlayCard', () => {

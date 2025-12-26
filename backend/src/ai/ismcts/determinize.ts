@@ -8,7 +8,7 @@
  */
 
 import { GameState, Card, Suit, PlayerPosition, FULL_DECK } from '@buck-euchre/shared';
-import { getEffectiveSuit } from '../../game/deck';
+import { getEffectiveSuit } from '../../game/deck.js';
 
 /**
  * Observations we've gathered about the game state

@@ -4,7 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { AppError, isAppError } from '../utils/errors';
+import { AppError, isAppError } from '../utils/errors.js';
 import { ErrorCode, ErrorResponse } from '@buck-euchre/shared';
 
 /**

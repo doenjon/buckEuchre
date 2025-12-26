@@ -3,7 +3,7 @@
  */
 
 import { UserSettings } from '@prisma/client';
-import { prisma } from '../db/client';
+import { prisma } from '../db/client.js';
 
 export interface UpdateSettingsParams {
   showCardOverlay?: boolean;

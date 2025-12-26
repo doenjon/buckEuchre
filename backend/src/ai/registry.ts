@@ -13,7 +13,7 @@ import {
   AIProviderMetadata,
   AIConfig,
   AIDifficulty,
-} from './types';
+} from './types.js';
 
 /**
  * Global registry of AI providers

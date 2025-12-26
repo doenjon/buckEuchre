@@ -1,5 +1,5 @@
 import { GameState } from '@buck-euchre/shared';
-import { prisma } from '../db/client';
+import { prisma } from '../db/client.js';
 
 /**
  * In-memory game state store

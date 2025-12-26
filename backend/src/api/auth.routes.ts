@@ -6,8 +6,8 @@ import {
   authenticateUser,
   invalidateSession,
   getUserWithStats,
-} from '../services/user.service';
-import { authenticateToken } from '../auth/middleware';
+} from '../services/user.service.js';
+import { authenticateToken } from '../auth/middleware.js';
 
 const router = Router();
 

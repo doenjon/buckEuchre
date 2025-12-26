@@ -1,12 +1,12 @@
 import { Server, Socket } from 'socket.io';
-import { authenticateSocket } from './middleware';
-import { registerGameHandlers } from './game';
+import { authenticateSocket } from './middleware.js';
+import { registerGameHandlers } from './game.js';
 import { 
   registerConnection, 
   handleDisconnect, 
   handleReconnect,
   isPlayerConnected 
-} from '../services/connection.service';
+} from '../services/connection.service.js';
 
 /**
  * Initialize WebSocket connection handling

@@ -9,8 +9,8 @@
  */
 
 import express from 'express';
-import { getAllConfigs, getArenaStats, getRecentMatches, runMatches } from '../arena/arena.service';
-import { authenticateToken } from '../auth/middleware';
+import { getAllConfigs, getArenaStats, getRecentMatches, runMatches } from '../arena/arena.service.js';
+import { authenticateToken } from '../auth/middleware.js';
 
 const router = express.Router();
 
