@@ -11,8 +11,15 @@ git reset --hard origin/main
 echo "[deploy] Building & starting…"
 # Use explicit production compose file (ignore override file for local dev)
 docker compose -f docker-compose.yml build --pull
+
+echo "[deploy] Stopping and removing existing containers…"
+# Force remove containers even if down fails (handles edge cases)
 docker compose -f docker-compose.yml down --remove-orphans || true
-docker compose -f docker-compose.yml up -d --remove-orphans
+# Explicitly remove containers by name if they still exist (handles containers created outside compose)
+docker rm -f buckeuchre-postgres buckeuchre-backend buckeuchre-frontend buckeuchre-nginx 2>/dev/null || true
+
+echo "[deploy] Starting services…"
+docker compose -f docker-compose.yml up -d --remove-orphans --force-recreate
 
 echo "[deploy] Waiting for services to be healthy…"
 sleep 10
