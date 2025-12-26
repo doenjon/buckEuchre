@@ -5,7 +5,7 @@
  * All functions in this module are pure (no I/O, no mutations, no side effects)
  */
 
-import { Card, Trick, Suit, FoldDecision } from '../../../shared/src/types/game.js';
+import { Card, Trick, Suit, FoldDecision } from '@buck-euchre/shared';
 import { getEffectiveSuit } from './deck.js';
 
 /**

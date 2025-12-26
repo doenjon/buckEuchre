@@ -5,7 +5,7 @@
  * All functions in this module are pure (no I/O, no mutations, no side effects)
  */
 
-import { Player, PlayerPosition } from '../../../shared/src/types/game.js';
+import { Player, PlayerPosition } from '@buck-euchre/shared';
 
 /**
  * Calculates score changes for all players at end of round

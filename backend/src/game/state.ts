@@ -6,8 +6,7 @@
  * Each function returns a new GameState object
  */
 
-import { GameState, Player, PlayerPosition, Suit, Card, BidAmount } from '../../../shared/src/types/game.js';
-import { STARTING_SCORE } from '../../../shared/src/constants/rules';
+import { GameState, Player, PlayerPosition, Suit, Card, BidAmount, STARTING_SCORE } from '@buck-euchre/shared';
 import { createDeck, shuffleDeck, dealCards } from './deck.js';
 import { consumeCustomDeck, consumeDealerOverride } from './random.js';
 import { determineTrickWinner } from './trick.js';

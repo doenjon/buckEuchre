@@ -5,8 +5,7 @@
  * All functions in this module are pure (no I/O, no mutations, no side effects)
  */
 
-import { Card, Suit, Rank } from '../../../shared/src/types/game.js';
-import { TRUMP_RANK_VALUES, NON_TRUMP_RANK_VALUES } from '../../../shared/src/constants/cards';
+import { Card, Suit, Rank, TRUMP_RANK_VALUES, NON_TRUMP_RANK_VALUES } from '@buck-euchre/shared';
 import { getEffectiveSuit, isSameColor } from './deck.js';
 
 /**

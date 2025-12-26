@@ -5,7 +5,7 @@
  * All functions in this module are pure (no I/O, no mutations, no side effects)
  */
 
-import { Trick, Suit, PlayerPosition } from '../../../shared/src/types/game.js';
+import { Trick, Suit, PlayerPosition } from '@buck-euchre/shared';
 import { getEffectiveSuit } from './deck.js';
 import { isHigherCard } from './cards.js';
 

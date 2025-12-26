@@ -20,7 +20,7 @@ import {
   PlayCardSchema,
   StartNextRoundSchema,
   RequestStateSchema
-} from '../../../shared/src/validators/game.js';
+} from '@buck-euchre/shared';
 import { executeGameAction, getActiveGameState } from '../services/state.service.js';
 import { joinGame, leaveGame, getGame } from '../services/game.service.js';
 import { updateConnectionGame } from '../services/connection.service.js';
@@ -37,7 +37,7 @@ import { displayStateManager } from '../game/display.js';
 import { statsQueue } from '../services/stats-queue.service.js';
 import { canPlayCard, canPlaceBid, canFold } from '../game/validation.js';
 import { getEffectiveSuit } from '../game/deck.js';
-import { GameState, PlayerPosition, Player, Card } from '../../../shared/src/types/game.js';
+import { GameState, PlayerPosition, Player, Card } from '@buck-euchre/shared';
 import { checkAndTriggerAI } from '../ai/trigger.js';
 import { scheduleAutoStartNextRound, cancelAutoStartNextRound, hasAutoStartTimer } from '../services/round.service.js';
 import {

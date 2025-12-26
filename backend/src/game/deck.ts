@@ -5,10 +5,8 @@
  * All functions in this module are pure (no I/O, no mutations, no side effects)
  */
 
-import { Card } from '@buck-euchre/shared';
-import { FULL_DECK, CARDS_PER_PLAYER, BLIND_SIZE, PLAYER_COUNT } from '../../../shared/src/constants/cards';
+import { Card, FULL_DECK, CARDS_PER_PLAYER, BLIND_SIZE, PLAYER_COUNT, getEffectiveSuit, isSameColor } from '@buck-euchre/shared';
 import { getShuffleSeed } from './random';
-import { getEffectiveSuit, isSameColor } from '../../../shared/src/utils/cards';
 
 export { getEffectiveSuit, isSameColor };
 
