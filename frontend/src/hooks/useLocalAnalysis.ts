@@ -61,9 +61,9 @@ export function useLocalAnalysis() {
         verbose: false,
       });
 
-      // For non-PLAYING phases, use searchWithAnalysis (synchronous)
+      // For non-PLAYING phases, use searchWithAnalysis (async)
       if (state.phase !== 'PLAYING') {
-        const result = engine.searchWithAnalysis(state, position as any);
+        const result = await engine.searchWithAnalysis(state, position as any);
         
         // Convert statistics to appropriate analysis format based on phase
         const statistics = result.statistics;
