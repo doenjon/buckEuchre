@@ -81,7 +81,9 @@ export async function executeAITurn(
   aiPlayerId: string,
   io: Server
 ): Promise<void> {
+  const startTime = Date.now();
   try {
+    console.log(`[AI Executor] Starting AI turn for player ${aiPlayerId} in game ${gameId}`);
     const initialState = getActiveGameState(gameId);
     if (!initialState) {
       console.error(`[AI] Game ${gameId} not found`);

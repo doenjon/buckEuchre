@@ -57,7 +57,7 @@ function getAnalysisSituationKey(gameId: string, gameState: GameState, playerPos
  * Key: `${gameId}`
  */
 const lastTriggerCheck = new Map<string, number>();
-const TRIGGER_COOLDOWN_MS = 100; // Don't check triggers more than once per 100ms per game
+const TRIGGER_COOLDOWN_MS = 50; // Don't check triggers more than once per 50ms for the same situation
 
 /**
  * Get the current player who needs to act
@@ -234,17 +234,22 @@ export async function checkAndTriggerAI(
       console.log(`[AI Trigger] Game ${gameId} not found in memory, skipping trigger`);
       return;
     }
+
+    // Get current acting player early to create throttle key
+    const currentPlayerIdForThrottle = getCurrentActingPlayer(gameState);
+    const throttleKey = `${gameId}:${gameState.phase}:${currentPlayerIdForThrottle || 'none'}`;
     
-    // Throttle: Don't check triggers more than once per TRIGGER_COOLDOWN_MS per game
+    // Throttle: Don't check triggers more than once per TRIGGER_COOLDOWN_MS for the same situation
     const now = Date.now();
-    const lastCheck = lastTriggerCheck.get(gameId);
+    const lastCheck = lastTriggerCheck.get(throttleKey);
     if (lastCheck && (now - lastCheck) < TRIGGER_COOLDOWN_MS) {
-      // Too soon since last check, skip
+      // Too soon since last check for this exact situation, skip
+      console.log(`[AI Trigger] Throttled: same situation checked ${now - lastCheck}ms ago`);
       return;
     }
-    lastTriggerCheck.set(gameId, now);
+    lastTriggerCheck.set(throttleKey, now);
 
-    // Clean up old entries (keep only last 100 games)
+    // Clean up old entries (keep only last 100)
     if (lastTriggerCheck.size > 100) {
       const entries = Array.from(lastTriggerCheck.entries());
       entries.sort((a, b) => b[1] - a[1]); // Sort by timestamp descending
@@ -252,7 +257,7 @@ export async function checkAndTriggerAI(
       entries.slice(0, 50).forEach(([key, time]) => lastTriggerCheck.set(key, time));
     }
 
-    console.log(`[AI Trigger] Checking AI trigger for game ${gameId}, phase: ${gameState.phase}, currentBidder: ${gameState.currentBidder}`);
+    console.log(`[AI Trigger] Checking AI trigger for game ${gameId}, phase: ${gameState.phase}, currentBidder: ${gameState.currentBidder}, currentPlayer: ${currentPlayerIdForThrottle}`);
 
     // Special handling for FOLDING_DECISION phase
     // All non-bidders need to decide, and they can all decide simultaneously
@@ -367,13 +372,19 @@ export async function checkAndTriggerAI(
     }
 
     // Current player is AI - trigger after brief delay
-    console.log(`[AI Trigger] AI player ${currentPlayer.name} needs to act in phase ${gameState.phase}`);
+    console.log(`[AI Trigger] AI player ${currentPlayer.name} (${currentPlayerId}) needs to act in phase ${gameState.phase}`);
     
+    // Use setTimeout with a small delay to let state stabilize, but don't block
     setTimeout(() => {
-      executeAITurn(gameId, currentPlayerId, io).catch(err =>
-        console.error(`[AI Trigger] Error triggering AI turn:`, err)
-      );
-    }, 100); // Small delay to let state stabilize
+      console.log(`[AI Trigger] Executing AI turn for ${currentPlayer.name} (${currentPlayerId})`);
+      executeAITurn(gameId, currentPlayerId, io)
+        .then(() => {
+          console.log(`[AI Trigger] ✅ AI turn completed for ${currentPlayer.name} (${currentPlayerId})`);
+        })
+        .catch(err => {
+          console.error(`[AI Trigger] ❌ Error triggering AI turn for ${currentPlayer.name} (${currentPlayerId}):`, err);
+        });
+    }, 50); // Reduced delay to 50ms for faster response
   } catch (error: any) {
     console.error(`[AI Trigger] Error in checkAndTriggerAI:`, error.message || error);
   }
