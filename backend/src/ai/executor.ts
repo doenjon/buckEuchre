@@ -23,7 +23,6 @@ import { scheduleAutoStartNextRound } from '../services/round.service.js';
 import { aiProviderCache } from './provider-cache.js';
 import type { AIProvider } from './types.js';
 import { buildRoundCompletionPayload, persistRoundCompletionStats } from '../sockets/game.js';
-import { recordGameActivity } from '../services/watchdog.service.js';
 
 /**
  * Delay for a specified amount of time
@@ -192,11 +191,6 @@ export async function executeAITurn(
 
     const duration = Date.now() - startTime;
     console.log(`[AI Executor] ✅ COMPLETED AI turn for player ${aiPlayerId} in ${duration}ms (actionTaken=${actionTaken})`);
-
-    // Record activity to prevent watchdog from triggering
-    if (actionTaken) {
-      recordGameActivity(gameId);
-    }
   } catch (error: any) {
     const duration = Date.now() - startTime;
     console.error(`[AI Executor] ❌ FATAL ERROR executing AI turn for player ${aiPlayerId} after ${duration}ms:`);

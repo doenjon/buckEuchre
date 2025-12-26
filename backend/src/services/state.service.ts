@@ -206,15 +206,6 @@ export function getActiveGameState(gameId: string): GameState | null {
 }
 
 /**
- * Get all active game IDs
- *
- * @returns Array of all game IDs currently in memory
- */
-export function getAllActiveGameIds(): string[] {
-  return Array.from(activeGames.keys());
-}
-
-/**
  * Set the active game state in memory
  * 
  * Use this to load a game into memory (e.g., on server startup).

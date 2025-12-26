@@ -40,7 +40,6 @@ import { getEffectiveSuit } from '../game/deck.js';
 import { GameState, PlayerPosition, Player, Card } from '@buck-euchre/shared';
 import { checkAndTriggerAI } from '../ai/trigger.js';
 import { scheduleAutoStartNextRound, cancelAutoStartNextRound, hasAutoStartTimer } from '../services/round.service.js';
-import { recordGameActivity } from '../services/watchdog.service.js';
 import {
   updateRoundStats,
   updateGameStats,
@@ -497,9 +496,6 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
       return applyBid(currentState, player.position, validated.amount);
     });
 
-    // Record activity for watchdog
-    recordGameActivity(validated.gameId);
-
     // Broadcast update
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
       gameState: newState,
@@ -596,9 +592,6 @@ async function handleDeclareTrump(io: Server, socket: Socket, payload: unknown):
       return applyTrumpDeclaration(currentState, validated.trumpSuit);
     });
 
-    // Record activity for watchdog
-    recordGameActivity(validated.gameId);
-
     // Broadcast update
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
       gameState: newState,
@@ -686,9 +679,6 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
 
       return nextState;
     });
-
-    // Record activity for watchdog
-    recordGameActivity(validated.gameId);
 
     // Broadcast update
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
@@ -960,9 +950,6 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
       return;
     }
 
-    // Record activity for watchdog (successful card play)
-    recordGameActivity(validated.gameId);
-
     if (roundCompletionPayload) {
       await persistRoundCompletionStats(roundCompletionPayload);
     }
@@ -1231,9 +1218,6 @@ async function handleStartNextRound(io: Server, socket: Socket, payload: unknown
       round: roundState.round,
       version: roundState.version
     });
-
-    // Record activity for watchdog
-    recordGameActivity(validated.gameId);
 
     console.log(`${logPrefix} Step 5: Broadcasting GAME_STATE_UPDATE...`);
     // Broadcast update
