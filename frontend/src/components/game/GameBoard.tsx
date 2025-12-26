@@ -18,6 +18,7 @@ import { GameNotification } from './GameNotification';
 import { SettingsModal } from './SettingsModal';
 import { useGame } from '@/hooks/useGame';
 import { useGameNotifications } from '@/hooks/useGameNotifications';
+import { useLocalAnalysis } from '@/hooks/useLocalAnalysis';
 import { createRematchGame } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { GAME_TIMEOUTS } from '@buck-euchre/shared';
@@ -33,6 +34,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
   const navigate = useNavigate();
   const { phase, currentPlayerPosition, currentBidder, players } = gameState;
   const { playCard, startNextRound, leaveGame } = useGame();
+  const { isThinking, progress } = useLocalAnalysis();
   const [isRematching, setIsRematching] = useState(false);
   const [isReturning, setIsReturning] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -751,12 +753,27 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
         </Button>
       </div>
 
-      {/* AI Thinking Indicator - Bottom Right */}
-      {false && (
+      {/* AI Analysis Progress Indicator - Bottom Right */}
+      {isThinking && (
         <div className="fixed bottom-2 right-2 z-40">
-          <div className="rounded-full border-white/20 bg-black/60 backdrop-blur text-xs px-3 py-1.5 shadow-lg flex items-center gap-1.5">
-            <Loader2 className="h-3 w-3 animate-spin text-emerald-300" />
-            <span className="text-emerald-200/90 font-medium">AI thinking...</span>
+          <div className="rounded-lg border-white/20 bg-black/70 backdrop-blur px-3 py-2 shadow-lg">
+            <div className="flex items-center gap-2 mb-1">
+              <Loader2 className="h-3 w-3 animate-spin text-emerald-300" />
+              <span className="text-emerald-200/90 font-medium text-xs">Analyzing...</span>
+            </div>
+            {progress && (
+              <div className="flex flex-col gap-1">
+                <div className="w-32 h-1 bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-400 transition-all duration-200"
+                    style={{ width: `${progress.progress}%` }}
+                  />
+                </div>
+                <div className="text-[10px] text-emerald-300/70 tabular-nums">
+                  {progress.simulations}/{progress.totalSimulations} ({progress.progress}%)
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
