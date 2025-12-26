@@ -8,6 +8,7 @@ import type { Socket } from 'socket.io-client';
 import { useAuthStore } from '@/stores/authStore';
 import { useGameStore } from '@/stores/gameStore';
 import { useUIStore } from '@/stores/uiStore';
+import { setTrickCompleteListener } from '@/hooks/useLocalAnalysis';
 import { 
   createSocketConnection, 
   setupSocketListeners, 
@@ -174,8 +175,11 @@ export function useSocket() {
       
       onTrickComplete: (data) => {
         console.log('Trick complete:', data);
-        // Backend now handles the delay, so we just log this
-        // The state update will arrive after the backend's 1-second delay
+        // Trigger early analysis during the 3-second pause
+        if (data.trick) {
+          const nextTrickNumber = (data.trick.number || 0) + 1;
+          setTrickCompleteListener?.(data.trick.winner, nextTrickNumber);
+        }
       },
       
       onRoundComplete: (data) => {

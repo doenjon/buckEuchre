@@ -17,7 +17,20 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
   const { placeBid } = useGame();
   const isGameStartNotification = useGameStore((state) => state.isGameStartNotification);
   const getBidAnalysis = useGameStore((state) => state.getBidAnalysis);
+  const bidAnalysis = useGameStore((state) => state.bidAnalysis);
   const showCardOverlay = useSettingsStore((state) => state.showCardOverlay);
+  
+  // Debug logging
+  if (isMyTurn && showCardOverlay) {
+    console.log('[BiddingPanel] Render check', {
+      isMyTurn,
+      showCardOverlay,
+      isDisabled: isMyTurn && isGameStartNotification,
+      hasBidAnalysis: !!bidAnalysis,
+      bidAnalysisLength: bidAnalysis?.length,
+      bidAnalysis: bidAnalysis?.map(b => ({ bidAmount: b.bidAmount, expectedScore: b.expectedScore })),
+    });
+  }
 
   // Disable bidding if "Let's play!" notification is showing
   const isDisabled = isMyTurn && isGameStartNotification;
@@ -61,7 +74,15 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
       )}
       <div className="flex flex-wrap justify-center gap-1.5 md:gap-2">
         {availableBids.map(bid => {
-          const analysis = getBidAnalysis(bid as 3 | 4 | 5);
+          const analysis = getBidAnalysis(bid as 2 | 3 | 4 | 5);
+          // Debug logging
+          if (showCardOverlay && isMyTurn && !isDisabled) {
+            console.log('[BiddingPanel] Bid analysis check', {
+              bid,
+              hasAnalysis: !!analysis,
+              analysis: analysis ? { expectedScore: analysis.expectedScore, visits: analysis.visits } : null,
+            });
+          }
           return (
             <div key={bid} className="min-w-[72px] md:min-w-[84px] flex-1 sm:flex-none">
               <Button
@@ -76,19 +97,17 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
               {analysis && !isDisabled && showCardOverlay && (
                 <div className="mt-1 rounded-md border border-white/10 bg-black/40 px-2 py-1 pointer-events-none">
                   <div className="flex items-center justify-between gap-2 text-[10px] font-semibold leading-snug tabular-nums">
-                    <span className="flex items-center gap-1 text-emerald-200">
-                      {analysis.rank === 1 && (
-                        <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best bid">⭐</span>
-                      )}
-                      <span>{(analysis.winProbability * 100).toFixed(0)}%</span>
-                    </span>
-                    <span className="text-emerald-200">
+                    <span className={`${
+                      analysis.expectedScore < 0 ? 'text-green-300' : analysis.expectedScore > 0 ? 'text-red-300' : 'text-yellow-300'
+                    }`}>
                       {analysis.expectedScore > 0 ? '+' : ''}{analysis.expectedScore.toFixed(1)} pts
                     </span>
                   </div>
                   <div className="mt-0.5 flex items-center justify-between gap-2 text-[9px] leading-snug text-emerald-200/70 tabular-nums">
                     <span>{analysis.visits}v</span>
-                    <span>{(analysis.confidence * 100).toFixed(0)}% conf</span>
+                    {typeof analysis.buckProbability === 'number' && (
+                      <span className="text-orange-300">Buck {(analysis.buckProbability * 100).toFixed(0)}%</span>
+                    )}
                   </div>
                 </div>
               )}
@@ -111,19 +130,17 @@ export function BiddingPanel({ currentBid, isMyTurn }: BiddingPanelProps) {
             return passAnalysis && !isDisabled && showCardOverlay ? (
               <div className="mt-1 rounded-md border border-white/10 bg-black/40 px-2 py-1 pointer-events-none">
                 <div className="flex items-center justify-between gap-2 text-[10px] font-semibold leading-snug tabular-nums">
-                  <span className="flex items-center gap-1 text-emerald-200">
-                    {passAnalysis.rank === 1 && (
-                      <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best bid">⭐</span>
-                    )}
-                    <span>{(passAnalysis.winProbability * 100).toFixed(0)}%</span>
-                  </span>
-                  <span className="text-emerald-200">
+                  <span className={`${
+                    passAnalysis.expectedScore < 0 ? 'text-green-300' : passAnalysis.expectedScore > 0 ? 'text-red-300' : 'text-yellow-300'
+                  }`}>
                     {passAnalysis.expectedScore > 0 ? '+' : ''}{passAnalysis.expectedScore.toFixed(1)} pts
                   </span>
                 </div>
                 <div className="mt-0.5 flex items-center justify-between gap-2 text-[9px] leading-snug text-emerald-200/70 tabular-nums">
                   <span>{passAnalysis.visits}v</span>
-                  <span>{(passAnalysis.confidence * 100).toFixed(0)}% conf</span>
+                  {typeof passAnalysis.buckProbability === 'number' && (
+                    <span className="text-orange-300">Buck {(passAnalysis.buckProbability * 100).toFixed(0)}%</span>
+                  )}
                 </div>
               </div>
             ) : null;

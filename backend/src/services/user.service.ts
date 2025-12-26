@@ -59,52 +59,52 @@ export async function createUser(params: CreateUserParams): Promise<AuthResponse
   // Use a transaction to ensure all operations succeed or all fail
   // This prevents partial user creation if stats/settings/session creation fails
   const result = await prisma.$transaction(async (tx) => {
-    // Create user
+  // Create user
     const user = await tx.user.create({
-      data: {
-        email: email || null,
-        username,
-        passwordHash,
-        displayName,
-        isGuest,
-        lastLoginAt: new Date(),
-      },
-    });
+    data: {
+      email: email || null,
+      username,
+      passwordHash,
+      displayName,
+      isGuest,
+      lastLoginAt: new Date(),
+    },
+  });
 
-    // Create user stats
+  // Create user stats
     await tx.userStats.create({
-      data: {
-        userId: user.id,
-      },
-    });
+    data: {
+      userId: user.id,
+    },
+  });
 
-    // Create user settings with defaults
+  // Create user settings with defaults
     await tx.userSettings.create({
-      data: {
-        userId: user.id,
-        showCardOverlay: true,
-        showTooltips: true,
-        autoSortHand: true,
-        bidSpeed: 'normal',
-        animationSpeed: 'normal',
-        soundEffects: true,
-        showDebugConsole: false,
-      },
-    });
+    data: {
+      userId: user.id,
+      showCardOverlay: true,
+      showTooltips: true,
+      autoSortHand: true,
+      bidSpeed: 'normal',
+      animationSpeed: 'normal',
+      soundEffects: true,
+      showDebugConsole: false,
+    },
+  });
 
-    // Create session
-    const expiresAt = new Date(Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000);
-    const token = generateToken(user.id, user.username, user.isGuest);
+  // Create session
+  const expiresAt = new Date(Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000);
+  const token = generateToken(user.id, user.username, user.isGuest);
 
     const session = await tx.session.create({
-      data: {
-        userId: user.id,
-        token,
-        expiresAt,
-      },
-    });
+    data: {
+      userId: user.id,
+      token,
+      expiresAt,
+    },
+  });
 
-    return { user, session, token };
+  return { user, session, token };
   });
 
   return result;

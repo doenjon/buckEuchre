@@ -235,6 +235,7 @@ export interface BidAnalysis {
   confidence: number;  // 0-1 confidence in the analysis
   visits: number;  // Number of MCTS simulations that explored this bid
   rank: number;  // Rank among all bid options (1 = best)
+  buckProbability: number;  // 0-1 probability of getting bucked (+5 penalty)
 }
 
 /**
@@ -247,6 +248,7 @@ export interface FoldAnalysis {
   confidence: number;  // 0-1 confidence in the analysis
   visits: number;  // Number of MCTS simulations that explored this choice
   isBest: boolean;  // Whether this is the recommended action
+  buckProbability: number;  // 0-1 probability of getting bucked (+5 penalty)
 }
 
 /**
@@ -259,6 +261,7 @@ export interface SuitAnalysis {
   confidence: number;  // 0-1 confidence in the analysis
   visits: number;  // Number of MCTS simulations that explored this suit
   rank: number;  // Rank among all suits (1 = best)
+  buckProbability: number;  // 0-1 probability of getting bucked (+5 penalty)
 }
 
 /**

@@ -72,6 +72,7 @@ const mockGameState: GameState = {
   round: 1,
   dealerPosition: 0,
   scoresCalculated: false,
+  scoreHistory: [{ round: 0, scoresByPlayerId: { 'player-1': 0, 'player-2': 0, 'player-3': 0, 'player-4': 0 } }],
   blind: [],
   turnUpCard: null,
   isClubsTurnUp: false,

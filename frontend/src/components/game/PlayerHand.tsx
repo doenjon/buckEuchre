@@ -482,6 +482,19 @@ export function PlayerHand({
           const analysis = getCardAnalysis(card.id);
           const isCardPlayable = !playableCardIds || playableCardIds.has(card.id);
           const showAnalysis = !disabled && aiAnalysis && analysis && showCardOverlay && isCardPlayable;
+          
+          // Debug logging for overlay visibility (only log once per render to avoid spam)
+          if (index === 0 && showCardOverlay) {
+            console.log('[PlayerHand] Overlay check summary', {
+              hasAiAnalysis: !!aiAnalysis,
+              aiAnalysisLength: aiAnalysis?.length,
+              showCardOverlay,
+              disabled,
+              playableCardIdsCount: playableCardIds?.size,
+              firstCardAnalysis: analysis ? { cardId: card.id, expectedScore: analysis.expectedScore } : null,
+              firstCardPlayable: isCardPlayable,
+            });
+          }
           const isPlaying = playingCardId === card.id;
 
           return (
@@ -489,7 +502,7 @@ export function PlayerHand({
               key={card.id}
               data-card-id={card.id}
               className={`
-                hover:z-10 focus-within:z-10 relative
+                hover:z-10 focus-within:z-10 relative flex flex-col items-center
                 ${touchDraggedCardId === card.id ? 'opacity-50' : ''}
               `}
               ref={setCardRef(card.id)}
@@ -509,54 +522,45 @@ export function PlayerHand({
                 zIndex: index, // Cards to the right appear on top
               }}
             >
-              <Card
-                card={card}
-                onClick={() => handleCardClick(card)}
-                disabled={disabled || isPlaying}
-                selected={selectedCardId === card.id}
-                size="large"
-              />
-              {isPlaying && (
-                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                  <Loader2 className="h-10 w-10 md:h-12 md:w-12 text-emerald-300 animate-spin" strokeWidth={3} />
-                </div>
-              )}
               {showAnalysis && (
-                <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/95 to-black/30 rounded-t-lg p-1.5 pointer-events-none shadow-lg">
-                  <div className="flex flex-col items-start gap-0.5 text-[10px] font-bold">
-                    {analysis.rank === 1 && (
-                      <span className="text-yellow-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="Best card">⭐</span>
-                    )}
-                    <span
-                      className={`drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] ${
-                        analysis.expectedScore < 0 ? 'text-green-300' : analysis.expectedScore > 0 ? 'text-red-300' : 'text-yellow-300'
-                      }`}
-                      title={`Expected score change: ${analysis.expectedScore.toFixed(1)} (negative is good)`}
-                    >
-                      {analysis.expectedScore > 0 ? '+' : ''}{analysis.expectedScore.toFixed(1)}
+                <div className="mb-0.5 rounded border border-white/10 bg-black/40 px-1.5 py-0.5 pointer-events-none relative">
+                  <div className="flex items-center justify-between gap-1.5 text-[9px] font-semibold leading-tight tabular-nums">
+                    <span className={`${
+                      analysis.expectedScore < 0 ? 'text-green-300' : analysis.expectedScore > 0 ? 'text-red-300' : 'text-yellow-300'
+                    }`}>
+                      {analysis.expectedScore > 0 ? '+' : ''}{analysis.expectedScore.toFixed(1)} pts
+                      {analysis.confidenceInterval && (
+                        <span
+                          className="text-blue-300 ml-1"
+                          title={`MCTS uncertainty (95% CI): [${analysis.confidenceInterval.lower.toFixed(1)}, ${analysis.confidenceInterval.upper.toFixed(1)}]`}
+                        >
+                          ±{(analysis.confidenceInterval.width / 2).toFixed(1)}
+                        </span>
+                      )}
                     </span>
-                    {analysis.confidenceInterval && (
-                      <span
-                        className="text-blue-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
-                        title={`MCTS uncertainty (95% CI): [${analysis.confidenceInterval.lower.toFixed(1)}, ${analysis.confidenceInterval.upper.toFixed(1)}]`}
-                      >
-                        ±{(analysis.confidenceInterval.width / 2).toFixed(1)}
-                      </span>
-                    )}
+                  </div>
+                  <div className="mt-0.5 flex items-center justify-between gap-1.5 text-[8px] leading-tight text-emerald-200/70 tabular-nums">
+                    <span>{analysis.visits}v</span>
                     {typeof analysis.buckProbability === 'number' && (
-                      <span
-                        className="text-orange-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
-                        title={`Buck probability: ${(analysis.buckProbability * 100).toFixed(0)}% chance of getting bucked (+5 penalty)`}
-                      >
-                        Buck {(analysis.buckProbability * 100).toFixed(0)}%
-                      </span>
+                      <span className="text-orange-300">Buck {(analysis.buckProbability * 100).toFixed(0)}%</span>
                     )}
-                    <span className="text-green-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" title="MCTS visits (exploration count)">
-                      {analysis.visits}
-                    </span>
                   </div>
                 </div>
               )}
+              <div className="relative">
+                <Card
+                  card={card}
+                  onClick={() => handleCardClick(card)}
+                  disabled={disabled || isPlaying}
+                  selected={selectedCardId === card.id}
+                  size="large"
+                />
+                {isPlaying && (
+                  <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                    <Loader2 className="h-10 w-10 md:h-12 md:w-12 text-emerald-300 animate-spin" strokeWidth={3} />
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}

@@ -3,7 +3,7 @@
  * @description Main game board component
  */
 
-import { useEffect, useRef, useState, useCallback, useMemo, type ReactNode } from 'react';
+import { useEffect, useState, useCallback, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, RotateCcw, LogOut, Trophy, X, Settings } from 'lucide-react';
 import { Scoreboard } from './Scoreboard';
@@ -18,6 +18,7 @@ import { GameNotification } from './GameNotification';
 import { SettingsModal } from './SettingsModal';
 import { useGame } from '@/hooks/useGame';
 import { useGameNotifications } from '@/hooks/useGameNotifications';
+import { useLocalAnalysis } from '@/hooks/useLocalAnalysis';
 import { createRematchGame } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { GAME_TIMEOUTS } from '@buck-euchre/shared';
@@ -33,6 +34,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
   const navigate = useNavigate();
   const { phase, currentPlayerPosition, currentBidder, players } = gameState;
   const { playCard, startNextRound, leaveGame } = useGame();
+  const { isThinking } = useLocalAnalysis();
   const [isRematching, setIsRematching] = useState(false);
   const [isReturning, setIsReturning] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -750,6 +752,16 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
           )}
         </Button>
       </div>
+
+      {/* AI Thinking Indicator - Bottom Right */}
+      {isThinking && (
+        <div className="fixed bottom-2 right-2 z-40">
+          <div className="rounded-full border-white/20 bg-black/60 backdrop-blur text-xs px-3 py-1.5 shadow-lg flex items-center gap-1.5">
+            <Loader2 className="h-3 w-3 animate-spin text-emerald-300" />
+            <span className="text-emerald-200/90 font-medium">AI thinking...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,6 +4,20 @@
   "description": "Shared types, constants, and validators for Buck Euchre",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./game/*": {
+      "types": "./dist/game/*.d.ts",
+      "default": "./dist/game/*.js"
+    },
+    "./ai/*": {
+      "types": "./dist/ai/*.d.ts",
+      "default": "./dist/ai/*.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

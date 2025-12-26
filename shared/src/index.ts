@@ -17,3 +17,9 @@ export * from './validators';
 
 // Export shared utilities
 export * from './utils';
+
+// Export shared pure game logic (used by both backend + frontend)
+export * from './game';
+
+// Export shared AI (ISMCTS + analysis helpers)
+export * from './ai';

@@ -242,7 +242,7 @@ export async function analyzeBids(
     );
 
     // Extract bid actions from statistics
-    const bidStats = new Map<BidAmount, { visits: number; avgValue: number }>();
+    const bidStats = new Map<BidAmount, { visits: number; avgValue: number; buckProbability: number }>();
 
     for (const [key, stat] of Array.from(statistics)) {
       // Only include BID actions
@@ -250,6 +250,7 @@ export async function analyzeBids(
         bidStats.set(stat.action.amount, {
           visits: stat.visits,
           avgValue: stat.avgValue,
+          buckProbability: stat.buckProbability,
         });
       }
     }
@@ -272,6 +273,7 @@ export async function analyzeBids(
           confidence: 0,
           visits: 0,
           rank: possibleBids.length,
+          buckProbability: 0,
         });
         continue;
       }
@@ -288,6 +290,7 @@ export async function analyzeBids(
         confidence,
         visits: stats.visits,
         rank: 0, // Will be set after sorting
+        buckProbability: stats.buckProbability,
       });
     }
 
@@ -366,7 +369,7 @@ export async function analyzeFoldDecision(
     );
 
     // Extract fold actions from statistics
-    const foldStats = new Map<boolean, { visits: number; avgValue: number }>();
+    const foldStats = new Map<boolean, { visits: number; avgValue: number; buckProbability: number }>();
 
     for (const [key, stat] of Array.from(statistics)) {
       // Only include FOLD actions
@@ -374,6 +377,7 @@ export async function analyzeFoldDecision(
         foldStats.set(stat.action.fold, {
           visits: stat.visits,
           avgValue: stat.avgValue,
+          buckProbability: stat.buckProbability,
         });
       }
     }
@@ -394,6 +398,7 @@ export async function analyzeFoldDecision(
           confidence: 0,
           visits: 0,
           isBest: false,
+          buckProbability: 0,
         });
         continue;
       }
@@ -410,6 +415,7 @@ export async function analyzeFoldDecision(
         confidence,
         visits: stats.visits,
         isBest: false, // Will be set after finding the best
+        buckProbability: stats.buckProbability,
       });
     }
 
@@ -485,7 +491,7 @@ export async function analyzeTrumpSelection(
     );
 
     // Extract trump suit actions from statistics
-    const suitStats = new Map<Suit, { visits: number; avgValue: number }>();
+    const suitStats = new Map<Suit, { visits: number; avgValue: number; buckProbability: number }>();
 
     for (const [key, stat] of Array.from(statistics)) {
       // Only include TRUMP actions
@@ -493,6 +499,7 @@ export async function analyzeTrumpSelection(
         suitStats.set(stat.action.suit, {
           visits: stat.visits,
           avgValue: stat.avgValue,
+          buckProbability: stat.buckProbability,
         });
       }
     }
@@ -513,6 +520,7 @@ export async function analyzeTrumpSelection(
           confidence: 0,
           visits: 0,
           rank: possibleSuits.length,
+          buckProbability: 0,
         });
         continue;
       }
@@ -529,6 +537,7 @@ export async function analyzeTrumpSelection(
         confidence,
         visits: stats.visits,
         rank: 0, // Will be set after sorting
+        buckProbability: stats.buckProbability,
       });
     }
 

@@ -593,8 +593,10 @@ async function executeAICardPlay(
       });
       
       // Trigger AI after delay completes (only if round is still in progress)
-      if (currentState.phase === 'PLAYING') {
-        void checkAndTriggerAI(gameId, currentState, io);
+      // Use fresh state from memory to avoid stale state issues
+      const freshStateAfterDelay = getActiveGameState(gameId);
+      if (freshStateAfterDelay && freshStateAfterDelay.phase === 'PLAYING') {
+        void checkAndTriggerAI(gameId, freshStateAfterDelay, io);
       }
     });
   } else {
@@ -613,6 +615,10 @@ async function executeAICardPlay(
     });
     
     // Trigger AI immediately if trick not complete
-    await checkAndTriggerAI(gameId, finalState, io);
+    // Use fresh state from memory to avoid stale state issues
+    const freshState = getActiveGameState(gameId);
+    if (freshState) {
+      await checkAndTriggerAI(gameId, freshState, io);
+    }
   }
 }
