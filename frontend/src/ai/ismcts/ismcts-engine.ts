@@ -379,7 +379,7 @@ export class ISMCTSEngine {
     const root = new MCTSNode(null, null, legalActions);
     const totalSimulations = this.config.simulations;
     const progressInterval = 100; // Update progress every 100 simulations
-    const intermediateResultsInterval = 1000; // Send intermediate results every 1000 simulations
+    const intermediateResultsInterval = 5000; // Send intermediate results every 5000 simulations
 
     // Helper to convert current tree state to results
     const getResults = () => {
