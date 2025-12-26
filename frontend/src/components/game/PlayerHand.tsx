@@ -547,11 +547,6 @@ export function PlayerHand({
                       <span className="text-orange-300">Buck {(analysis.buckProbability * 100).toFixed(0)}%</span>
                     )}
                   </div>
-                  {isThinking && progress && (
-                    <div className="mt-0.5 text-[7px] text-blue-300/60 italic">
-                      updating...
-                    </div>
-                  )}
                 </div>
               )}
               <div className="relative">
