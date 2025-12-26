@@ -12,6 +12,7 @@ import apiRoutes from './api';
 import { handleConnection } from './sockets/connection.js';
 import { setSocketServer } from './utils/socketManager.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { startWatchdog } from './services/watchdog.service.js';
 
 /**
  * Create and configure Express + Socket.IO server
@@ -141,6 +142,9 @@ export function createAppServer(): {
   // Initialize WebSocket handlers
   handleConnection(io);
   setSocketServer(io);
+
+  // Start the game watchdog to detect and recover stuck games
+  startWatchdog(io);
 
   return { app, httpServer, io };
 }

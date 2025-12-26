@@ -23,6 +23,7 @@ import { scheduleAutoStartNextRound } from '../services/round.service.js';
 import { aiProviderCache } from './provider-cache.js';
 import type { AIProvider } from './types.js';
 import { buildRoundCompletionPayload, persistRoundCompletionStats } from '../sockets/game.js';
+import { recordGameActivity } from '../services/watchdog.service.js';
 
 /**
  * Delay for a specified amount of time
@@ -69,8 +70,11 @@ async function getAIProvider(playerId: string): Promise<AIProvider> {
   return await aiProviderCache.getProvider(playerId, 'medium');
 }
 
+// Maximum time an AI turn can take before we consider it hung
+const AI_TURN_TIMEOUT_MS = 15000; // 15 seconds
+
 /**
- * Execute AI turn based on current game phase
+ * Execute AI turn based on current game phase with timeout protection
  *
  * @param gameId - ID of the game
  * @param aiPlayerId - ID of the AI player
@@ -82,6 +86,8 @@ export async function executeAITurn(
   io: Server
 ): Promise<void> {
   const startTime = Date.now();
+  let actionTaken = false; // Track if AI actually did something
+
   try {
     console.log(`[AI Executor] 🚀 STARTING AI turn for player ${aiPlayerId} in game ${gameId}`);
     const initialState = getActiveGameState(gameId);
@@ -94,6 +100,8 @@ export async function executeAITurn(
     if (initialPosition === null) {
       console.error(`[AI Executor] ❌ Player ${aiPlayerId} not found in game ${gameId}`);
       console.error(`[AI Executor] Available players: ${initialState.players.map(p => `${p.id}(${p.name})`).join(', ')}`);
+      // Trigger recovery to ensure game continues
+      await triggerRecoveryCheck(gameId, io);
       return;
     }
 
@@ -116,6 +124,7 @@ export async function executeAITurn(
     const aiPosition = findPlayerPosition(state, aiPlayerId);
     if (aiPosition === null) {
       console.error(`[AI Executor] ❌ Player ${aiPlayerId} not found after delay`);
+      await triggerRecoveryCheck(gameId, io);
       return;
     }
 
@@ -131,8 +140,11 @@ export async function executeAITurn(
         if (state.currentBidder === aiPosition) {
           console.log(`[AI Executor] ✅ Executing bid for AI at position ${aiPosition}`);
           await executeAIBid(gameId, aiPlayerId, io);
+          actionTaken = true;
         } else {
-          console.log(`[AI Executor] ⚠️ AI at position ${aiPosition} but currentBidder is ${state.currentBidder} - skipping`);
+          console.log(`[AI Executor] ⚠️ AI at position ${aiPosition} but currentBidder is ${state.currentBidder} - state changed during thinking`);
+          // State changed during thinking - trigger recovery to ensure game continues
+          await triggerRecoveryCheck(gameId, io);
         }
         break;
 
@@ -141,8 +153,10 @@ export async function executeAITurn(
         if (state.winningBidderPosition === aiPosition) {
           console.log(`[AI Executor] ✅ Executing trump declaration for AI at position ${aiPosition}`);
           await executeAIDeclareTrump(gameId, aiPlayerId, io);
+          actionTaken = true;
         } else {
-          console.log(`[AI Executor] ⚠️ AI at position ${aiPosition} but winningBidder is ${state.winningBidderPosition} - skipping`);
+          console.log(`[AI Executor] ⚠️ AI at position ${aiPosition} but winningBidder is ${state.winningBidderPosition} - state changed during thinking`);
+          await triggerRecoveryCheck(gameId, io);
         }
         break;
 
@@ -151,8 +165,10 @@ export async function executeAITurn(
         if (state.winningBidderPosition !== aiPosition && aiPlayer.foldDecision === 'UNDECIDED') {
           console.log(`[AI Executor] ✅ Executing fold decision for AI at position ${aiPosition}`);
           await executeAIFoldDecision(gameId, aiPlayerId, io);
+          actionTaken = true;
         } else {
           console.log(`[AI Executor] ⚠️ AI cannot fold: winningBidder=${state.winningBidderPosition}, foldDecision=${aiPlayer.foldDecision}`);
+          await triggerRecoveryCheck(gameId, io);
         }
         break;
 
@@ -161,24 +177,53 @@ export async function executeAITurn(
         if (state.currentPlayerPosition === aiPosition) {
           console.log(`[AI Executor] ✅ Executing card play for AI at position ${aiPosition}`);
           await executeAICardPlay(gameId, aiPlayerId, io);
+          actionTaken = true;
         } else {
-          console.log(`[AI Executor] ⚠️ AI at position ${aiPosition} but currentPlayer is ${state.currentPlayerPosition} - skipping`);
+          console.log(`[AI Executor] ⚠️ AI at position ${aiPosition} but currentPlayer is ${state.currentPlayerPosition} - state changed during thinking`);
+          await triggerRecoveryCheck(gameId, io);
         }
         break;
 
       default:
         console.log(`[AI Executor] ⚠️ ${aiPlayer.name} doesn't need to act in phase ${phase}`);
+        await triggerRecoveryCheck(gameId, io);
         break;
     }
-    
+
     const duration = Date.now() - startTime;
-    console.log(`[AI Executor] ✅ COMPLETED AI turn for player ${aiPlayerId} in ${duration}ms`);
+    console.log(`[AI Executor] ✅ COMPLETED AI turn for player ${aiPlayerId} in ${duration}ms (actionTaken=${actionTaken})`);
+
+    // Record activity to prevent watchdog from triggering
+    if (actionTaken) {
+      recordGameActivity(gameId);
+    }
   } catch (error: any) {
     const duration = Date.now() - startTime;
     console.error(`[AI Executor] ❌ FATAL ERROR executing AI turn for player ${aiPlayerId} after ${duration}ms:`);
     console.error(`[AI Executor] Error message:`, error.message);
     console.error(`[AI Executor] Error stack:`, error.stack);
+    // On error, try to trigger recovery to continue the game
+    await triggerRecoveryCheck(gameId, io);
     throw error;
+  }
+}
+
+/**
+ * Trigger a recovery check to ensure the game continues
+ * This is called when an AI turn fails or state changes unexpectedly
+ */
+async function triggerRecoveryCheck(gameId: string, io: Server): Promise<void> {
+  console.log(`[AI Executor] 🔄 Triggering recovery check for game ${gameId}`);
+  // Small delay to prevent tight loops
+  await delay(500);
+  // Re-trigger AI check to continue the game
+  try {
+    const freshState = getActiveGameState(gameId);
+    if (freshState) {
+      await checkAndTriggerAI(gameId, freshState, io);
+    }
+  } catch (err) {
+    console.error(`[AI Executor] Recovery check failed:`, err);
   }
 }
 
@@ -580,52 +625,84 @@ async function executeAICardPlay(
     
     // Schedule transition to actual state after 3 seconds
     displayStateManager.scheduleTransition(gameId, async () => {
-      // Get current state from memory (may have changed during delay)
-      let currentState = getActiveGameState(gameId);
-      
-      // Fallback to the state we stored when creating the display
-      if (!currentState) {
-        console.warn(`[AI] Game ${gameId} not found in memory, using fallback state`);
-        currentState = stateForTransition;
-      }
-      
-      if (!currentState) {
-        console.error(`[AI] No state available for game ${gameId} during transition - this should not happen`);
-        return; // Can't emit without state
-      }
-      
-      // Validate state before emitting
-      if (!currentState || !currentState.gameId) {
-        console.error(`[AI] Invalid state for game ${gameId} during transition:`, currentState);
-        return;
-      }
-      
-      // IMPORTANT: Ensure clients accept this transition.
-      // The "display state" is emitted with a newer updatedAt, so if we emit the real
-      // state with an older timestamp the frontend may treat it as stale and ignore it.
-      const stateWithUpdatedTimestamp = {
-        ...currentState,
-        updatedAt: Date.now(),
-      };
-      
-      io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
-        gameState: stateWithUpdatedTimestamp,
-        event: 'CARD_PLAYED',
-        data: play,
-      });
-      console.log(`[AI] [PLAY_CARD] Delayed transition after showing completed trick`, {
-        phase: currentState.phase,
-        currentPlayerPosition: currentState.currentPlayerPosition,
-        trickNumber: currentState.currentTrick.number,
-        cardsInTrick: currentState.currentTrick.cards.length,
-        tricksCompleted: currentState.tricks.length,
-      });
-      
-      // Trigger AI after delay completes (only if round is still in progress)
-      // Use fresh state from memory to avoid stale state issues
-      const freshStateAfterDelay = getActiveGameState(gameId);
-      if (freshStateAfterDelay && freshStateAfterDelay.phase === 'PLAYING') {
-        void checkAndTriggerAI(gameId, freshStateAfterDelay, io);
+      console.log(`[AI] [PLAY_CARD] Transition callback starting for game ${gameId}`);
+      try {
+        // Get current state from memory (may have changed during delay)
+        let currentState = getActiveGameState(gameId);
+
+        // Fallback to the state we stored when creating the display
+        if (!currentState) {
+          console.warn(`[AI] Game ${gameId} not found in memory, using fallback state`);
+          currentState = stateForTransition;
+        }
+
+        if (!currentState) {
+          console.error(`[AI] No state available for game ${gameId} during transition - this should not happen`);
+          return; // Can't emit without state
+        }
+
+        // Validate state before emitting
+        if (!currentState || !currentState.gameId) {
+          console.error(`[AI] Invalid state for game ${gameId} during transition:`, currentState);
+          return;
+        }
+
+        // IMPORTANT: Ensure clients accept this transition.
+        // The "display state" is emitted with a newer updatedAt, so if we emit the real
+        // state with an older timestamp the frontend may treat it as stale and ignore it.
+        const stateWithUpdatedTimestamp = {
+          ...currentState,
+          updatedAt: Date.now(),
+        };
+
+        io.to(`game:${gameId}`).emit('GAME_STATE_UPDATE', {
+          gameState: stateWithUpdatedTimestamp,
+          event: 'CARD_PLAYED',
+          data: play,
+        });
+        console.log(`[AI] [PLAY_CARD] Delayed transition after showing completed trick`, {
+          phase: currentState.phase,
+          currentPlayerPosition: currentState.currentPlayerPosition,
+          trickNumber: currentState.currentTrick.number,
+          cardsInTrick: currentState.currentTrick.cards.length,
+          tricksCompleted: currentState.tricks.length,
+        });
+
+        // Trigger AI after delay completes (only if round is still in progress)
+        // Use fresh state from memory to avoid stale state issues
+        const freshStateAfterDelay = getActiveGameState(gameId);
+        if (freshStateAfterDelay && freshStateAfterDelay.phase === 'PLAYING') {
+          console.log(`[AI] [PLAY_CARD] Triggering next AI after transition delay`);
+          try {
+            await checkAndTriggerAI(gameId, freshStateAfterDelay, io);
+          } catch (triggerError) {
+            console.error(`[AI] [PLAY_CARD] Error triggering AI after transition:`, triggerError);
+            // Schedule a retry after a short delay
+            setTimeout(async () => {
+              const retryState = getActiveGameState(gameId);
+              if (retryState && retryState.phase === 'PLAYING') {
+                console.log(`[AI] [PLAY_CARD] Retrying AI trigger after error`);
+                await checkAndTriggerAI(gameId, retryState, io).catch(e =>
+                  console.error(`[AI] [PLAY_CARD] Retry also failed:`, e)
+                );
+              }
+            }, 1000);
+          }
+        } else {
+          console.log(`[AI] [PLAY_CARD] Not triggering AI - phase is ${freshStateAfterDelay?.phase || 'unknown'}`);
+        }
+      } catch (error) {
+        console.error(`[AI] [PLAY_CARD] Error in transition callback for game ${gameId}:`, error);
+        // Try to recover by triggering AI check
+        setTimeout(async () => {
+          const recoveryState = getActiveGameState(gameId);
+          if (recoveryState) {
+            console.log(`[AI] [PLAY_CARD] Attempting recovery trigger after callback error`);
+            await checkAndTriggerAI(gameId, recoveryState, io).catch(e =>
+              console.error(`[AI] [PLAY_CARD] Recovery trigger failed:`, e)
+            );
+          }
+        }, 500);
       }
     });
   } else {

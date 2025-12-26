@@ -263,11 +263,13 @@ export async function checkAndTriggerAI(
     console.log(`[AI Trigger] 📊 Game state: phase=${gameState.phase}, version=${gameState.version}`);
 
     // Special handling for FOLDING_DECISION phase
+    // IMPORTANT: Only trigger ONE player at a time to avoid race conditions
+    // Each player's action will trigger checkAndTriggerAI again for the next player
     if (gameState.phase === 'FOLDING_DECISION') {
-      // Check all non-bidders
+      // Find the FIRST undecided non-bidder
       for (let pos = 0; pos < 4; pos++) {
         const player = gameState.players[pos];
-        
+
         // Skip bidder and already-decided players
         if (pos === gameState.winningBidderPosition || player.foldDecision !== 'UNDECIDED') {
           continue;
@@ -275,13 +277,22 @@ export async function checkAndTriggerAI(
 
         // Check if AI or human
         const isAI = isAIPlayerByName(player.name);
-        
+
         if (isAI) {
-          // AI needs to act - trigger it (no delay, no throttle - game state prevents duplicates)
+          // AI needs to act - trigger it and wait for completion
+          // The AI's fold decision will call checkAndTriggerAI again for the next player
           console.log(`[AI Trigger] Triggering AI fold decision for ${player.name} at position ${pos}`);
-          executeAITurn(gameId, player.id, io).catch(err => 
-            console.error(`[AI Trigger] Error:`, err)
-          );
+          try {
+            await executeAITurn(gameId, player.id, io);
+          } catch (err) {
+            console.error(`[AI Trigger] Error executing AI fold decision:`, err);
+            // Even on error, try to trigger next player to avoid hanging
+            setTimeout(() => {
+              checkAndTriggerAI(gameId, gameState, io).catch(e =>
+                console.error(`[AI Trigger] Recovery trigger failed:`, e)
+              );
+            }, 1000);
+          }
         } else {
           // Human needs analysis - send it
           console.log(`[AI Trigger] Sending fold analysis for human player ${player.name} at position ${pos}`);
@@ -289,7 +300,12 @@ export async function checkAndTriggerAI(
             console.error(`[AI Trigger] Analysis error:`, err)
           );
         }
+        // Only trigger ONE player, then return
+        // The chain continues when that player acts
+        return;
       }
+      // If we get here, no one needs to act (shouldn't happen)
+      console.log(`[AI Trigger] FOLDING_DECISION: No undecided players found`);
       return;
     }
 

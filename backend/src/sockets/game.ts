@@ -40,6 +40,7 @@ import { getEffectiveSuit } from '../game/deck.js';
 import { GameState, PlayerPosition, Player, Card } from '@buck-euchre/shared';
 import { checkAndTriggerAI } from '../ai/trigger.js';
 import { scheduleAutoStartNextRound, cancelAutoStartNextRound, hasAutoStartTimer } from '../services/round.service.js';
+import { recordGameActivity } from '../services/watchdog.service.js';
 import {
   updateRoundStats,
   updateGameStats,
@@ -343,7 +344,10 @@ async function handleJoinGame(
         event: 'GAME_STARTED'
       });
       console.log(`[JOIN_GAME] Cards dealt for game ${validated.gameId}, now in ${dealtState.phase} phase`);
-      checkAndTriggerAI(validated.gameId, dealtState, io);
+      // Trigger AI with error handling - not awaited as this is not critical path
+      checkAndTriggerAI(validated.gameId, dealtState, io).catch(err =>
+        console.error(`[JOIN_GAME] Error triggering AI after deal:`, err)
+      );
     } else {
       // Player reconnecting to game in progress - just send current state
       socket.emit('GAME_STATE_UPDATE', {
@@ -353,7 +357,19 @@ async function handleJoinGame(
       console.log(`[JOIN_GAME] User ${displayName} reconnected to game ${validated.gameId} (phase: ${gameState.phase})`);
 
       // Trigger AI if needed (game might be waiting for AI to act)
-      checkAndTriggerAI(validated.gameId, gameState, io);
+      // This is important on reconnect - use error handling with retry
+      checkAndTriggerAI(validated.gameId, gameState, io).catch(err => {
+        console.error(`[JOIN_GAME] Error triggering AI on reconnect:`, err);
+        // Retry after a delay since this could be a race condition
+        setTimeout(() => {
+          const freshState = getActiveGameState(validated.gameId);
+          if (freshState) {
+            checkAndTriggerAI(validated.gameId, freshState, io).catch(e =>
+              console.error(`[JOIN_GAME] Retry trigger also failed:`, e)
+            );
+          }
+        }, 1000);
+      });
 
       // Only schedule auto-start timer if one doesn't already exist
       // This prevents resetting the timer when players reconnect
@@ -481,22 +497,27 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
       return applyBid(currentState, player.position, validated.amount);
     });
 
+    // Record activity for watchdog
+    recordGameActivity(validated.gameId);
+
     // Broadcast update
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
       gameState: newState,
       event: newState.phase === 'DEALING' ? 'ALL_PASSED' : 'BID_PLACED'
     });
-    
-    // Trigger AI if needed
-    checkAndTriggerAI(validated.gameId, newState, io);
-    
+
+    // Trigger AI if needed - with error handling
+    checkAndTriggerAI(validated.gameId, newState, io).catch(err =>
+      console.error(`[PLACE_BID] Error triggering AI:`, err)
+    );
+
     // If all players passed, send notification and deal new cards after a delay
     if (newState.phase === 'DEALING') {
       // Send notification immediately
       io.to(`game:${validated.gameId}`).emit('ALL_PLAYERS_PASSED', {
         message: 'Everyone passed. Dealing new hand...'
       });
-      
+
       // Deal new cards after 2.5 second delay
       setTimeout(async () => {
         try {
@@ -506,9 +527,22 @@ async function handlePlaceBid(io: Server, socket: Socket, payload: unknown): Pro
             event: 'CARDS_DEALT'
           });
           console.log(`[PLACE_BID] New round dealt for game ${validated.gameId} after all players passed`);
-          
-          // Trigger AI after dealing
-          checkAndTriggerAI(validated.gameId, dealtState, io);
+
+          // Trigger AI after dealing - with error handling and retry
+          try {
+            await checkAndTriggerAI(validated.gameId, dealtState, io);
+          } catch (aiError) {
+            console.error(`[PLACE_BID] Error triggering AI after deal:`, aiError);
+            // Retry after a short delay
+            setTimeout(() => {
+              const freshState = getActiveGameState(validated.gameId);
+              if (freshState) {
+                checkAndTriggerAI(validated.gameId, freshState, io).catch(e =>
+                  console.error(`[PLACE_BID] Retry trigger also failed:`, e)
+                );
+              }
+            }, 1000);
+          }
         } catch (error: any) {
           console.error(`[PLACE_BID] Failed to deal new round:`, error.message);
         }
@@ -562,14 +596,28 @@ async function handleDeclareTrump(io: Server, socket: Socket, payload: unknown):
       return applyTrumpDeclaration(currentState, validated.trumpSuit);
     });
 
+    // Record activity for watchdog
+    recordGameActivity(validated.gameId);
+
     // Broadcast update
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
       gameState: newState,
       event: 'TRUMP_DECLARED'
     });
-    
-    // Trigger AI if needed
-    checkAndTriggerAI(validated.gameId, newState, io);
+
+    // Trigger AI if needed - with error handling
+    checkAndTriggerAI(validated.gameId, newState, io).catch(err => {
+      console.error(`[DECLARE_TRUMP] Error triggering AI:`, err);
+      // Retry after a short delay
+      setTimeout(() => {
+        const freshState = getActiveGameState(validated.gameId);
+        if (freshState) {
+          checkAndTriggerAI(validated.gameId, freshState, io).catch(e =>
+            console.error(`[DECLARE_TRUMP] Retry trigger also failed:`, e)
+          );
+        }
+      }, 1000);
+    });
   } catch (error: any) {
     console.error('Error in DECLARE_TRUMP:', error);
     socket.emit('ERROR', {
@@ -639,14 +687,28 @@ async function handleFoldDecision(io: Server, socket: Socket, payload: unknown):
       return nextState;
     });
 
+    // Record activity for watchdog
+    recordGameActivity(validated.gameId);
+
     // Broadcast update
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
       gameState: newState,
       event: 'FOLD_DECISION_MADE'
     });
 
-    // Trigger AI if needed
-    checkAndTriggerAI(validated.gameId, newState, io);
+    // Trigger AI if needed - with error handling
+    checkAndTriggerAI(validated.gameId, newState, io).catch(err => {
+      console.error(`[FOLD_DECISION] Error triggering AI:`, err);
+      // Retry after a short delay
+      setTimeout(() => {
+        const freshState = getActiveGameState(validated.gameId);
+        if (freshState) {
+          checkAndTriggerAI(validated.gameId, freshState, io).catch(e =>
+            console.error(`[FOLD_DECISION] Retry trigger also failed:`, e)
+          );
+        }
+      }, 1000);
+    });
 
     if (roundCompletionPayload) {
       await persistRoundCompletionStats(roundCompletionPayload);
@@ -898,6 +960,9 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
       return;
     }
 
+    // Record activity for watchdog (successful card play)
+    recordGameActivity(validated.gameId);
+
     if (roundCompletionPayload) {
       await persistRoundCompletionStats(roundCompletionPayload);
     }
@@ -933,49 +998,79 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
       
       // Schedule transition to actual state after 3 seconds
       displayStateManager.scheduleTransition(validated.gameId, async () => {
-        // Get current state from memory (may have changed during delay)
-        let currentState = getActiveGameState(validated.gameId);
-        
-        // Fallback to the state we stored when creating the display
-        if (!currentState) {
-          console.warn(`[PLAY_CARD] Game ${validated.gameId} not found in memory, using fallback state`);
-          currentState = stateForTransition;
-        }
-        
-        if (!currentState) {
-          console.error(`[PLAY_CARD] No state available for game ${validated.gameId} during transition - this should not happen`);
-          return; // Can't emit without state
-        }
-        
-        // Validate state before emitting
-        if (!currentState || !currentState.gameId) {
-          console.error(`[PLAY_CARD] Invalid state for game ${validated.gameId} during transition:`, currentState);
-          return;
-        }
+        console.log(`[PLAY_CARD] Transition callback starting for game ${validated.gameId}`);
+        try {
+          // Get current state from memory (may have changed during delay)
+          let currentState = getActiveGameState(validated.gameId);
 
-        // IMPORTANT: Update the timestamp so frontend accepts this state
-        // Display state was emitted with a newer timestamp, so we need to ensure
-        // this actual state (with empty trick) has an even newer timestamp
-        const stateWithUpdatedTimestamp = {
-          ...currentState,
-          updatedAt: Date.now()
-        };
+          // Fallback to the state we stored when creating the display
+          if (!currentState) {
+            console.warn(`[PLAY_CARD] Game ${validated.gameId} not found in memory, using fallback state`);
+            currentState = stateForTransition;
+          }
 
-        io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
-          gameState: stateWithUpdatedTimestamp,
-          event: 'CARD_PLAYED'
-        });
-        console.log(`[PLAY_CARD] Delayed transition after showing completed trick`, {
-          phase: currentState.phase,
-          currentPlayerPosition: currentState.currentPlayerPosition,
-          trickNumber: currentState.currentTrick.number,
-          cardsInTrick: currentState.currentTrick.cards.length,
-          tricksCompleted: currentState.tricks.length,
-        });
-        
-        // Trigger AI after delay completes (only if round is still in progress)
-        if (currentState.phase === 'PLAYING') {
-          void checkAndTriggerAI(validated.gameId, currentState, io);
+          if (!currentState) {
+            console.error(`[PLAY_CARD] No state available for game ${validated.gameId} during transition - this should not happen`);
+            return; // Can't emit without state
+          }
+
+          // Validate state before emitting
+          if (!currentState || !currentState.gameId) {
+            console.error(`[PLAY_CARD] Invalid state for game ${validated.gameId} during transition:`, currentState);
+            return;
+          }
+
+          // IMPORTANT: Update the timestamp so frontend accepts this state
+          // Display state was emitted with a newer timestamp, so we need to ensure
+          // this actual state (with empty trick) has an even newer timestamp
+          const stateWithUpdatedTimestamp = {
+            ...currentState,
+            updatedAt: Date.now()
+          };
+
+          io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
+            gameState: stateWithUpdatedTimestamp,
+            event: 'CARD_PLAYED'
+          });
+          console.log(`[PLAY_CARD] Delayed transition after showing completed trick`, {
+            phase: currentState.phase,
+            currentPlayerPosition: currentState.currentPlayerPosition,
+            trickNumber: currentState.currentTrick.number,
+            cardsInTrick: currentState.currentTrick.cards.length,
+            tricksCompleted: currentState.tricks.length,
+          });
+
+          // Trigger AI after delay completes (only if round is still in progress)
+          if (currentState.phase === 'PLAYING') {
+            console.log(`[PLAY_CARD] Triggering next AI after transition delay`);
+            try {
+              await checkAndTriggerAI(validated.gameId, currentState, io);
+            } catch (triggerError) {
+              console.error(`[PLAY_CARD] Error triggering AI after transition:`, triggerError);
+              // Schedule a retry after a short delay
+              setTimeout(async () => {
+                const retryState = getActiveGameState(validated.gameId);
+                if (retryState && retryState.phase === 'PLAYING') {
+                  console.log(`[PLAY_CARD] Retrying AI trigger after error`);
+                  await checkAndTriggerAI(validated.gameId, retryState, io).catch(e =>
+                    console.error(`[PLAY_CARD] Retry also failed:`, e)
+                  );
+                }
+              }, 1000);
+            }
+          }
+        } catch (error) {
+          console.error(`[PLAY_CARD] Error in transition callback for game ${validated.gameId}:`, error);
+          // Try to recover by triggering AI check
+          setTimeout(async () => {
+            const recoveryState = getActiveGameState(validated.gameId);
+            if (recoveryState) {
+              console.log(`[PLAY_CARD] Attempting recovery trigger after callback error`);
+              await checkAndTriggerAI(validated.gameId, recoveryState, io).catch(e =>
+                console.error(`[PLAY_CARD] Recovery trigger failed:`, e)
+              );
+            }
+          }, 500);
         }
       });
     } else {
@@ -991,9 +1086,24 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
         cardsInTrick: finalState.currentTrick.cards.length,
         tricksCompleted: finalState.tricks.length,
       });
-      
+
       // Trigger AI immediately if trick not complete
-      void checkAndTriggerAI(validated.gameId, finalState, io);
+      // Use proper error handling to ensure the game continues even on errors
+      try {
+        await checkAndTriggerAI(validated.gameId, finalState, io);
+      } catch (triggerError) {
+        console.error(`[PLAY_CARD] Error triggering AI:`, triggerError);
+        // Schedule a recovery attempt
+        setTimeout(async () => {
+          const recoveryState = getActiveGameState(validated.gameId);
+          if (recoveryState && (recoveryState.phase === 'PLAYING' || recoveryState.phase === 'BIDDING')) {
+            console.log(`[PLAY_CARD] Recovery AI trigger after error`);
+            await checkAndTriggerAI(validated.gameId, recoveryState, io).catch(e =>
+              console.error(`[PLAY_CARD] Recovery trigger also failed:`, e)
+            );
+          }
+        }, 1000);
+      }
     }
 
     console.log(`${logPrefix} Step 6: Checking for round completion...`);
@@ -1122,6 +1232,9 @@ async function handleStartNextRound(io: Server, socket: Socket, payload: unknown
       version: roundState.version
     });
 
+    // Record activity for watchdog
+    recordGameActivity(validated.gameId);
+
     console.log(`${logPrefix} Step 5: Broadcasting GAME_STATE_UPDATE...`);
     // Broadcast update
     io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
@@ -1131,10 +1244,21 @@ async function handleStartNextRound(io: Server, socket: Socket, payload: unknown
     console.log(`${logPrefix} Step 6: Broadcast sent`);
 
     console.log(`${logPrefix} Step 6: Triggering AI...`);
-    // Trigger AI if needed
-    checkAndTriggerAI(validated.gameId, roundState, io);
+    // Trigger AI if needed - with error handling
+    checkAndTriggerAI(validated.gameId, roundState, io).catch(err => {
+      console.error(`[START_NEXT_ROUND] Error triggering AI:`, err);
+      // Retry after a short delay
+      setTimeout(() => {
+        const freshState = getActiveGameState(validated.gameId);
+        if (freshState) {
+          checkAndTriggerAI(validated.gameId, freshState, io).catch(e =>
+            console.error(`[START_NEXT_ROUND] Retry trigger also failed:`, e)
+          );
+        }
+      }, 1000);
+    });
     console.log(`${logPrefix} Step 7: AI triggered`);
-    
+
     const duration = Date.now() - startTime;
     process.stdout.write(`${logPrefix} ========== START_NEXT_ROUND HANDLER SUCCESS (${duration}ms) ==========\n`);
     console.log(`${logPrefix} ========== START_NEXT_ROUND HANDLER SUCCESS (${duration}ms) ==========`);
