@@ -148,53 +148,80 @@ export function useLocalAnalysis() {
           }
         }
       } else {
-        // For PLAYING phase, use the optimized analyzeHandWithProgress
+        // For PLAYING phase, use searchWithAnalysis (same as other phases for consistency)
         const player = state.players[position];
         if (player && player.hand && player.hand.length > 0) {
-          const convertToCardAnalysis = (results: Record<string, any>): CardAnalysis[] => {
-            const entries = Object.entries(results);
-            const sorted = [...entries].sort(([, a], [, b]) => a.value - b.value);
-            const ranks = new Map(sorted.map(([cardId], index) => [cardId, index + 1]));
-
-            return entries.map(([cardId, stats]) => ({
-              cardId,
-              expectedScore: stats.value,
+          const result = await engine.searchWithAnalysis(state, position as any);
+          const statistics = result.statistics;
+          
+          // Convert to CardAnalysis format (same as backend analysis.service.ts)
+          const cardStats = new Map<string, any>();
+          for (const [key, stat] of statistics) {
+            if (stat.action.type === 'CARD') {
+              cardStats.set(stat.action.card.id, stat);
+            }
+          }
+          
+          const analyses: CardAnalysis[] = [];
+          for (const card of player.hand) {
+            const stats = cardStats.get(card.id);
+            
+            if (!stats) {
+              analyses.push({
+                cardId: card.id,
+                winProbability: 0,
+                expectedTricks: 0,
+                expectedScore: 5, // Worst case
+                confidence: 0,
+                visits: 0,
+                rank: player.hand.length,
+              });
+              continue;
+            }
+            
+            // Calculate metrics from MCTS values (same as backend)
+            // avgValue is normalized score change where:
+            //   1.0 = best outcome (-5 score: took all 5 tricks)
+            //   0.5 = neutral outcome (0 score change)
+            //   0.0 = worst outcome (+5 score: got set/failed)
+            const winProbability = stats.avgValue;
+            const confidence = Math.min(stats.visits / 200, 1);
+            const expectedScoreChange = -(winProbability * 10 - 5); // Reverse the normalization
+            const remainingTricks = 5 - (state.tricks?.length || 0);
+            const expectedTricks = Math.max(0, Math.min(remainingTricks, -expectedScoreChange));
+            
+            // Convert confidence interval from avgValue scale to expectedScore scale
+            const ciLowerScore = -(stats.confidenceInterval.lower * 10 - 5);
+            const ciUpperScore = -(stats.confidenceInterval.upper * 10 - 5);
+            const ciWidth = Math.abs(ciLowerScore - ciUpperScore);
+            const stdErrorScore = stats.stdError * 10;
+            
+            analyses.push({
+              cardId: card.id,
+              winProbability,
+              expectedTricks,
+              expectedScore: expectedScoreChange,
+              confidence,
               visits: stats.visits,
-              winProbability: 0,
-              expectedTricks: 0,
-              confidence: Math.min(1, stats.visits / 1000),
-              rank: ranks.get(cardId) || 0,
-              buckProbability: stats.buckProbability || 0,
-              confidenceInterval: stats.confidence ? {
-                lower: stats.confidence.lower,
-                upper: stats.confidence.upper,
-                width: stats.confidence.upper - stats.confidence.lower
-              } : undefined,
-            }));
-          };
-
-          const results = await engine.analyzeHandWithProgress(
-            state,
-            position as any,
-            (simulations: number, total: number) => {
-              if (abortController.signal.aborted) return;
-              const progressPercent = Math.round((simulations / total) * 100);
-              const progressInfo = { simulations, totalSimulations: total, progress: progressPercent };
-              setProgress(progressInfo);
-              onProgress?.(progressInfo);
-            },
-            (intermediateResults) => {
-              if (!abortController.signal.aborted) {
-                const cardAnalysis = convertToCardAnalysis(intermediateResults);
-                setAIAnalysis(cardAnalysis);
-              }
-            },
-            abortController.signal
-          );
-
+              rank: 0, // Will be set after sorting
+              buckProbability: stats.buckProbability,
+              standardError: stdErrorScore,
+              confidenceInterval: {
+                lower: Math.min(ciLowerScore, ciUpperScore),
+                upper: Math.max(ciLowerScore, ciUpperScore),
+                width: ciWidth,
+              },
+            });
+          }
+          
+          // Sort by win probability (descending) and assign ranks
+          analyses.sort((a, b) => b.winProbability - a.winProbability);
+          analyses.forEach((analysis, index) => {
+            analysis.rank = index + 1;
+          });
+          
           if (!abortController.signal.aborted) {
-            const cardAnalysis = convertToCardAnalysis(results);
-            setAIAnalysis(cardAnalysis);
+            setAIAnalysis(analyses);
           }
         }
       }

@@ -6,8 +6,8 @@
  * Handles imperfect information by determinizing and building a search tree.
  */
 
-import { GameState, Suit, PlayerPosition } from '@buck-euchre/shared';
-import { MCTSNode, Action, AICharacter } from './mcts-node';
+import { GameState, Card, Suit, BidAmount, PlayerPosition } from '@buck-euchre/shared';
+import { MCTSNode, Action, serializeAction } from './mcts-node';
 import { determinize } from './determinize';
 import { simulate, SimulationResult } from './rollout';
 import { applyBid, applyTrumpDeclaration, applyFoldDecision, applyCardPlay } from '../../game/state';
@@ -28,6 +28,20 @@ export interface ISMCTSConfig {
 
   /** Character/personality traits for varied play styles */
   character?: AICharacter;
+}
+
+/**
+ * AI Character traits that affect play style
+ */
+export interface AICharacter {
+  /** Bidding aggressiveness (0.5 = conservative, 1.0 = balanced, 1.5 = aggressive) */
+  biddingAggressiveness?: number;
+
+  /** Risk-taking in card play (0.5 = safe, 1.0 = balanced, 1.5 = risky) */
+  riskTaking?: number;
+
+  /** Fold threshold modifier (0.5 = fold more, 1.0 = balanced, 1.5 = fold less) */
+  foldThreshold?: number;
 }
 
 /**
@@ -121,10 +135,23 @@ function applyAction(gameState: GameState, action: Action, playerPosition: Playe
 }
 
 /**
+ * Helper to yield control to event loop periodically
+ * This prevents blocking and allows other events (like button presses) to be processed
+ */
+function yieldToEventLoop(): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+/**
  * ISMCTS Engine
  */
 export class ISMCTSEngine {
   private config: ISMCTSConfig;
+  /** Number of simulations to run before yielding to event loop
+   *  This makes MCTS "nice" - allows other events (like button presses) to be processed
+   *  Yielding every 500 simulations balances responsiveness with performance
+   */
+  private readonly YIELD_INTERVAL = 500;
 
   constructor(config: ISMCTSConfig) {
     this.config = config;
@@ -137,7 +164,7 @@ export class ISMCTSEngine {
    * @param playerPosition - Our player position
    * @returns Best action to take
    */
-  search(gameState: GameState, playerPosition: PlayerPosition): Action {
+  async search(gameState: GameState, playerPosition: PlayerPosition): Promise<Action> {
     const startTime = Date.now();
 
     // Get legal actions at root
@@ -155,13 +182,19 @@ export class ISMCTSEngine {
     // Create root node
     const root = new MCTSNode(null, null, legalActions);
 
-    // Run simulations
+    // Run simulations with periodic yields to prevent blocking event loop
     for (let i = 0; i < this.config.simulations; i++) {
       // 1. DETERMINIZE: Sample opponent hands
       const determinizedState = determinize(gameState, playerPosition);
 
       // 2-5. Run one simulation on determinized state
       this.runSimulation(root, determinizedState, playerPosition);
+
+      // Yield to event loop periodically to allow other events to be processed
+      // This makes MCTS "nice" and prevents blocking button presses
+      if ((i + 1) % this.YIELD_INTERVAL === 0) {
+        await yieldToEventLoop();
+      }
     }
 
     const elapsed = Date.now() - startTime;
@@ -300,14 +333,14 @@ export class ISMCTSEngine {
   /**
    * Get analysis of all actions (for teaching features)
    */
-  searchWithAnalysis(
+  async searchWithAnalysis(
     gameState: GameState,
     playerPosition: PlayerPosition
-  ): {
+  ): Promise<{
     bestAction: Action;
     statistics: Map<string, { visits: number; avgValue: number; action: Action; stdError: number; confidenceInterval: { lower: number; upper: number; width: number }; buckProbability: number }>;
     totalSimulations: number;
-  } {
+  }> {
     // Run normal search
     const legalActions = getLegalActions(gameState, playerPosition);
     if (legalActions.length === 0) {
@@ -330,6 +363,12 @@ export class ISMCTSEngine {
           console.error(`[ISMCTS] Simulation ${i} failed:`, error.message || error, error.stack);
         }
         // Continue with next simulation
+      }
+
+      // Yield to event loop periodically to allow other events to be processed
+      // This makes MCTS "nice" and prevents blocking button presses
+      if ((i + 1) % this.YIELD_INTERVAL === 0) {
+        await yieldToEventLoop();
       }
     }
 
@@ -358,86 +397,5 @@ export class ISMCTSEngine {
       statistics,
       totalSimulations: root.visits,
     };
-  }
-
-  /**
-   * Analyze hand with progress callbacks for UI updates
-   * Returns statistics for all playable cards
-   */
-  async analyzeHandWithProgress(
-    gameState: GameState,
-    playerPosition: PlayerPosition,
-    onProgress?: (simulations: number, total: number) => void,
-    onIntermediateResults?: (results: Record<string, { visits: number; value: number; confidence?: { lower: number; upper: number }; buckProbability?: number }>) => void,
-    abortSignal?: AbortSignal
-  ): Promise<Record<string, { visits: number; value: number; confidence?: { lower: number; upper: number }; buckProbability?: number }>> {
-    const legalActions = getLegalActions(gameState, playerPosition);
-    if (legalActions.length === 0) {
-      return {};
-    }
-
-    const root = new MCTSNode(null, null, legalActions);
-    const totalSimulations = this.config.simulations;
-    const progressInterval = 100; // Update progress every 100 simulations
-    const intermediateResultsInterval = 5000; // Send intermediate results every 5000 simulations
-
-    // Helper to convert current tree state to results
-    const getResults = () => {
-      const statistics = root.getChildStatistics();
-      const results: Record<string, any> = {};
-
-      for (const [key, stat] of statistics) {
-        // Extract card ID from action key (format: "CARD:SUIT_RANK")
-        const match = key.match(/^CARD:(.+)$/);
-        if (match) {
-          const cardId = match[1];
-          results[cardId] = {
-            visits: stat.visits,
-            value: stat.avgValue,
-            confidence: stat.confidenceInterval,
-            buckProbability: stat.buckProbability
-          };
-        }
-      }
-
-      return results;
-    };
-
-    // Run simulations with progress updates
-    for (let i = 0; i < totalSimulations; i++) {
-      // Check if aborted
-      if (abortSignal?.aborted) {
-        console.log(`[ISMCTS] Analysis aborted after ${i} simulations`);
-        break;
-      }
-
-      try {
-        const determinizedState = determinize(gameState, playerPosition);
-        this.runSimulation(root, determinizedState, playerPosition);
-      } catch (error) {
-        // Skip failed simulations
-      }
-
-      const currentSim = i + 1;
-
-      // Report intermediate results every 1000 simulations
-      if (onIntermediateResults && currentSim % intermediateResultsInterval === 0) {
-        const intermediateResults = getResults();
-        onIntermediateResults(intermediateResults);
-      }
-
-      // Report progress
-      if (onProgress && (currentSim % progressInterval === 0 || currentSim === totalSimulations)) {
-        onProgress(currentSim, totalSimulations);
-
-        // Yield control to browser to keep UI responsive
-        if (currentSim % progressInterval === 0) {
-          await new Promise(resolve => setTimeout(resolve, 0));
-        }
-      }
-    }
-
-    // Return final results
-    return getResults();
   }
 }

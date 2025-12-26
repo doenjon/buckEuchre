@@ -9,20 +9,6 @@
 import { Card, BidAmount, Suit } from '@buck-euchre/shared';
 
 /**
- * AI Character traits that affect play style
- */
-export interface AICharacter {
-  /** Bidding aggressiveness (0.5 = conservative, 1.0 = balanced, 1.5 = aggressive) */
-  biddingAggressiveness?: number;
-
-  /** Risk-taking in card play (0.5 = safe, 1.0 = balanced, 1.5 = risky) */
-  riskTaking?: number;
-
-  /** Fold threshold modifier (0.5 = fold more, 1.0 = balanced, 1.5 = fold less) */
-  foldThreshold?: number;
-}
-
-/**
  * Action types in Buck Euchre
  */
 export type Action =
