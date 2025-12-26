@@ -397,6 +397,7 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
   // Find next available position and add player (with retry for race conditions)
   let attempts = 0;
   const maxAttempts = 5;
+  let playerAdded = false;
 
   while (!playerAdded && attempts < maxAttempts) {
     try {
