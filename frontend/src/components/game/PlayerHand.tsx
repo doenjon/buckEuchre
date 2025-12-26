@@ -14,6 +14,7 @@ import {
 import { Card } from './Card';
 import { useGameStore } from '@/stores/gameStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useLocalAnalysis } from '@/hooks/useLocalAnalysis';
 import { Loader2 } from 'lucide-react';
 
 export interface PlayerHandProps {
@@ -87,6 +88,7 @@ export function PlayerHand({
 }: PlayerHandProps) {
   const { aiAnalysis, getCardAnalysis } = useGameStore();
   const { showCardOverlay, autoSortHand } = useSettingsStore();
+  const { isThinking, progress } = useLocalAnalysis();
   const sortedCardIds = useMemo(() => {
     if (!cards || cards.length === 0) {
       return [] as string[];
@@ -545,6 +547,11 @@ export function PlayerHand({
                       <span className="text-orange-300">Buck {(analysis.buckProbability * 100).toFixed(0)}%</span>
                     )}
                   </div>
+                  {isThinking && progress && (
+                    <div className="mt-0.5 text-[7px] text-blue-300/60 italic">
+                      updating...
+                    </div>
+                  )}
                 </div>
               )}
               <div className="relative">
