@@ -32,11 +32,11 @@ import {
   dealNewRound,
   finishRound,
   startNextRound
-} from '../game/state';
+} from '@buck-euchre/shared/game/state';
 import { displayStateManager } from '../game/display';
 import { statsQueue } from '../services/stats-queue.service';
-import { canPlayCard, canPlaceBid, canFold } from '../game/validation';
-import { getEffectiveSuit } from '../game/deck';
+import { canPlayCard, canPlaceBid, canFold } from '@buck-euchre/shared/game/validation';
+import { getEffectiveSuit } from '@buck-euchre/shared/game/deck';
 import { GameState, PlayerPosition, Player, Card } from '../../../shared/src/types/game';
 import { checkAndTriggerAI } from '../ai/trigger';
 import { scheduleAutoStartNextRound, cancelAutoStartNextRound, hasAutoStartTimer } from '../services/round.service';
@@ -810,7 +810,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
         console.log(`[PLAY_CARD] State before finishRound:`, {
           round: stateBeforeScoring.round,
           phase: stateBeforeScoring.phase,
-          scores: stateBeforeScoring.players.map(p => ({ name: p.name, score: p.score }))
+          scores: stateBeforeScoring.players.map((p: Player) => ({ name: p.name, score: p.score }))
         });
         
         console.log(`[PLAY_CARD] Calling finishRound...`);
@@ -819,7 +819,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
           phase: nextState.phase,
           round: nextState.round,
           gameOver: nextState.gameOver,
-          scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
+          scores: nextState.players.map((p: Player) => ({ name: p.name, score: p.score }))
         });
 
         console.log(`[PLAY_CARD] Building stats payload...`);
@@ -830,7 +830,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
         }
         console.log(`[ROUND] Completed. Moving to ${nextState.phase}`, {
           gameOver: nextState.gameOver,
-          scores: nextState.players.map(p => ({ name: p.name, score: p.score }))
+          scores: nextState.players.map((p: Player) => ({ name: p.name, score: p.score }))
         });
         
         console.log(`[PLAY_CARD] About to emit TRICK_COMPLETE...`);
@@ -1109,7 +1109,7 @@ async function handleStartNextRound(io: Server, socket: Socket, payload: unknown
         phase: result.phase,
         round: result.round,
         version: result.version,
-        playersHaveCards: result.players.every(p => p.hand.length > 0)
+        playersHaveCards: result.players.every((p: Player) => p.hand.length > 0)
       });
       return result;
     });
