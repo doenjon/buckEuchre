@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io';
-import { ExtendedError } from 'socket.io/dist/namespace';
+import type { ExtendedError } from 'socket.io';
 import { validateSession } from '../services/user.service';
 
 /**
