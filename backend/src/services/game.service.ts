@@ -225,9 +225,6 @@ export async function createRematchGame(oldGameId: string, requestingUserId: str
  * @returns Current game state after joining (only if game is full)
  */
 export async function joinGame(gameId: string, playerId: string): Promise<GameState | null> {
-  const callStack = new Error().stack?.split('\n').slice(2, 5).join(' | ') || 'unknown';
-  console.log(`[JOIN_GAME] ENTRY gameId=${gameId} playerId=${playerId} stack=${callStack}`);
-  
   if (!gameId || !playerId) {
     throw new Error('Game ID and Player ID are required');
   }
@@ -271,41 +268,31 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
 
   if (inThisGame && inThisGame.game) {
     // User is already in this game - handle reconnection
-    console.log(`[JOIN_GAME] User ${playerId} is already in game ${gameId} - handling reconnection path`);
     const game = inThisGame.game;
-    console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - reconnection path: players=${game.players.length} status=${game.status}`);
 
     // Check if game state exists in memory
     let gameState = getActiveGameState(gameId);
     if (gameState) {
-      console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - found state in memory phase=${gameState.phase} returning`);
       return gameState;
     }
-    console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - no state in memory, checking database`);
 
     // Check if game state exists in database
     const dbGameState = await loadGameState(gameId);
     if (dbGameState) {
-      console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - found state in database phase=${dbGameState.phase}, loading to memory`);
       setActiveGameState(gameId, dbGameState);
       return dbGameState;
     }
-    console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - no state in database either`);
 
     // No state yet - check if we should start the game
     if (game.players.length === 4 && game.status === GameStatus.WAITING) {
-      console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - 4 players and WAITING, starting game initialization`);
       // All 4 players present! Initialize game (atomic init + queue)
       const playerIds = game.players.map((gp) => gp.user!.id) as [string, string, string, string];
-      console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - calling executeGameActionWithInit playerIds=${playerIds.join(',')}`);
       const startedState = await executeGameActionWithInit(
         gameId,
         () => {
-          console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - INSIDE INITIALIZER creating initial state`);
-      let initialState = initializeGame(playerIds);
-      // CRITICAL: Set the gameId on the state object
-      initialState.gameId = gameId;
-          console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - initial state created phase=${initialState.phase}`);
+          let initialState = initializeGame(playerIds);
+          // CRITICAL: Set the gameId on the state object
+          initialState.gameId = gameId;
 
           // Update player names from database
           initialState.players = initialState.players.map((p: Player, index: number) => {
@@ -317,24 +304,16 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
             };
           }) as [Player, Player, Player, Player];
 
-          // Keep initial phase as DEALING (no cards yet); the queued action will deal.
-          console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - initializer returning phase=${initialState.phase}`);
           return initialState;
         },
         (currentState) => {
-          console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - INSIDE ACTION currentPhase=${currentState.phase}`);
           // If already dealt by another concurrent starter, don't deal again.
           if (currentState.phase !== 'DEALING') {
-            console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - action skipping deal (already ${currentState.phase})`);
             return currentState;
           }
-          console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - action dealing cards`);
-          const dealt = dealNewRound(currentState);
-          console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - action dealt cards newPhase=${dealt.phase}`);
-          return dealt;
+          return dealNewRound(currentState);
         }
       );
-      console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - executeGameActionWithInit completed phase=${startedState.phase}`);
 
       // Update game status to IN_PROGRESS (idempotent; safe if called multiple times)
       // Use fire-and-forget with retry to avoid blocking on connection pool exhaustion
@@ -360,12 +339,10 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
         }
       });
 
-      console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - Game started! phase=${startedState.phase} version=${startedState.version}`);
       return startedState;
     }
 
     // Game exists but no state yet (still in WAITING, not enough players)
-    console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - reconnection path: not enough players (${game.players.length}/4) or not WAITING, returning null`);
     return null;
   }
 
@@ -414,14 +391,12 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
   // Check if user is already in THIS game (double-check to prevent duplicates)
   const alreadyInGame = game.players.some(p => p.userId === playerId);
   if (alreadyInGame) {
-    console.log(`[joinGame] User ${playerId} is already in game ${gameId}, returning null (reconnection)`);
     return null;
   }
 
   // Find next available position and add player (with retry for race conditions)
   let attempts = 0;
   const maxAttempts = 5;
-  let playerAdded = false;
 
   while (!playerAdded && attempts < maxAttempts) {
     try {
@@ -537,11 +512,9 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
   }
 
   // If game is now full (4 players), initialize game state
-  console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - new player path: finalGame.players.length=${finalGame.players.length}`);
   if (finalGame.players.length === 4) {
     // Use finalGame which we just queried, guaranteed to have all 4 players
     const updatedGame = finalGame;
-    console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - game is full! Starting initialization`);
 
     if (updatedGame.players.length !== 4) {
       throw new Error('Game does not have exactly 4 players');
@@ -549,27 +522,20 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
 
     // Get user IDs as a tuple
     const playerIds = updatedGame.players.map((gp) => gp.user!.id) as [string, string, string, string];
-    console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - playerIds=${playerIds.join(',')} calling executeGameActionWithInit`);
 
     // Initialize game state using pure function from game/state.ts
     const startedState = await executeGameActionWithInit(
       gameId,
       () => {
-        console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - INSIDE INITIALIZER (new player path)`);
     let initialState = initializeGame(playerIds);
     
     // CRITICAL: Set the gameId on the state object
     initialState.gameId = gameId;
-        console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - initial state created phase=${initialState.phase}`);
     
     // Update player names from database
     initialState.players = initialState.players.map((p: Player, index: number) => {
       const gamePlayer = updatedGame.players[index];
       const displayName = gamePlayer.user?.displayName || gamePlayer.guestName || `Player ${index + 1}`;
-      
-          console.log(
-            `[JOIN_GAME] gameId=${gameId} Setting player ${index} name: ${displayName} (user: ${gamePlayer.user?.id}, username: ${gamePlayer.user?.username})`
-          );
       
       return {
         ...p,
@@ -577,23 +543,15 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
       };
     }) as [Player, Player, Player, Player];
 
-        // Keep initial phase as DEALING (no cards yet); the queued action will deal.
-        console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - initializer returning phase=${initialState.phase}`);
         return initialState;
       },
       (currentState) => {
-        console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - INSIDE ACTION (new player path) currentPhase=${currentState.phase}`);
         if (currentState.phase !== 'DEALING') {
-          console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - action skipping deal (already ${currentState.phase})`);
           return currentState;
         }
-        console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - action dealing cards`);
-        const dealt = dealNewRound(currentState);
-        console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - action dealt cards newPhase=${dealt.phase}`);
-        return dealt;
+        return dealNewRound(currentState);
       }
     );
-    console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - executeGameActionWithInit completed phase=${startedState.phase}`);
 
     // Update game status to IN_PROGRESS (fire-and-forget with retry to avoid blocking)
     setImmediate(async () => {
@@ -618,12 +576,10 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
       }
     });
 
-    console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - Game started! phase=${startedState.phase} version=${startedState.version}`);
     return startedState;
   }
 
   // Game not full yet, return null (waiting for more players)
-  console.log(`[JOIN_GAME] gameId=${gameId} playerId=${playerId} - new player path: game not full (${finalGame.players.length}/4), returning null`);
   return null;
 }
 

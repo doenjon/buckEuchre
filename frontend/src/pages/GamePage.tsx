@@ -3,7 +3,7 @@
  * @description Main game page
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useGame } from '@/hooks/useGame';
@@ -60,14 +60,19 @@ export function GamePage() {
     }
   }, [authReady, checkAuth, navigate, gameId]);
 
-  // Join game when component mounts
+  // Join game when component mounts (with guard to prevent multiple calls)
+  const joinGameRef = useRef<string | null>(null);
   useEffect(() => {
     if (!authReady) {
       return;
     }
 
     if (gameId && userId) {
-      joinGame(gameId);
+      // Only join if we haven't already joined this game
+      if (joinGameRef.current !== gameId) {
+        joinGameRef.current = gameId;
+        joinGame(gameId);
+      }
     }
   }, [authReady, gameId, userId, joinGame]);
 

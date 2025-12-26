@@ -130,8 +130,23 @@ export function WaitingForPlayers({
     }
     
     // Refresh players periodically (without loading state)
-    // Increased interval to reduce database load
-    const interval = setInterval(() => fetchGamePlayers(false), 5000);
+    // Stop polling if we have gameState (game has started)
+    const gameState = useGameStore.getState().gameState;
+    if (gameState && gameState.gameId === gameId) {
+      // Game has started, no need to poll
+      return;
+    }
+    
+    // Poll every 5 seconds while waiting
+    const interval = setInterval(() => {
+      const currentGameState = useGameStore.getState().gameState;
+      if (currentGameState && currentGameState.gameId === gameId) {
+        // Game started, stop polling
+        clearInterval(interval);
+        return;
+      }
+      fetchGamePlayers(false);
+    }, 5000);
     return () => clearInterval(interval);
   }, [gameId, players]);
 

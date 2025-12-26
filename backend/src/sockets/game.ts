@@ -242,6 +242,9 @@ export function registerGameHandlers(io: Server, socket: Socket): void {
   process.stdout.write(`[WEBSOCKET_REGISTRATION] Handlers registered for socket ${socket.id}\n`);
 }
 
+// Track in-flight join requests to prevent duplicates
+const pendingJoinRequests = new Map<string, Promise<GameState | null>>();
+
 /**
  * Handle JOIN_GAME event
  */
@@ -272,28 +275,85 @@ async function handleJoinGame(
       return;
     }
 
-    console.log(`[WS:JOIN_GAME] ENTRY userId=${userId} displayName=${displayName} gameId=${validated.gameId} socketId=${socket.id}`);
+    // Create a unique key for this join request
+    const joinKey = `${userId}:${validated.gameId}`;
+    
+    // Check if there's already a pending join request for this user+game
+    const existingRequest = pendingJoinRequests.get(joinKey);
+    if (existingRequest) {
+      console.log(`[WS:JOIN_GAME] Deduplicating join request userId=${userId} gameId=${validated.gameId} socketId=${socket.id}`);
+      // Ack quickly
+      callback?.({ success: true, message: 'Join request already in progress' });
+      ackSent = true;
+      
+      // Wait for the existing request to complete and use its result
+      try {
+        const gameState = await existingRequest;
+        // Still join the socket room and update connection
+        socket.join(`game:${validated.gameId}`);
+        updateConnectionGame(userId, validated.gameId);
+        
+        // Send appropriate response based on game state
+        if (!gameState) {
+          const game = await getGame(validated.gameId);
+          if (game) {
+            io.to(`game:${validated.gameId}`).emit('GAME_WAITING', {
+              gameId: validated.gameId,
+              playerCount: game.players.length,
+              playersNeeded: 4 - game.players.length,
+              message: `Waiting for ${4 - game.players.length} more player(s)...`
+            });
+          }
+        } else {
+          socket.emit('GAME_STATE_UPDATE', {
+            gameState,
+            event: gameState.phase === 'DEALING' ? 'GAME_STARTED' : 'PLAYER_RECONNECTED'
+          });
+        }
+      } catch (err) {
+        // If the existing request failed, we'll handle it below
+        throw err;
+      }
+      return;
+    }
+
+    console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} socketId=${socket.id}`);
 
     // Ack quickly so client can retry/resync even if backend is slow.
     // The actual success/failure of seating will still come via ERROR / GAME_* events.
     callback?.({ success: true, message: 'Join request received' });
     ackSent = true;
 
+    // Create and track the join request promise
+    const joinPromise = (async () => {
+      try {
+        const gameState = await joinGame(validated.gameId, userId);
+        return gameState;
+      } finally {
+        // Remove from pending requests when done
+        pendingJoinRequests.delete(joinKey);
+      }
+    })();
+    
+    pendingJoinRequests.set(joinKey, joinPromise);
+    
     // Add player to game (uses game service)
-    console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - calling joinGame()`);
-    const gameState = await joinGame(validated.gameId, userId);
-    console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - joinGame() returned gameState=${gameState ? `phase=${gameState.phase} version=${gameState.version}` : 'null'}`);
+    const gameState = await joinPromise;
 
     // Join socket room regardless of whether game has started
     socket.join(`game:${validated.gameId}`);
     
     // Update connection service to track this player's game
     updateConnectionGame(userId, validated.gameId);
+    
+    if (gameState) {
+      console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - joined successfully phase=${gameState.phase}`);
+    } else {
+      console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - waiting for players`);
+    }
 
     if (!gameState) {
       // Game exists but hasn't started yet (still in WAITING)
-      console.log(`[JOIN_GAME] Game ${validated.gameId} is in WAITING status (no state yet)`);
-      
       // Get game info from database to show player list
       const game = await getGame(validated.gameId);
       if (!game) {
@@ -312,38 +372,26 @@ async function handleJoinGame(
         message: `Waiting for ${4 - game.players.length} more player(s)...`
       });
       
-      console.log(`[JOIN_GAME] User ${displayName} joined. ${game.players.length}/4 players`);
       return;
     }
 
     // Game has started or player is reconnecting
     // joinGame now deals cards directly, so gameState should already be in BIDDING phase
     // But handle DEALING phase for backwards compatibility (shouldn't happen anymore)
-    console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - checking phase=${gameState.phase}`);
     if (gameState.phase === 'DEALING') {
       // This shouldn't happen anymore since joinGame deals cards directly
       // But handle it just in case for safety
-      console.log(`[WS:JOIN_GAME] WARNING userId=${userId} gameId=${validated.gameId} - Game in DEALING phase! This shouldn't happen. Dealing cards...`);
-      
-      console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - calling executeGameAction to deal`);
       const dealtState = await executeGameAction(validated.gameId, async (currentState) => {
-        console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - INSIDE executeGameAction currentPhase=${currentState.phase}`);
         if (currentState.phase !== 'DEALING') {
-          console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - already dealt (phase: ${currentState.phase}), returning current`);
           return currentState;
         }
-        console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - dealing cards`);
-        const dealt = dealNewRound(currentState);
-        console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - dealt cards newPhase=${dealt.phase}`);
-        return dealt;
+        return dealNewRound(currentState);
       });
-      console.log(`[WS:JOIN_GAME] userId=${userId} gameId=${validated.gameId} - executeGameAction completed phase=${dealtState.phase}`);
       
       io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
         gameState: dealtState,
         event: 'GAME_STARTED'
       });
-      console.log(`[JOIN_GAME] Cards dealt for game ${validated.gameId}, now in ${dealtState.phase} phase`);
       // Trigger AI with error handling - not awaited as this is not critical path
       checkAndTriggerAI(validated.gameId, dealtState, io).catch(err =>
         console.error(`[JOIN_GAME] Error triggering AI after deal:`, err)
@@ -354,10 +402,8 @@ async function handleJoinGame(
         gameState,
         event: 'PLAYER_RECONNECTED'
       });
-      console.log(`[JOIN_GAME] User ${displayName} reconnected to game ${validated.gameId} (phase: ${gameState.phase})`);
 
       // Trigger AI if needed (game might be waiting for AI to act)
-      // This is important on reconnect - use error handling with retry
       checkAndTriggerAI(validated.gameId, gameState, io).catch(err => {
         console.error(`[JOIN_GAME] Error triggering AI on reconnect:`, err);
         // Retry after a delay since this could be a race condition
@@ -383,7 +429,17 @@ async function handleJoinGame(
       }
     }
   } catch (error: any) {
-    console.error(`[JOIN_GAME] Error for user ${socket.data.displayName}:`, error.message || error);
+    // Clean up pending request on error
+    const validated = JoinGameSchema.safeParse(payload);
+    if (validated.success) {
+      const userId = socket.data.userId;
+      if (userId) {
+        const joinKey = `${userId}:${validated.data.gameId}`;
+        pendingJoinRequests.delete(joinKey);
+      }
+    }
+    
+    console.error(`[WS:JOIN_GAME] Error userId=${socket.data.userId} gameId=${validated.success ? validated.data.gameId : 'unknown'}:`, error.message || error);
     // If validation failed before ack, tell the caller. If ack was already sent, the client
     // will still receive the ERROR event and can react accordingly.
     if (!ackSent) {
