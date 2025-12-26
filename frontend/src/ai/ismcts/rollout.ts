@@ -137,11 +137,17 @@ function fastCardPlay(
 ): Card {
   const player = gameState.players[playerPosition];
   const trumpSuit = gameState.trumpSuit!;
-  const isLeading = gameState.currentTrick.cards.length === 0;
+  
+  // If currentTrick has a winner, it's a completed trick - treat as empty for analysis
+  const trickForAnalysis = gameState.currentTrick.winner !== null
+    ? { ...gameState.currentTrick, cards: [], winner: null }
+    : gameState.currentTrick;
+  
+  const isLeading = trickForAnalysis.cards.length === 0;
 
   // Get legal cards
   const legalCards = player.hand.filter(
-    card => canPlayCard(card, player.hand, gameState.currentTrick, trumpSuit, player.folded === true).valid
+    card => canPlayCard(card, player.hand, trickForAnalysis, trumpSuit, player.folded === true).valid
   );
 
   if (legalCards.length === 0) {
@@ -302,8 +308,13 @@ export function rollout(
         }
 
         // Get legal cards from current state
+        // If currentTrick has a winner, it's a completed trick - treat as empty for analysis
+        const trickForAnalysis = currentState.currentTrick.winner !== null
+          ? { ...currentState.currentTrick, cards: [], winner: null }
+          : currentState.currentTrick;
+        
         const legalCards = player.hand.filter(
-          c => canPlayCard(c, player.hand, currentState.currentTrick, currentState.trumpSuit!, player.folded === true).valid
+          c => canPlayCard(c, player.hand, trickForAnalysis, currentState.trumpSuit!, player.folded === true).valid
         );
 
         if (legalCards.length === 0) {

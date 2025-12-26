@@ -89,11 +89,18 @@ function getLegalActions(gameState: GameState, playerPosition: PlayerPosition): 
     case 'PLAYING': {
       // Get playable cards
       const trumpSuit = gameState.trumpSuit!;
+      
+      // If currentTrick has a winner, it's a completed trick - treat as empty for analysis
+      // This handles the case where display state shows completed trick but we're analyzing next trick
+      const trickForAnalysis = gameState.currentTrick.winner !== null
+        ? { ...gameState.currentTrick, cards: [], winner: null }
+        : gameState.currentTrick;
+      
       for (const card of player.hand) {
         const validation = canPlayCard(
           card,
           player.hand,
-          gameState.currentTrick,
+          trickForAnalysis,
           trumpSuit,
           player.folded === true
         );
