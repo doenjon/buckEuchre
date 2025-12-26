@@ -368,7 +368,8 @@ export class ISMCTSEngine {
     gameState: GameState,
     playerPosition: PlayerPosition,
     onProgress?: (simulations: number, total: number) => void,
-    onIntermediateResults?: (results: Record<string, { visits: number; value: number; confidence?: { lower: number; upper: number }; buckProbability?: number }>) => void
+    onIntermediateResults?: (results: Record<string, { visits: number; value: number; confidence?: { lower: number; upper: number }; buckProbability?: number }>) => void,
+    abortSignal?: AbortSignal
   ): Promise<Record<string, { visits: number; value: number; confidence?: { lower: number; upper: number }; buckProbability?: number }>> {
     const legalActions = getLegalActions(gameState, playerPosition);
     if (legalActions.length === 0) {
@@ -404,6 +405,12 @@ export class ISMCTSEngine {
 
     // Run simulations with progress updates
     for (let i = 0; i < totalSimulations; i++) {
+      // Check if aborted
+      if (abortSignal?.aborted) {
+        console.log(`[ISMCTS] Analysis aborted after ${i} simulations`);
+        break;
+      }
+
       try {
         const determinizedState = determinize(gameState, playerPosition);
         this.runSimulation(root, determinizedState, playerPosition);

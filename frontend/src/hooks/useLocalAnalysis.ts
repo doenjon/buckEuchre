@@ -45,8 +45,6 @@ export function useLocalAnalysis() {
     setIsThinking(true);
 
     try {
-      let cumulativeSimulations = 0;
-
       // Helper to convert results to CardAnalysis format
       const convertToCardAnalysis = (results: Record<string, any>): CardAnalysis[] => {
         const entries = Object.entries(results);
@@ -74,63 +72,47 @@ export function useLocalAnalysis() {
         }));
       };
 
-      // Run progressive analysis through each stage
-      for (const targetSimulations of ANALYSIS_STAGES) {
-        // Check if analysis was aborted
-        if (abortController.signal.aborted) {
-          console.log(`[useLocalAnalysis] Analysis aborted at ${cumulativeSimulations} simulations`);
-          break;
-        }
+      // Create a single engine with max iterations (20k)
+      const maxIterations = ANALYSIS_STAGES[ANALYSIS_STAGES.length - 1]; // 20000
+      const engine = new ISMCTSEngine({
+        simulations: maxIterations,
+        verbose: false,
+      });
 
-        const simulationsForThisStage = targetSimulations - cumulativeSimulations;
-
-        const engine = new ISMCTSEngine({
-          simulations: simulationsForThisStage,
-          verbose: false,
-        });
-
-        // Update progress to show current stage
-        setProgress({
-          simulations: cumulativeSimulations,
-          totalSimulations: targetSimulations,
-          progress: Math.round((cumulativeSimulations / targetSimulations) * 100)
-        });
-
-        // Run analysis with progress callbacks and intermediate results
-        const results = await engine.analyzeHandWithProgress(
-          state,
-          position as any,
-          (simulations: number) => {
-            const totalSims = cumulativeSimulations + simulations;
-            const progressPercent = Math.round((totalSims / targetSimulations) * 100);
-            const progressInfo = {
-              simulations: totalSims,
-              totalSimulations: targetSimulations,
-              progress: progressPercent
-            };
-            setProgress(progressInfo);
-            onProgress?.(progressInfo);
-          },
-          (intermediateResults) => {
-            // Update UI with intermediate results every 1000 simulations
-            if (!abortController.signal.aborted) {
-              const cardAnalysis = convertToCardAnalysis(intermediateResults);
-              setAIAnalysis(cardAnalysis);
-            }
+      // Run continuous analysis with a single MCTS tree
+      // Intermediate results will update every 1000 iterations automatically
+      const results = await engine.analyzeHandWithProgress(
+        state,
+        position as any,
+        (simulations: number, total: number) => {
+          // Check if aborted
+          if (abortController.signal.aborted) {
+            return;
           }
-        );
 
-        // Update cumulative count
-        cumulativeSimulations = targetSimulations;
+          const progressPercent = Math.round((simulations / total) * 100);
+          const progressInfo = {
+            simulations,
+            totalSimulations: total,
+            progress: progressPercent
+          };
+          setProgress(progressInfo);
+          onProgress?.(progressInfo);
+        },
+        (intermediateResults) => {
+          // Update UI with intermediate results every 1000 simulations
+          if (!abortController.signal.aborted) {
+            const cardAnalysis = convertToCardAnalysis(intermediateResults);
+            setAIAnalysis(cardAnalysis);
+          }
+        },
+        abortController.signal
+      );
 
-        // Set final results for this stage
-        if (!abortController.signal.aborted) {
-          const cardAnalysis = convertToCardAnalysis(results);
-          setAIAnalysis(cardAnalysis);
-        }
-
-        // Brief pause between stages
-        await new Promise(resolve => setTimeout(resolve, 50));
+      // Set final results
+      if (!abortController.signal.aborted) {
+        const cardAnalysis = convertToCardAnalysis(results);
+        setAIAnalysis(cardAnalysis);
       }
 
       return null; // Results are already set via setAIAnalysis
