@@ -842,9 +842,10 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
           cardsCount: completedTrick.cards.length
         });
         
+        // No delay for final trick since round is over
         io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
           trick: completedTrick,
-          delayMs: 3000,
+          delayMs: 0,
           nextPlayerPosition: null // Round is over, no next player
         });
         console.log(`[TRICK_COMPLETE] Emitted for final trick ${completedTrick.number} (round complete)`, {
@@ -857,15 +858,24 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
         // Trick complete but round continues - emit trick complete for animation
         // The completed trick is now the last one in the tricks array
         const completedTrick = nextState.tricks[nextState.tricks.length - 1];
+
+        // Only delay if next player is AI (to slow down AI play)
+        // Skip delay if next player is human (they can play when ready)
+        const nextPlayerPos = nextState.currentPlayerPosition;
+        const nextPlayerIsAI = nextPlayerPos !== null && nextState.players[nextPlayerPos]?.isAI;
+        const delayMs = nextPlayerIsAI ? 3000 : 0;
+
         io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
           trick: completedTrick,
-          delayMs: 3000,
-          nextPlayerPosition: nextState.currentPlayerPosition // Next player to act
+          delayMs,
+          nextPlayerPosition: nextPlayerPos // Next player to act
         });
         console.log(`[TRICK_COMPLETE] Emitted for trick ${completedTrick.number}`, {
           winner: completedTrick.winner,
           cardsPlayed: completedTrick.cards.length,
           nextPlayer: nextState.currentPlayerPosition,
+          nextPlayerIsAI,
+          delayMs,
         });
         trickWasCompleted = true;
       }
@@ -905,8 +915,13 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
     console.log(`${logPrefix} Step 5: Handling trick completion and broadcasts...`);
     // Show all cards immediately if trick was completed, then delay transition
     if (trickWasCompleted) {
+      // Calculate delay based on next player - only delay for AI players
+      const nextPlayerPos = finalState.currentPlayerPosition;
+      const nextPlayerIsAI = nextPlayerPos !== null && finalState.players[nextPlayerPos]?.isAI;
+      const trickCompleteDelay = nextPlayerIsAI ? 3000 : 0;
+
       // Create display state showing completed trick
-      const displayState = displayStateManager.createTrickCompleteDisplay(finalState, 3000);
+      const displayState = displayStateManager.createTrickCompleteDisplay(finalState, trickCompleteDelay);
       
       // Validate display state before emitting
       if (!displayState || !displayState.gameId) {
@@ -926,12 +941,14 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
       console.log(`[PLAY_CARD] Immediate broadcast showing all cards in completed trick`, {
         trickNumber: displayState.currentTrick.number,
         cardsInTrick: displayState.currentTrick.cards.length,
+        nextPlayerIsAI,
+        delayMs: trickCompleteDelay,
       });
-      
+
       // Store finalState for fallback in case memory state is unavailable
       const stateForTransition = finalState;
-      
-      // Schedule transition to actual state after 3 seconds
+
+      // Schedule transition to actual state (delay depends on next player - 3s for AI, 0s for human)
       displayStateManager.scheduleTransition(validated.gameId, async () => {
         // Get current state from memory (may have changed during delay)
         let currentState = getActiveGameState(validated.gameId);
