@@ -84,8 +84,8 @@ export function useLocalAnalysis() {
           const bidAnalysis: BidAnalysis[] = entries.map(([bidAmount, stat]) => ({
             bidAmount,
             winProbability: stat.avgValue,
-            expectedScore: stat.avgValue,
-            confidence: Math.min(1, stat.visits / 1000),
+            expectedScore: -(stat.avgValue * 10 - 5), // Apply transformation: normalized [0,1] -> score [-5,+5]
+            confidence: Math.min(1, stat.visits / 200), // Match backend confidence calculation
             visits: stat.visits,
             rank: ranks.get(bidAmount) || 0,
             buckProbability: stat.buckProbability || 0,
@@ -110,8 +110,8 @@ export function useLocalAnalysis() {
           const foldAnalysis: FoldAnalysis[] = entries.map(([fold, stat]) => ({
             fold,
             winProbability: stat.avgValue,
-            expectedScore: stat.avgValue,
-            confidence: Math.min(1, stat.visits / 1000),
+            expectedScore: -(stat.avgValue * 10 - 5), // Apply transformation: normalized [0,1] -> score [-5,+5]
+            confidence: Math.min(1, stat.visits / 200), // Match backend confidence calculation
             visits: stat.visits,
             isBest: fold === bestFold,
             buckProbability: stat.buckProbability || 0,
@@ -136,8 +136,8 @@ export function useLocalAnalysis() {
           const suitAnalysis: SuitAnalysis[] = entries.map(([suit, stat]) => ({
             suit,
             winProbability: stat.avgValue,
-            expectedScore: stat.avgValue,
-            confidence: Math.min(1, stat.visits / 1000),
+            expectedScore: -(stat.avgValue * 10 - 5), // Apply transformation: normalized [0,1] -> score [-5,+5]
+            confidence: Math.min(1, stat.visits / 200), // Match backend confidence calculation
             visits: stat.visits,
             rank: ranks.get(suit) || 0,
             buckProbability: stat.buckProbability || 0,
