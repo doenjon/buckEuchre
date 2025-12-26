@@ -25,21 +25,43 @@ const analysisCache = new Map<string, AnalysisCacheEntry>();
 const ANALYSIS_TTL_MS = 5000; // Analysis expires after 5 seconds
 
 /**
- * Get simple analysis cache key
+ * Get analysis cache key that includes relevant state
+ * This ensures analysis is refreshed when the situation changes
  */
-function getAnalysisKey(gameId: string, playerPosition: number, phase: string): string {
-  return `${gameId}:p${playerPosition}:${phase}`;
+function getAnalysisKey(gameId: string, playerPosition: number, gameState: GameState): string {
+  const phase = gameState.phase;
+  
+  // Include state that affects analysis in the key
+  switch (phase) {
+    case 'BIDDING':
+      // Include current bidder and highest bid - analysis changes as bidding progresses
+      return `${gameId}:p${playerPosition}:${phase}:cb${gameState.currentBidder ?? -1}:hb${gameState.highestBid ?? 'N'}`;
+    case 'PLAYING':
+      // Include trick number and cards in trick - analysis changes each trick
+      const trickNo = gameState.currentTrick?.number ?? (gameState.tricks.length + 1);
+      const cardsInTrick = gameState.currentTrick?.cards?.length ?? 0;
+      return `${gameId}:p${playerPosition}:${phase}:t${trickNo}:c${cardsInTrick}`;
+    case 'FOLDING_DECISION':
+      // Include player's decision state - analysis only needed when undecided
+      const decision = gameState.players[playerPosition]?.foldDecision ?? 'UNDECIDED';
+      return `${gameId}:p${playerPosition}:${phase}:d${decision}`;
+    case 'DECLARING_TRUMP':
+      // Include winning bidder - only that player needs analysis
+      return `${gameId}:p${playerPosition}:${phase}:wb${gameState.winningBidderPosition ?? -1}`;
+    default:
+      return `${gameId}:p${playerPosition}:${phase}`;
+  }
 }
 
 /**
- * Check if analysis should be sent (simple TTL cache)
+ * Check if analysis should be sent (simple TTL cache with state-aware keys)
  */
 function shouldSendAnalysis(
   gameId: string,
   playerPosition: number,
-  phase: string
+  gameState: GameState
 ): boolean {
-  const key = getAnalysisKey(gameId, playerPosition, phase);
+  const key = getAnalysisKey(gameId, playerPosition, gameState);
   const cached = analysisCache.get(key);
   const now = Date.now();
 
@@ -121,9 +143,9 @@ async function sendAIAnalysis(
       return;
     }
 
-    // Check if we should send (simple TTL cache)
-    if (!shouldSendAnalysis(gameId, playerPosition, gameState.phase)) {
-      return; // Already sent recently
+    // Check if we should send (state-aware TTL cache)
+    if (!shouldSendAnalysis(gameId, playerPosition, gameState)) {
+      return; // Already sent recently for this exact situation
     }
 
     // Validate player still needs analysis
