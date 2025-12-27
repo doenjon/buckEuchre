@@ -16,26 +16,41 @@ import { initializeArenaConfigs } from './arena/arena.service.js';
 // Load environment variables from backend/.env explicitly (not from parent directory)
 dotenv.config({ path: path.join(process.cwd(), '.env') });
 
-// Setup file logging for debugging
-const LOG_FILE = path.join(process.cwd(), 'backend-debug.log');
-const originalLog = console.log;
-const originalError = console.error;
-console.log = (...args: any[]) => {
-  originalLog(...args);
-  try {
-    fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')}\n`);
-  } catch (e) {
-    // Ignore file write errors
-  }
-};
-console.error = (...args: any[]) => {
-  originalError(...args);
-  try {
-    fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ERROR: ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')}\n`);
-  } catch (e) {
-    // Ignore file write errors
-  }
-};
+// Setup file logging for debugging (only if ENABLE_FILE_LOGGING env var is set)
+// DISABLED BY DEFAULT: File logging causes massive performance issues in dev
+// - 985MB log files
+// - Synchronous I/O blocks event loop
+// - tsx watch restarts break active games
+// Enable only when debugging specific issues
+const ENABLE_FILE_LOGGING = process.env.ENABLE_FILE_LOGGING === 'true';
+if (ENABLE_FILE_LOGGING) {
+  const LOG_FILE = path.join(process.cwd(), 'backend-debug.log');
+  const originalLog = console.log;
+  const originalError = console.error;
+  
+  // Use async logging to avoid blocking
+  const writeLog = (level: string, ...args: any[]) => {
+    const message = `[${new Date().toISOString()}] ${level}: ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')}\n`;
+    fs.appendFile(LOG_FILE, message, (err) => {
+      if (err) {
+        // Silently ignore file write errors
+      }
+    });
+  };
+  
+  console.log = (...args: any[]) => {
+    originalLog(...args);
+    writeLog('LOG', ...args);
+  };
+  console.error = (...args: any[]) => {
+    originalError(...args);
+    writeLog('ERROR', ...args);
+  };
+  
+  console.log('⚠️  File logging ENABLED (performance impact expected)');
+} else {
+  console.log('ℹ️  File logging disabled (set ENABLE_FILE_LOGGING=true to enable)');
+}
 
 // Debug: Log DATABASE_URL (without password)
 console.log('🔍 DATABASE_URL loaded:', process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@') || 'NOT SET');
