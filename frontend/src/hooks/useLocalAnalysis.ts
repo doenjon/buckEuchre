@@ -33,6 +33,18 @@ export function useLocalAnalysis() {
     abortController: AbortController,
     onProgress?: (progress: AnalysisProgress) => void
   ) => {
+    // Skip analysis during transitional phases
+    if (state.phase === 'ROUND_OVER' || state.phase === 'GAME_OVER' || state.phase === 'DEALING') {
+      return null;
+    }
+
+    // Skip analysis during "display state" showing a completed trick
+    // This prevents running MCTS with stale hand data
+    if (state.phase === 'PLAYING' && state.currentTrick.winner !== null) {
+      console.log('[runAnalysis] Skipping - display state showing completed trick');
+      return null;
+    }
+
     // Check if it's the player's turn for the current phase
     let shouldAnalyze = false;
     if (state.phase === 'PLAYING' && state.currentPlayerPosition === position) {
@@ -288,6 +300,30 @@ export function useLocalAnalysis() {
       return;
     }
 
+    // Skip analysis during transitional phases where no action is required
+    // ROUND_OVER, GAME_OVER, and DEALING don't need analysis
+    if (gameState.phase === 'ROUND_OVER' || gameState.phase === 'GAME_OVER' || gameState.phase === 'DEALING') {
+      // Clear all analysis and abort ongoing analysis
+      if (analysisRef.current) {
+        analysisRef.current.abortController.abort();
+        setAIAnalysis(null);
+        setBidAnalysis(null);
+        setFoldAnalysis(null);
+        setSuitAnalysis(null);
+        analysisRef.current = null;
+      }
+      return;
+    }
+
+    // Skip analysis during "display state" showing a completed trick
+    // This is indicated by currentTrick.winner being set while phase is PLAYING
+    // In display state, the game is showing the completed trick before transitioning
+    if (gameState.phase === 'PLAYING' && gameState.currentTrick.winner !== null) {
+      console.log('[useLocalAnalysis] Skipping analysis - display state showing completed trick');
+      // Don't clear analysis here - we might have valid analysis from before the trick completed
+      return;
+    }
+
     // Check if it's my turn for the current phase
     let shouldAnalyze = false;
     if (gameState.phase === 'PLAYING' && gameState.currentPlayerPosition === myPosition) {
@@ -317,7 +353,8 @@ export function useLocalAnalysis() {
     }
 
     // Create a unique ID for this game state + position combination
-    const stateId = `${gameState.gameId}-${gameState.version}-${gameState.phase}-${myPosition}`;
+    // Include currentTrick length to detect mid-trick state changes
+    const stateId = `${gameState.gameId}-${gameState.version}-${gameState.phase}-${myPosition}-${gameState.currentTrick.cards.length}`;
 
     // Skip if we've already analyzed this exact state
     if (analysisRef.current?.gameStateId === stateId) {
@@ -335,9 +372,15 @@ export function useLocalAnalysis() {
 
     console.log(`[useLocalAnalysis] Starting analysis for phase ${gameState.phase}`);
 
-    // Delay analysis start slightly to allow UI to update first
-    // This prevents blocking the render when state changes rapidly
+    // Delay analysis start to allow UI to update first and debounce rapid state changes
+    // Use a longer delay (100ms) to handle rapid state transitions
     const timeoutId = setTimeout(() => {
+      // Double-check abort signal before starting expensive analysis
+      if (abortController.signal.aborted) {
+        console.log('[useLocalAnalysis] Analysis aborted before starting');
+        return;
+      }
+
       // Run analysis asynchronously with error handling
       runAnalysis(gameState, myPosition, abortController).catch((error) => {
         console.error('[useLocalAnalysis] Unhandled analysis error:', error);
@@ -346,7 +389,7 @@ export function useLocalAnalysis() {
           analysisRef.current = null;
         }
       });
-    }, 50); // 50ms delay to let UI render
+    }, 100); // 100ms delay for better debouncing during rapid state changes
 
     // Cleanup timeout if effect re-runs
     return () => clearTimeout(timeoutId);

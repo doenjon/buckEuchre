@@ -55,11 +55,13 @@ export class DisplayStateManager {
 
     // Create display state with override
     // Keep currentPlayerPosition so frontend knows whose turn it is
-    // Increment version so frontend accepts this as a new state
+    // Use same version as actual state - the transition will increment version
+    // This prevents version desync between display state and actual state
     const displayState: GameState = {
       ...gameState,
       currentTrick: completedTrick, // Override: show completed trick
-      version: (gameState.version || 0) + 1, // Increment version for frontend sync
+      // DON'T increment version here - transition will handle version increment
+      // This prevents double-increment and version desync issues
       updatedAt: Date.now(), // Update timestamp
       // Keep currentPlayerPosition as-is (winner should be able to play after delay)
     };

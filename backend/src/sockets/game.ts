@@ -1061,52 +1061,56 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
       displayStateManager.scheduleTransition(validated.gameId, async () => {
         console.log(`[PLAY_CARD] Transition callback starting for game ${validated.gameId}`);
         try {
-          // Get current state from memory (may have changed during delay)
-          let currentState = getActiveGameState(validated.gameId);
+          // ALWAYS get the fresh state from memory - this is the source of truth
+          // Do not use any cached/captured state from before the delay
+          let freshState = getActiveGameState(validated.gameId);
 
-          // Fallback to the state we stored when creating the display
-          if (!currentState) {
+          // Fallback to the state we stored only if memory state is completely unavailable
+          if (!freshState) {
             console.warn(`[PLAY_CARD] Game ${validated.gameId} not found in memory, using fallback state`);
-            currentState = stateForTransition;
+            freshState = stateForTransition;
           }
 
-          if (!currentState) {
+          if (!freshState) {
             console.error(`[PLAY_CARD] No state available for game ${validated.gameId} during transition - this should not happen`);
             return; // Can't emit without state
           }
 
           // Validate state before emitting
-          if (!currentState || !currentState.gameId) {
-            console.error(`[PLAY_CARD] Invalid state for game ${validated.gameId} during transition:`, currentState);
+          if (!freshState.gameId) {
+            console.error(`[PLAY_CARD] Invalid state for game ${validated.gameId} during transition:`, freshState);
             return;
           }
 
-          // IMPORTANT: Increment version so frontend accepts this state
-          // Display state was emitted with a higher version, so we need to increment
-          // the version again for this transition to the actual state
-          const stateWithUpdatedTimestamp = {
-            ...currentState,
-            version: (currentState.version || 0) + 1,
+          // Emit the fresh state with an incremented version
+          // Display state used the same version as actual state, so we increment here
+          // to signal to the frontend that this is the "real" state after the display pause
+          const stateToEmit = {
+            ...freshState,
+            version: (freshState.version || 0) + 1,
             updatedAt: Date.now()
           };
 
           io.to(`game:${validated.gameId}`).emit('GAME_STATE_UPDATE', {
-            gameState: stateWithUpdatedTimestamp,
+            gameState: stateToEmit,
             event: 'CARD_PLAYED'
           });
           console.log(`[PLAY_CARD] Delayed transition after showing completed trick`, {
-            phase: currentState.phase,
-            currentPlayerPosition: currentState.currentPlayerPosition,
-            trickNumber: currentState.currentTrick.number,
-            cardsInTrick: currentState.currentTrick.cards.length,
-            tricksCompleted: currentState.tricks.length,
+            phase: freshState.phase,
+            currentPlayerPosition: freshState.currentPlayerPosition,
+            trickNumber: freshState.currentTrick.number,
+            cardsInTrick: freshState.currentTrick.cards.length,
+            tricksCompleted: freshState.tricks.length,
           });
 
-          // Trigger AI after delay completes (only if round is still in progress)
-          if (currentState.phase === 'PLAYING') {
+          // Trigger AI after delay completes using the FRESH state (not stale captured state)
+          // Only if round is still in progress
+          if (freshState.phase === 'PLAYING') {
             console.log(`[PLAY_CARD] Triggering next AI after transition delay`);
             try {
-              await checkAndTriggerAI(validated.gameId, currentState, io);
+              // Re-fetch state right before AI trigger to ensure freshness
+              const stateForAI = getActiveGameState(validated.gameId) || freshState;
+              await checkAndTriggerAI(validated.gameId, stateForAI, io);
             } catch (triggerError) {
               console.error(`[PLAY_CARD] Error triggering AI after transition:`, triggerError);
               // Schedule a retry after a short delay
@@ -1120,6 +1124,8 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
                 }
               }, 1000);
             }
+          } else if (freshState.phase !== 'PLAYING') {
+            console.log(`[PLAY_CARD] Not triggering AI - phase is ${freshState.phase}`);
           }
         } catch (error) {
           console.error(`[PLAY_CARD] Error in transition callback for game ${validated.gameId}:`, error);
