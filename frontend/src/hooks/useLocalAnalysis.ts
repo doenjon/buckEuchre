@@ -256,6 +256,9 @@ export function useLocalAnalysis() {
       return null;
     } catch (error) {
       console.error('[useLocalAnalysis] Analysis failed:', error);
+      // Make sure to clear thinking state even on error
+      setIsThinking(false);
+      setProgress(null);
       return null;
     } finally {
       setIsThinking(false);
@@ -330,10 +333,23 @@ export function useLocalAnalysis() {
     const abortController = new AbortController();
     analysisRef.current = { gameStateId: stateId, position: myPosition, abortController };
 
-    console.log(`[useLocalAnalysis] Starting 20k iteration analysis for phase ${gameState.phase}`);
+    console.log(`[useLocalAnalysis] Starting analysis for phase ${gameState.phase}`);
 
-    // Run analysis asynchronously
-    void runAnalysis(gameState, myPosition, abortController);
+    // Delay analysis start slightly to allow UI to update first
+    // This prevents blocking the render when state changes rapidly
+    const timeoutId = setTimeout(() => {
+      // Run analysis asynchronously with error handling
+      runAnalysis(gameState, myPosition, abortController).catch((error) => {
+        console.error('[useLocalAnalysis] Unhandled analysis error:', error);
+        // Clear the ref on error to allow retry
+        if (analysisRef.current?.gameStateId === stateId) {
+          analysisRef.current = null;
+        }
+      });
+    }, 50); // 50ms delay to let UI render
+
+    // Cleanup timeout if effect re-runs
+    return () => clearTimeout(timeoutId);
   }, [gameState, myPosition, runAnalysis, setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis]);
 
   // Cleanup on unmount

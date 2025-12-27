@@ -76,7 +76,10 @@ export function TrumpSelector({ isMyTurn }: TrumpSelectorProps) {
                 </div>
               )}
               <button
-                onClick={() => declareTrump(suit)}
+                onClick={() => {
+                  console.log(`[TrumpSelector] Declaring trump: ${suit}`);
+                  declareTrump(suit);
+                }}
                 className="w-full aspect-[3/4] min-h-[80px] md:min-h-[94px] flex items-center justify-center border-2 border-gray-300 rounded-lg shadow-md md:shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 touch-target tap-feedback focus:outline-none focus:ring-2 focus:ring-emerald-400 active:scale-95"
                 style={{ backgroundColor: '#ffffff' }}
                 aria-label={`Select ${suit} as trump`}
