@@ -112,6 +112,16 @@ export function useSocket() {
       },
 
       onGameStateUpdate: (data) => {
+        // ALWAYS log receipt of event for debugging
+        console.log('[useSocket] GAME_STATE_UPDATE event received (raw):', {
+          hasGameState: !!data.gameState,
+          gameId: data.gameState?.gameId,
+          version: data.gameState?.version,
+          event: data.event,
+          phase: data.gameState?.phase,
+          currentPlayerPosition: data.gameState?.currentPlayerPosition
+        });
+
         // Validate that we have a valid game state
         if (!data.gameState || !data.gameState.gameId) {
           console.error('[useSocket] Received invalid game state update:', data);
@@ -132,23 +142,26 @@ export function useSocket() {
         // Skip if we've already processed this exact version for this game (duplicate event)
         // This prevents processing the same event multiple times even if it arrives multiple times
         if (newVersion === lastProcessed && newVersion === currentVersion && currentState?.gameId === gameId) {
-          // Silently ignore - this is a duplicate event we've already processed
-          return;
-        }
-
-        // Only log if this is a new version or different game
-        if (newVersion > currentVersion || currentState?.gameId !== gameId) {
-          console.log('[useSocket] GAME_STATE_UPDATE received:', {
-            event: data.event,
-            phase: data.gameState?.phase,
+          console.log('[useSocket] Ignoring duplicate event:', {
             version: newVersion,
             currentVersion,
             lastProcessed,
-            gameId,
-            winningBidder: data.gameState?.winningBidderPosition,
-            trumpSuit: data.gameState?.trumpSuit
+            gameId
           });
+          return;
         }
+
+        // Log all events for debugging
+        console.log('[useSocket] GAME_STATE_UPDATE processing:', {
+          event: data.event,
+          phase: data.gameState?.phase,
+          version: newVersion,
+          currentVersion,
+          lastProcessed,
+          gameId,
+          currentPlayerPosition: data.gameState?.currentPlayerPosition,
+          willAccept: newVersion > currentVersion || currentState?.gameId !== gameId
+        });
 
         if (newVersion > currentVersion) {
           // Newer version - update state
