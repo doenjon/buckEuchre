@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Buck Euchre',
         short_name: 'BuckEuchre',
@@ -91,6 +91,9 @@ export default defineConfig({
       }
     })
   ],
+  optimizeDeps: {
+    include: ['@buck-euchre/shared']
+  },
   resolve: {
     alias: [
       {
