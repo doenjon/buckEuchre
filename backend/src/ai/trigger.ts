@@ -2,87 +2,28 @@
  * @module ai/trigger
  * @description Trigger AI actions when it's their turn
  * 
- * ROBUST DESIGN: No throttling, no complex keys.
- * Game state itself prevents duplicates via executeGameAction queue.
+ * This module monitors game state updates and automatically
+ * triggers AI player actions when appropriate.
  */
 
 import { Server } from 'socket.io';
 import { GameState, AIAnalysisEvent } from '@buck-euchre/shared';
 import { isAIPlayerByName, isAIPlayerAsync } from '../services/ai-player.service.js';
 import { executeAITurn } from './executor.js';
-import { analyzeHand, getBestCard, analyzeBids, getBestBid, analyzeFoldDecision, getBestFoldDecision, analyzeTrumpSelection, getBestSuit, DEFAULT_ANALYSIS_CONFIG } from './analysis.service.js';
-import { getActiveGameState } from '../services/state.service.js';
+import { analyzeHand, getBestCard, analyzeBids, getBestBid, analyzeFoldDecision, getBestFoldDecision } from './analysis.service.js';
 
 /**
- * Simple analysis cache with TTL
- * Key: `${gameId}:p${playerPosition}:${phase}`
+ * Track last analysis sent to prevent duplicate sends
+ * Key: `${gameId}:${playerPosition}:${currentPlayerPosition}:${trickNumber}`
  */
-interface AnalysisCacheEntry {
-  timestamp: number;
-}
-
-const analysisCache = new Map<string, AnalysisCacheEntry>();
-const ANALYSIS_TTL_MS = 5000; // Analysis expires after 5 seconds
-
-/**
- * Get analysis cache key that includes relevant state
- * This ensures analysis is refreshed when the situation changes
- */
-function getAnalysisKey(gameId: string, playerPosition: number, gameState: GameState): string {
-  const phase = gameState.phase;
-  
-  // Include state that affects analysis in the key
-  switch (phase) {
-    case 'BIDDING':
-      // Include current bidder and highest bid - analysis changes as bidding progresses
-      return `${gameId}:p${playerPosition}:${phase}:cb${gameState.currentBidder ?? -1}:hb${gameState.highestBid ?? 'N'}`;
-    case 'PLAYING':
-      // Include trick number and cards in trick - analysis changes each trick
-      const trickNo = gameState.currentTrick?.number ?? (gameState.tricks.length + 1);
-      const cardsInTrick = gameState.currentTrick?.cards?.length ?? 0;
-      return `${gameId}:p${playerPosition}:${phase}:t${trickNo}:c${cardsInTrick}`;
-    case 'FOLDING_DECISION':
-      // Include player's decision state - analysis only needed when undecided
-      const decision = gameState.players[playerPosition]?.foldDecision ?? 'UNDECIDED';
-      return `${gameId}:p${playerPosition}:${phase}:d${decision}`;
-    case 'DECLARING_TRUMP':
-      // Include winning bidder - only that player needs analysis
-      return `${gameId}:p${playerPosition}:${phase}:wb${gameState.winningBidderPosition ?? -1}`;
-    default:
-      return `${gameId}:p${playerPosition}:${phase}`;
-  }
-}
-
-/**
- * Check if analysis should be sent (simple TTL cache with state-aware keys)
- */
-function shouldSendAnalysis(
-  gameId: string,
-  playerPosition: number,
-  gameState: GameState
-): boolean {
-  const key = getAnalysisKey(gameId, playerPosition, gameState);
-  const cached = analysisCache.get(key);
-  const now = Date.now();
-
-  // Clean up expired entries
-  if (cached && (now - cached.timestamp) > ANALYSIS_TTL_MS) {
-    analysisCache.delete(key);
-    return true; // Expired, can send new
-  }
-
-  // If cached and not expired, don't send
-  if (cached) {
-    return false;
-  }
-
-  // Not cached, can send - mark it
-  analysisCache.set(key, { timestamp: now });
-  return true;
-}
+const lastAnalysisKey = new Map<string, number>();
+const ANALYSIS_COOLDOWN_MS = 2000; // Don't send analysis again within 2 seconds
 
 /**
  * Get the current player who needs to act
+ * 
+ * @param gameState - Current game state
+ * @returns Player ID who should act, or null if no action needed
  */
 function getCurrentActingPlayer(gameState: GameState): string | null {
   switch (gameState.phase) {
@@ -113,6 +54,7 @@ function getCurrentActingPlayer(gameState: GameState): string | null {
         const player = gameState.players[gameState.currentPlayerPosition];
         // Don't trigger AI if player has no cards left
         if (!player.hand || player.hand.length === 0) {
+          console.log(`[AI Trigger] Player ${player.id} has no cards left, skipping AI trigger`);
           return null;
         }
         return player.id;
@@ -120,6 +62,7 @@ function getCurrentActingPlayer(gameState: GameState): string | null {
       break;
 
     default:
+      // No action needed in other phases
       return null;
   }
 
@@ -127,247 +70,288 @@ function getCurrentActingPlayer(gameState: GameState): string | null {
 }
 
 /**
- * Send AI analysis to human player
+ * Get all AI players who need to make fold decisions
  * 
- * Always fetches fresh state from memory.
+ * @param gameState - Current game state
+ * @returns Array of AI player IDs who need to decide
+ */
+function getAIPlayersNeedingFoldDecision(gameState: GameState): string[] {
+  if (gameState.phase !== 'FOLDING_DECISION') {
+    return [];
+  }
+
+  const aiPlayers: string[] = [];
+
+  for (let i = 0; i < 4; i++) {
+    const player = gameState.players[i];
+    
+    // Skip the bidder
+    if (i === gameState.winningBidderPosition) {
+      continue;
+    }
+
+    // Check if this player hasn't decided yet
+    if (player.foldDecision === 'UNDECIDED' && isAIPlayerByName(player.name)) {
+      aiPlayers.push(player.id);
+    }
+  }
+
+  return aiPlayers;
+}
+
+/**
+ * Check if AI should act and trigger if needed
+ * 
+ * This function is called after every game state update to check
+ * if an AI player needs to take an action.
+ * 
+ * @param gameId - ID of the game
+ * @param gameState - Current game state
+ * @param io - Socket.io server for broadcasting
+ */
+export async function checkAndTriggerAI(
+  gameId: string,
+  gameState: GameState,
+  io: Server
+): Promise<void> {
+  try {
+    console.log(`[AI Trigger] Checking AI trigger for game ${gameId}, phase: ${gameState.phase}, currentBidder: ${gameState.currentBidder}`);
+    
+    // Special handling for FOLDING_DECISION phase
+    // All non-bidders need to decide, and they can all decide simultaneously
+    if (gameState.phase === 'FOLDING_DECISION') {
+      const aiPlayersToAct = getAIPlayersNeedingFoldDecision(gameState);
+
+      if (aiPlayersToAct.length > 0) {
+        console.log(`[AI Trigger] ${aiPlayersToAct.length} AI player(s) need to make fold decisions`);
+
+        // Trigger all AI fold decisions with slight delays to seem natural
+        // Use Promise.all to ensure all AI decisions complete, even if one fails
+        const aiPromises = aiPlayersToAct.map((playerId, i) => {
+          return new Promise<void>((resolve) => {
+            setTimeout(async () => {
+              try {
+                await executeAITurn(gameId, playerId, io);
+                console.log(`[AI Trigger] AI player ${playerId} completed fold decision`);
+              } catch (err) {
+                console.error(`[AI Trigger] Error triggering AI fold decision for ${playerId}:`, err);
+                // Don't throw - let other AI players continue even if one fails
+              } finally {
+                resolve();
+              }
+            }, i * 200); // 200ms delay between each AI
+          });
+        });
+
+        // Don't await here - let AI decisions process asynchronously
+        // but ensure all promises are tracked to prevent unhandled rejections
+        Promise.all(aiPromises).catch(err => {
+          console.error(`[AI Trigger] Unexpected error in AI fold decision batch:`, err);
+        });
+      }
+      return;
+    }
+
+    // For other phases, check if current acting player is AI
+    const currentPlayerId = getCurrentActingPlayer(gameState);
+
+    if (!currentPlayerId) {
+      // No one needs to act right now
+      console.log(`[AI Trigger] No current acting player found`);
+      return;
+    }
+
+    // Find the player in game state to check their name
+    const currentPlayer = gameState.players.find(p => p.id === currentPlayerId);
+    
+    if (!currentPlayer) {
+      console.log(`[AI Trigger] Current player ${currentPlayerId} not found in game state`);
+      return;
+    }
+
+    // Check if AI by name (fast check)
+    let isAI = isAIPlayerByName(currentPlayer.name);
+
+    // If name doesn't match known AI names, check username from database (fallback for old games)
+    if (!isAI) {
+      console.log(`[AI Trigger] Name "${currentPlayer.name}" doesn't match AI name list, checking database...`);
+      isAI = await isAIPlayerAsync(currentPlayerId);
+    }
+    
+    console.log(`[AI Trigger] Current acting player: ${currentPlayer.name} (${currentPlayerId}), isAI: ${isAI}`);
+
+    if (!isAI) {
+      // Current player is human, send AI analysis
+      console.log(`[AI Trigger] Current player ${currentPlayer.name} is human, sending AI analysis`);
+      await sendAIAnalysis(gameId, gameState, currentPlayer.position, io);
+      return;
+    }
+
+    // Current player is AI - trigger after brief delay
+    console.log(`[AI Trigger] AI player ${currentPlayer.name} needs to act in phase ${gameState.phase}`);
+    
+    setTimeout(() => {
+      executeAITurn(gameId, currentPlayerId, io).catch(err =>
+        console.error(`[AI Trigger] Error triggering AI turn:`, err)
+      );
+    }, 100); // Small delay to let state stabilize
+  } catch (error: any) {
+    console.error(`[AI Trigger] Error in checkAndTriggerAI:`, error.message || error);
+  }
+}
+
+/**
+ * Send AI analysis to human player
+ *
+ * Analyzes the player's options (cards, bids, or fold decision) and sends statistics
+ * to help them make decisions.
+ *
+ * @param gameId - ID of the game
+ * @param gameState - Current game state
+ * @param playerPosition - Position of the human player
+ * @param io - Socket.io server for broadcasting
  */
 async function sendAIAnalysis(
   gameId: string,
+  gameState: GameState,
   playerPosition: number,
   io: Server
 ): Promise<void> {
   try {
-    // Always fetch fresh state
-    const gameState = getActiveGameState(gameId);
-    if (!gameState) {
+    // Only analyze during specific phases
+    if (gameState.phase !== 'PLAYING' && gameState.phase !== 'BIDDING' && gameState.phase !== 'FOLDING_DECISION') {
       return;
     }
 
-    // Validate player still needs analysis FIRST (before cache check)
-    // This prevents caching analysis for situations that are no longer valid
-    if (gameState.phase === 'FOLDING_DECISION') {
-      const player = gameState.players[playerPosition];
-      if (playerPosition === gameState.winningBidderPosition || player.foldDecision !== 'UNDECIDED') {
-        console.log(`[AI Analysis] Player ${playerPosition} no longer needs fold analysis`);
-        return; // No longer needs analysis
-      }
-    } else if (gameState.phase === 'PLAYING') {
-      if (gameState.currentPlayerPosition !== playerPosition) {
-        console.log(`[AI Analysis] Player ${playerPosition} not current player (current: ${gameState.currentPlayerPosition})`);
-        return; // Not this player's turn anymore
-      }
-    } else if (gameState.phase === 'BIDDING') {
-      if (gameState.currentBidder !== playerPosition) {
-        console.log(`[AI Analysis] Player ${playerPosition} not current bidder (current: ${gameState.currentBidder})`);
-        return; // Not this player's turn anymore
-      }
-    } else if (gameState.phase === 'DECLARING_TRUMP') {
-      if (gameState.winningBidderPosition !== playerPosition) {
-        console.log(`[AI Analysis] Player ${playerPosition} not winning bidder (winner: ${gameState.winningBidderPosition})`);
-        return; // Not this player's turn anymore
-      }
+    // Create a unique key for this analysis request
+    const currentPlayerPos = gameState.currentPlayerPosition ?? gameState.currentBidder ?? -1;
+    const trickNumber = gameState.tricks.length;
+    const analysisKey = `${gameId}:${playerPosition}:${currentPlayerPos}:${trickNumber}:${gameState.phase}`;
+
+    // Check if we've already sent analysis for this exact situation recently
+    const lastSent = lastAnalysisKey.get(analysisKey);
+    const now = Date.now();
+
+    if (lastSent && (now - lastSent) < ANALYSIS_COOLDOWN_MS) {
+      // Already sent analysis recently for this turn - skip
+      return;
     }
 
-    // Check if we should send (state-aware TTL cache)
-    // Only check cache AFTER validating the player still needs analysis
-    if (!shouldSendAnalysis(gameId, playerPosition, gameState)) {
-      console.log(`[AI Analysis] Analysis already cached for player ${playerPosition} in phase ${gameState.phase}`);
-      return; // Already sent recently for this exact situation
+    // Check if it's actually this player's turn based on phase
+    let isPlayersTurn = false;
+    if (gameState.phase === 'PLAYING') {
+      isPlayersTurn = currentPlayerPos === playerPosition;
+    } else if (gameState.phase === 'BIDDING') {
+      isPlayersTurn = gameState.currentBidder === playerPosition;
+    } else if (gameState.phase === 'FOLDING_DECISION') {
+      // In folding phase, check if this player needs to make a decision
+      const player = gameState.players[playerPosition];
+      isPlayersTurn = player.foldDecision === 'UNDECIDED' && playerPosition !== gameState.winningBidderPosition;
+    }
+
+    if (!isPlayersTurn) {
+      return;
     }
 
     console.log(`[AI Analysis] Analyzing for player at position ${playerPosition} in phase ${gameState.phase}`);
 
-    // Run analysis using the same continuous analysis configuration for all phases
-    // This ensures consistent ISMCTS analysis for hand, bids, fold decisions, and trump selection
-    const analysisConfig = DEFAULT_ANALYSIS_CONFIG;
+    // Run analysis with high quality (2000 simulations)
+    const analysisConfig = {
+      simulations: 2000,
+      verbose: false,
+    };
+
     let analysisEvent: AIAnalysisEvent;
 
+    // Analyze based on game phase
     if (gameState.phase === 'PLAYING') {
       const analyses = await analyzeHand(gameState, playerPosition as any, analysisConfig);
-      if (analyses.length === 0) return;
+
+      if (analyses.length === 0) {
+        console.log(`[AI Analysis] No card analysis available for player ${playerPosition}`);
+        return;
+      }
+
+      const bestCardId = getBestCard(analyses);
 
       analysisEvent = {
         playerPosition: playerPosition as any,
         analysisType: 'card',
         cards: analyses,
         totalSimulations: analysisConfig.simulations,
-        bestCardId: getBestCard(analyses) || '',
+        bestCardId: bestCardId || '',
       };
+
+      console.log(`[AI Analysis] Sent card analysis for ${analyses.length} cards to game ${gameId}`);
     } else if (gameState.phase === 'BIDDING') {
       const analyses = await analyzeBids(gameState, playerPosition as any, analysisConfig);
-      if (analyses.length === 0) return;
+
+      if (analyses.length === 0) {
+        console.log(`[AI Analysis] No bid analysis available for player ${playerPosition}`);
+        return;
+      }
+
+      const bestBid = getBestBid(analyses);
 
       analysisEvent = {
         playerPosition: playerPosition as any,
         analysisType: 'bid',
         bids: analyses,
         totalSimulations: analysisConfig.simulations,
-        bestBid: getBestBid(analyses) ?? undefined,
+        bestBid: bestBid ?? undefined,
       };
+
+      console.log(`[AI Analysis] Sent bid analysis for ${analyses.length} bids to game ${gameId}`);
     } else if (gameState.phase === 'FOLDING_DECISION') {
       const analyses = await analyzeFoldDecision(gameState, playerPosition as any, analysisConfig);
-      if (analyses.length === 0) return;
+
+      if (analyses.length === 0) {
+        console.log(`[AI Analysis] No fold analysis available for player ${playerPosition}`);
+        return;
+      }
+
+      const bestFold = getBestFoldDecision(analyses);
 
       analysisEvent = {
         playerPosition: playerPosition as any,
         analysisType: 'fold',
         foldOptions: analyses,
         totalSimulations: analysisConfig.simulations,
-        bestFoldDecision: getBestFoldDecision(analyses) ?? undefined,
+        bestFoldDecision: bestFold ?? undefined,
       };
-    } else if (gameState.phase === 'DECLARING_TRUMP') {
-      const analyses = await analyzeTrumpSelection(gameState, playerPosition as any, analysisConfig);
-      if (analyses.length === 0) return;
 
-      analysisEvent = {
-        playerPosition: playerPosition as any,
-        analysisType: 'suit',
-        suits: analyses,
-        totalSimulations: analysisConfig.simulations,
-        bestSuit: getBestSuit(analyses) ?? undefined,
-      };
+      console.log(`[AI Analysis] Sent fold analysis for ${analyses.length} options to game ${gameId}`);
     } else {
       return;
     }
 
-    // Send it
-    console.log(`[AI Analysis] Broadcasting ${analysisEvent.analysisType} analysis to game ${gameId}`);
+    // Mark that we've sent analysis for this key
+    lastAnalysisKey.set(analysisKey, now);
+
+    // Clean up old entries (keep only last 100)
+    if (lastAnalysisKey.size > 100) {
+      const entries = Array.from(lastAnalysisKey.entries());
+      entries.sort((a, b) => b[1] - a[1]); // Sort by timestamp descending
+      lastAnalysisKey.clear();
+      entries.slice(0, 50).forEach(([key, time]) => lastAnalysisKey.set(key, time));
+    }
+
+    // Broadcast to the game room
     io.to(`game:${gameId}`).emit('AI_ANALYSIS_UPDATE', analysisEvent);
   } catch (error: any) {
-    console.error(`[AI Analysis] Error:`, error);
-  }
-}
-
-// Track active AI triggers to prevent concurrent triggers for the same game
-const activeAITriggers = new Set<string>();
-
-/**
- * Check if AI should act and trigger if needed
- *
- * ROBUST: No throttling. Game state prevents duplicates.
- * Always fetches fresh state from memory.
- * Uses simple lock to prevent concurrent triggers for same game.
- *
- * @param gameId - ID of the game
- * @param _gameState - DEPRECATED: Ignored, fresh state is fetched from memory
- * @param io - Socket.io server for broadcasting
- */
-export async function checkAndTriggerAI(
-  gameId: string,
-  _gameState: GameState, // Deprecated - always fetch fresh
-  io: Server
-): Promise<void> {
-  // Prevent concurrent triggers for the same game
-  if (activeAITriggers.has(gameId)) {
-    console.log(`[AI Trigger] ⏸️  Already processing AI trigger for game ${gameId}, skipping duplicate`);
-    return;
-  }
-
-  try {
-    activeAITriggers.add(gameId);
-    console.log(`[AI Trigger] 🔍 ENTRY: gameId=${gameId}`);
-    // Always fetch fresh state
-    const gameState = getActiveGameState(gameId);
-    if (!gameState) {
-      console.log(`[AI Trigger] ❌ Game ${gameId} not found in memory`);
-      return;
-    }
-    console.log(`[AI Trigger] 📊 Game state: phase=${gameState.phase}, version=${gameState.version}`);
-
-    // Special handling for FOLDING_DECISION phase
-    if (gameState.phase === 'FOLDING_DECISION') {
-      // Check all non-bidders
-      for (let pos = 0; pos < 4; pos++) {
-        const player = gameState.players[pos];
-        
-        // Skip bidder and already-decided players
-        if (pos === gameState.winningBidderPosition || player.foldDecision !== 'UNDECIDED') {
-          continue;
-        }
-
-        // Check if AI or human
-        const isAI = isAIPlayerByName(player.name);
-        
-        if (isAI) {
-          // AI needs to act - trigger it (no delay, no throttle - game state prevents duplicates)
-          console.log(`[AI Trigger] Triggering AI fold decision for ${player.name} at position ${pos}`);
-          // Note: For FOLDING_DECISION, multiple AIs can act simultaneously (by design)
-          // So we don't await here - each AI acts independently
-          executeAITurn(gameId, player.id, io).catch(err => 
-            console.error(`[AI Trigger] Error:`, err)
-          );
-        } else {
-          // Human needs analysis - skip server analysis (should run locally on the client)
-          console.log(`[AI Trigger] 👤 Human player ${player.name} at position ${pos} in FOLDING_DECISION phase - skipping server analysis (should run locally)`);
-        }
-      }
-      return;
-    }
-
-    // For other phases, check current acting player
-    const currentPlayerId = getCurrentActingPlayer(gameState);
-    console.log(`[AI Trigger] 🎯 Current acting player ID: ${currentPlayerId || 'NONE'}`);
-    
-    if (!currentPlayerId) {
-      console.log(`[AI Trigger] ⚠️ No current acting player (phase: ${gameState.phase})`);
-      if (gameState.phase === 'PLAYING') {
-        console.log(`[AI Trigger] PLAYING phase details: currentPlayerPosition=${gameState.currentPlayerPosition}, players=${gameState.players.map(p => `${p.name}(${p.position})`).join(', ')}`);
-      } else if (gameState.phase === 'BIDDING') {
-        console.log(`[AI Trigger] BIDDING phase details: currentBidder=${gameState.currentBidder}, players=${gameState.players.map(p => `${p.name}(${p.position})`).join(', ')}`);
-      }
-      return; // No one needs to act
-    }
-
-    const currentPlayer = gameState.players.find(p => p.id === currentPlayerId);
-    if (!currentPlayer) {
-      console.error(`[AI Trigger] ❌ Current player ${currentPlayerId} not found in game state`);
-      console.error(`[AI Trigger] Available players: ${gameState.players.map(p => `${p.id}(${p.name})`).join(', ')}`);
-      return;
-    }
-
-    console.log(`[AI Trigger] 👤 Current player: ${currentPlayer.name} (${currentPlayerId}) at position ${currentPlayer.position}`);
-
-    // Check if AI (try name first, then database)
-    let isAI = isAIPlayerByName(currentPlayer.name);
-    console.log(`[AI Trigger] 🤖 isAIPlayerByName("${currentPlayer.name}") = ${isAI}`);
-    
-    if (!isAI) {
-      console.log(`[AI Trigger] 🔍 Checking database for player ${currentPlayerId}...`);
-      isAI = await isAIPlayerAsync(currentPlayerId);
-      console.log(`[AI Trigger] 🤖 isAIPlayerAsync("${currentPlayerId}") = ${isAI}`);
-    }
-
-    if (isAI) {
-      // AI needs to act - trigger it (no delay, no throttle - game state prevents duplicates)
-      console.log(`[AI Trigger] ✅ AI player detected - triggering turn for ${currentPlayer.name} (${currentPlayerId}) in phase ${gameState.phase}`);
-      // Await the AI turn to keep the lock until it completes
-      // This prevents multiple triggers from firing simultaneously
-      await executeAITurn(gameId, currentPlayerId, io)
-        .then(() => {
-          console.log(`[AI Trigger] ✅ AI turn promise resolved for ${currentPlayer.name}`);
-        })
-        .catch(err => {
-          console.error(`[AI Trigger] ❌ AI turn promise rejected for ${currentPlayer.name}:`, err);
-          console.error(`[AI Trigger] Error stack:`, err.stack);
-        });
-    } else {
-      // Human player - skip all server analysis (should run locally on the client)
-      // Analysis for all phases (PLAYING, BIDDING, FOLDING_DECISION, DECLARING_TRUMP) should run locally
-      console.log(`[AI Trigger] 👤 Human player in ${gameState.phase} phase - skipping server analysis (should run locally)`);
-    }
-  } catch (error: any) {
-    console.error(`[AI Trigger] ❌ FATAL ERROR in checkAndTriggerAI:`, error);
-    console.error(`[AI Trigger] Error message:`, error.message);
-    console.error(`[AI Trigger] Error stack:`, error.stack);
-  } finally {
-    // Always remove lock, even on error
-    // Lock is kept until AI turn completes (or errors) to prevent concurrent triggers
-    activeAITriggers.delete(gameId);
+    console.error(`[AI Analysis] Error sending analysis:`, error.message || error);
   }
 }
 
 /**
  * Setup AI triggers for game state updates
+ *
+ * This should be called once during server initialization.
+ * It doesn't actually hook into events, but provides the function
+ * that should be called after every state update.
+ *
+ * @param io - Socket.io server
+ * @returns Function to call after state updates
  */
 export function setupAITriggers(io: Server): (gameId: string, gameState: GameState) => void {
   return (gameId: string, gameState: GameState) => {
