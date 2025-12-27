@@ -97,6 +97,14 @@ export function getPlayerGameId(playerId: string): string | null {
 }
 
 /**
+ * Get player's game ID from disconnection timer (during grace period)
+ */
+export function getPlayerGameIdFromDisconnectTimer(playerId: string): string | null {
+  const timer = disconnectionTimers.get(playerId);
+  return timer?.gameId || null;
+}
+
+/**
  * Get all connected player IDs for a given game
  */
 export function getConnectedPlayersInGame(gameId: string): string[] {

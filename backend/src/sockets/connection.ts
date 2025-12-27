@@ -5,7 +5,9 @@ import {
   registerConnection, 
   handleDisconnect, 
   handleReconnect,
-  isPlayerConnected 
+  isPlayerConnected,
+  getPlayerGameIdFromDisconnectTimer,
+  getPlayerGameId
 } from '../services/connection.service.js';
 
 /**
@@ -32,13 +34,18 @@ export function handleConnection(io: Server): void {
 
     console.log(`[Socket] ✓ Player connected: ${playerName} (${playerId})`);
 
-    // Check if this is a reconnection
+    // Check if this is a reconnection (player was connected before)
     const wasConnected = isPlayerConnected(playerId);
+    
+    // Get old gameId BEFORE registering new connection (which might overwrite it)
+    // Check disconnection timers first (player might be in grace period)
+    const oldGameId = getPlayerGameIdFromDisconnectTimer(playerId) || 
+                      (wasConnected ? getPlayerGameId(playerId) : null);
 
-    // Register this connection
-    registerConnection(socket, playerId);
+    // Register this connection with the old gameId to preserve it
+    registerConnection(socket, playerId, oldGameId || undefined);
 
-    if (wasConnected) {
+    if (wasConnected || oldGameId) {
       // Handle reconnection
       console.log(`[Socket] Player ${playerName} is reconnecting`);
       handleReconnect(socket, playerId, io);
