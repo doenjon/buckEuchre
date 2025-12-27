@@ -189,13 +189,26 @@ export class ISMCTSEngine {
     // Create root node
     const root = new MCTSNode(null, null, legalActions);
 
+    // Track simulation success/failure
+    let successfulSimulations = 0;
+    let failedSimulations = 0;
+
     // Run simulations with periodic yields to prevent blocking event loop
     for (let i = 0; i < this.config.simulations; i++) {
-      // 1. DETERMINIZE: Sample opponent hands
-      const determinizedState = determinize(gameState, playerPosition);
+      try {
+        // 1. DETERMINIZE: Sample opponent hands
+        const determinizedState = determinize(gameState, playerPosition);
 
-      // 2-5. Run one simulation on determinized state
-      this.runSimulation(root, determinizedState, playerPosition);
+        // 2-5. Run one simulation on determinized state
+        this.runSimulation(root, determinizedState, playerPosition);
+        successfulSimulations++;
+      } catch (error: any) {
+        failedSimulations++;
+        if (failedSimulations <= 10) {
+          console.error(`[ISMCTS] Simulation ${i} failed:`, error.message || error);
+        }
+        // Continue with next simulation
+      }
 
       // Yield to event loop periodically to allow other events to be processed
       // This makes MCTS "nice" and prevents blocking button presses
@@ -205,6 +218,14 @@ export class ISMCTSEngine {
     }
 
     const elapsed = Date.now() - startTime;
+
+    // Log simulation results
+    console.log(`[ISMCTS] AI Decision: ${successfulSimulations} succeeded, ${failedSimulations} failed out of ${this.config.simulations}`);
+
+    // Warn if too many simulations failed
+    if (successfulSimulations < this.config.simulations * 0.5) {
+      console.warn(`[ISMCTS] ⚠️ Only ${successfulSimulations}/${this.config.simulations} simulations succeeded! AI decision quality may be poor.`);
+    }
 
     if (this.config.verbose) {
       console.log(`[ISMCTS] Completed ${this.config.simulations} simulations in ${elapsed}ms`);
