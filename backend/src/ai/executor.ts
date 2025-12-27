@@ -34,12 +34,12 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * Get a random thinking delay (500-2000ms)
+ * Get AI thinking delay (constant 1s)
  *
  * @returns Delay in milliseconds
  */
 function getThinkingDelay(): number {
-  return 500 + Math.random() * 1500;
+  return 1000;
 }
 
 /**
