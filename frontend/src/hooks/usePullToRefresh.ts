@@ -64,11 +64,27 @@ export function usePullToRefresh(
   }, []);
 
   const checkScrollableParent = useCallback((target: HTMLElement): boolean => {
+    // For the game screen with overflow-hidden, we're more permissive
+    // Only block if we find a scrollable element that's currently scrolled down
     let element: HTMLElement | null = target;
     while (element && element !== document.body) {
       const { scrollTop, scrollHeight, clientHeight } = element;
-      if (scrollHeight > clientHeight && scrollTop > 0) {
+      const isScrollable = scrollHeight > clientHeight;
+      const isScrolledDown = scrollTop > 5; // Small threshold to account for rounding
+
+      console.log('[PullToRefresh] Checking element:', {
+        tag: element.tagName,
+        className: element.className,
+        scrollTop,
+        scrollHeight,
+        clientHeight,
+        isScrollable,
+        isScrolledDown
+      });
+
+      if (isScrollable && isScrolledDown) {
         // Element is scrollable and not at the top
+        console.log('[PullToRefresh] Blocked by scrolled element');
         return false;
       }
       element = element.parentElement;
@@ -147,8 +163,11 @@ export function usePullToRefresh(
   useEffect(() => {
     if (!enabled) return;
 
+    console.log('[PullToRefresh] Hook initialized and event listeners being added');
+
     // Touch event handlers
     const handleTouchStart = (e: TouchEvent) => {
+      console.log('[PullToRefresh] TouchStart event received');
       handleStart(e.touches[0].clientY, e.target as HTMLElement);
     };
 
