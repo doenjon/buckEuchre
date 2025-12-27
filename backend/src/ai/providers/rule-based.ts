@@ -103,7 +103,7 @@ export const RuleBasedAIMetadata = {
   version: '1.0.0',
   description: 'Simple heuristic-based AI using card counting and basic strategy',
   factory: createRuleBasedAI,
-  supportedDifficulties: ['easy', 'medium'] as AIDifficulty[],
+  supportedDifficulties: ['easy'] as AIDifficulty[],  // Only easy - medium+ uses ISMCTS
   isAsync: false,
   tags: ['baseline', 'fast', 'deterministic'],
 };
