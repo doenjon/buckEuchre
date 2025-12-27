@@ -7,10 +7,12 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useGame } from '@/hooks/useGame';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useAuthStore } from '@/stores/authStore';
 import { GameBoard } from '@/components/game/GameBoard';
 import { WaitingForPlayers } from '@/components/game/WaitingForPlayers';
 import { Button } from '@/components/ui/button';
+import { PullToRefreshIndicator } from '@/components/ui/PullToRefreshIndicator';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
 export function GamePage() {
@@ -20,6 +22,9 @@ export function GamePage() {
   const { joinGame, gameState, myPosition, setMyPosition, waitingInfo, error, clearGame } = useGame();
   const authStore = useAuthStore();
   const userId = authStore.userId;
+
+  // Pull-to-refresh functionality
+  const { pullDistance, isPulling, isRefreshing } = usePullToRefresh();
   
   // Debug: Log auth state changes
   useEffect(() => {
@@ -123,42 +128,56 @@ export function GamePage() {
   // Show minimal loading state while checking auth
   if (!authReady) {
     return (
-      <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-300" />
-      </div>
+      <>
+        <PullToRefreshIndicator
+          pullDistance={pullDistance}
+          isPulling={isPulling}
+          isRefreshing={isRefreshing}
+        />
+        <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-300" />
+        </div>
+      </>
     );
   }
 
   if (activeError) {
     return (
-      <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
-        <div
-          className="mx-auto flex max-w-md flex-col gap-6 px-4 sm:px-6 lg:px-8"
-          style={{
-            paddingTop: `calc(4rem + env(safe-area-inset-top, 0px))`,
-            paddingBottom: `calc(4rem + env(safe-area-inset-bottom, 0px))`
-          }}
-        >
-          <div className="rounded-[32px] border border-rose-400/30 bg-rose-950/30 p-6 text-slate-100 backdrop-blur shadow-[0_30px_80px_-45px_rgba(239,68,68,0.3)]">
-            <div className="flex flex-col items-center gap-4 text-center">
-              <AlertCircle className="h-10 w-10 text-rose-300" />
-              <h2 className="text-lg font-semibold text-slate-100">We couldn&apos;t seat you at this table</h2>
-              <p className="text-sm text-slate-200">{activeError}</p>
-              <Button
-                variant="primary"
-                size="md"
-                onClick={() => {
-                  clearGame();
-                  navigate('/lobby');
-                }}
-                className="mt-4"
-              >
-                Return to lobby
-              </Button>
+      <>
+        <PullToRefreshIndicator
+          pullDistance={pullDistance}
+          isPulling={isPulling}
+          isRefreshing={isRefreshing}
+        />
+        <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
+          <div
+            className="mx-auto flex max-w-md flex-col gap-6 px-4 sm:px-6 lg:px-8"
+            style={{
+              paddingTop: `calc(4rem + env(safe-area-inset-top, 0px))`,
+              paddingBottom: `calc(4rem + env(safe-area-inset-bottom, 0px))`
+            }}
+          >
+            <div className="rounded-[32px] border border-rose-400/30 bg-rose-950/30 p-6 text-slate-100 backdrop-blur shadow-[0_30px_80px_-45px_rgba(239,68,68,0.3)]">
+              <div className="flex flex-col items-center gap-4 text-center">
+                <AlertCircle className="h-10 w-10 text-rose-300" />
+                <h2 className="text-lg font-semibold text-slate-100">We couldn&apos;t seat you at this table</h2>
+                <p className="text-sm text-slate-200">{activeError}</p>
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => {
+                    clearGame();
+                    navigate('/lobby');
+                  }}
+                  className="mt-4"
+                >
+                  Return to lobby
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -176,13 +195,20 @@ export function GamePage() {
           };
 
     return (
-      <WaitingForPlayers
-        gameId={fallbackWaiting.gameId}
-        playerCount={fallbackWaiting.playerCount}
-        playersNeeded={fallbackWaiting.playersNeeded}
-        message={fallbackWaiting.message}
-        players={[]}
-      />
+      <>
+        <PullToRefreshIndicator
+          pullDistance={pullDistance}
+          isPulling={isPulling}
+          isRefreshing={isRefreshing}
+        />
+        <WaitingForPlayers
+          gameId={fallbackWaiting.gameId}
+          playerCount={fallbackWaiting.playerCount}
+          playersNeeded={fallbackWaiting.playersNeeded}
+          message={fallbackWaiting.message}
+          players={[]}
+        />
+      </>
     );
   }
 
@@ -191,43 +217,57 @@ export function GamePage() {
     const seatsRemaining = Math.max(0, 4 - connectedPlayers);
 
     return (
-      <WaitingForPlayers
-        gameId={gameId ?? gameState.gameId}
-        playerCount={connectedPlayers}
-        playersNeeded={seatsRemaining}
-        message={waitingInfo?.message}
-        players={gameState.players.map(p => ({ id: p.id, name: p.name, position: p.position }))}
-      />
+      <>
+        <PullToRefreshIndicator
+          pullDistance={pullDistance}
+          isPulling={isPulling}
+          isRefreshing={isRefreshing}
+        />
+        <WaitingForPlayers
+          gameId={gameId ?? gameState.gameId}
+          playerCount={connectedPlayers}
+          playersNeeded={seatsRemaining}
+          message={waitingInfo?.message}
+          players={gameState.players.map(p => ({ id: p.id, name: p.name, position: p.position }))}
+        />
+      </>
     );
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
-      <div
-        className="mx-auto flex h-full w-full max-w-6xl flex-col gap-2 md:gap-5 px-4 sm:px-6 lg:px-8"
-        style={{
-          paddingTop: `calc(0.5rem + env(safe-area-inset-top, 0px))`,
-          paddingBottom: `calc(0.5rem + env(safe-area-inset-bottom, 0px))`
-        }}
-      >
-        <header className="flex-shrink-0 flex flex-col gap-2 text-center pt-2 sm:pt-4 md:pt-6">
-          <span className="text-xs uppercase tracking-[0.35em] text-emerald-300/70 sm:text-sm">
-            Buck Euchre
-          </span>
-        </header>
+    <>
+      <PullToRefreshIndicator
+        pullDistance={pullDistance}
+        isPulling={isPulling}
+        isRefreshing={isRefreshing}
+      />
+      <div className="h-screen overflow-hidden bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
+        <div
+          className="mx-auto flex h-full w-full max-w-6xl flex-col gap-2 md:gap-5 px-4 sm:px-6 lg:px-8"
+          style={{
+            paddingTop: `calc(0.5rem + env(safe-area-inset-top, 0px))`,
+            paddingBottom: `calc(0.5rem + env(safe-area-inset-bottom, 0px))`
+          }}
+        >
+          <header className="flex-shrink-0 flex flex-col gap-2 text-center pt-2 sm:pt-4 md:pt-6">
+            <span className="text-xs uppercase tracking-[0.35em] text-emerald-300/70 sm:text-sm">
+              Buck Euchre
+            </span>
+          </header>
 
-        {myPosition !== null ? (
-          <div className="flex-1 min-h-0">
-            <GameBoard gameState={gameState} myPosition={myPosition} />
-          </div>
-        ) : (
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-slate-200 backdrop-blur">
-            <p className="text-sm font-medium tracking-wide text-emerald-200/80">
-              Finding your position in the game…
-            </p>
-          </div>
-        )}
+          {myPosition !== null ? (
+            <div className="flex-1 min-h-0">
+              <GameBoard gameState={gameState} myPosition={myPosition} />
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-slate-200 backdrop-blur">
+              <p className="text-sm font-medium tracking-wide text-emerald-200/80">
+                Finding your position in the game…
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
