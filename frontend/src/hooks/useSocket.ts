@@ -3,7 +3,7 @@
  * @description Custom hook for WebSocket connection
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import type { Socket } from 'socket.io-client';
 import { useAuthStore } from '@/stores/authStore';
 import { useGameStore } from '@/stores/gameStore';
@@ -26,38 +26,19 @@ export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
   const { token } = useAuthStore();
 
-  // Get store setters - these should be stable, but we use refs to be extra safe
-  // and prevent any potential re-render loops from dependency array changes
-  const gameStore = useGameStore();
-  const uiStore = useUIStore();
-
-  // Store the setters in refs to ensure stable callback references
+  // Store setters in refs to avoid re-renders - getters are stable, no need to subscribe to stores
   const settersRef = useRef({
-    setGameState: gameStore.setGameState,
-    setError: gameStore.setError,
-    setWaitingInfo: gameStore.setWaitingInfo,
-    setAIAnalysis: gameStore.setAIAnalysis,
-    setBidAnalysis: gameStore.setBidAnalysis,
-    setFoldAnalysis: gameStore.setFoldAnalysis,
-    setSuitAnalysis: gameStore.setSuitAnalysis,
-    setNextPlayerPosition: gameStore.setNextPlayerPosition,
-    setConnected: uiStore.setConnected,
-    setNotification: uiStore.setNotification,
+    setGameState: useGameStore.getState().setGameState,
+    setError: useGameStore.getState().setError,
+    setWaitingInfo: useGameStore.getState().setWaitingInfo,
+    setAIAnalysis: useGameStore.getState().setAIAnalysis,
+    setBidAnalysis: useGameStore.getState().setBidAnalysis,
+    setFoldAnalysis: useGameStore.getState().setFoldAnalysis,
+    setSuitAnalysis: useGameStore.getState().setSuitAnalysis,
+    setNextPlayerPosition: useGameStore.getState().setNextPlayerPosition,
+    setConnected: useUIStore.getState().setConnected,
+    setNotification: useUIStore.getState().setNotification,
   });
-
-  // Update refs on each render (they should be stable, but this ensures correctness)
-  settersRef.current = {
-    setGameState: gameStore.setGameState,
-    setError: gameStore.setError,
-    setWaitingInfo: gameStore.setWaitingInfo,
-    setAIAnalysis: gameStore.setAIAnalysis,
-    setBidAnalysis: gameStore.setBidAnalysis,
-    setFoldAnalysis: gameStore.setFoldAnalysis,
-    setSuitAnalysis: gameStore.setSuitAnalysis,
-    setNextPlayerPosition: gameStore.setNextPlayerPosition,
-    setConnected: uiStore.setConnected,
-    setNotification: uiStore.setNotification,
-  };
 
   // Initialize socket connection
   // IMPORTANT: Only depend on token - use refs for all callbacks to prevent re-renders
@@ -380,7 +361,7 @@ export function useSocket() {
     }
   }, []);
 
-  return {
+  return useMemo(() => ({
     socket: socketRef.current,
     joinGame,
     leaveGame,
@@ -389,5 +370,5 @@ export function useSocket() {
     makeFoldDecision,
     playCard,
     startNextRound,
-  };
+  }), [joinGame, leaveGame, placeBid, declareTrump, makeFoldDecision, playCard, startNextRound]);
 }

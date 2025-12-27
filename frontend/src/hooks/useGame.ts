@@ -3,12 +3,16 @@
  * @description Custom hook for game state and actions
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useGameStore } from '@/stores/gameStore';
 import { useSocket } from './useSocket';
 
 export function useGame() {
-  const gameStore = useGameStore();
+  // Use stable selectors to avoid re-renders on unrelated state changes
+  const gameState = useGameStore(state => state.gameState);
+  const myPosition = useGameStore(state => state.myPosition);
+  const waitingInfo = useGameStore(state => state.waitingInfo);
+  const error = useGameStore(state => state.error);
   const socket = useSocket();
 
   // Game actions
@@ -18,53 +22,53 @@ export function useGame() {
 
   const leaveGame = useCallback((gameId: string) => {
     socket.leaveGame(gameId);
-    gameStore.clearGame();
-  }, [socket, gameStore]);
+    useGameStore.getState().clearGame();
+  }, [socket]);
 
   const placeBid = useCallback((amount: 'PASS' | 2 | 3 | 4 | 5) => {
-    if (!gameStore.gameState) return;
-    socket.placeBid(gameStore.gameState.gameId, amount);
-  }, [socket, gameStore.gameState]);
+    if (!gameState) return;
+    socket.placeBid(gameState.gameId, amount);
+  }, [socket, gameState]);
 
   const declareTrump = useCallback((trumpSuit: 'SPADES' | 'HEARTS' | 'DIAMONDS' | 'CLUBS') => {
-    if (!gameStore.gameState) return;
-    socket.declareTrump(gameStore.gameState.gameId, trumpSuit);
-  }, [socket, gameStore.gameState]);
+    if (!gameState) return;
+    socket.declareTrump(gameState.gameId, trumpSuit);
+  }, [socket, gameState]);
 
   const makeFoldDecision = useCallback((fold: boolean) => {
-    if (!gameStore.gameState) return;
-    socket.makeFoldDecision(gameStore.gameState.gameId, fold);
-  }, [socket, gameStore.gameState]);
+    if (!gameState) return;
+    socket.makeFoldDecision(gameState.gameId, fold);
+  }, [socket, gameState]);
 
   const playCard = useCallback((cardId: string) => {
-    if (!gameStore.gameState) return;
-    socket.playCard(gameStore.gameState.gameId, cardId);
-  }, [socket, gameStore.gameState]);
+    if (!gameState) return;
+    socket.playCard(gameState.gameId, cardId);
+  }, [socket, gameState]);
 
   const startNextRound = useCallback(() => {
-    if (!gameStore.gameState) return;
-    socket.startNextRound(gameStore.gameState.gameId);
-  }, [socket, gameStore.gameState]);
+    if (!gameState) return;
+    socket.startNextRound(gameState.gameId);
+  }, [socket, gameState]);
 
-  // Computed values
-  const myPlayer = gameStore.getMyPlayer();
-  const isMyTurn = gameStore.isMyTurn();
-  const playableCards = gameStore.getPlayableCards();
-  const currentPlayer = gameStore.getCurrentPlayer();
+  // Computed values using getState() to avoid stale closures
+  const myPlayer = useGameStore.getState().getMyPlayer();
+  const isMyTurn = useGameStore.getState().isMyTurn();
+  const playableCards = useGameStore.getState().getPlayableCards();
+  const currentPlayer = useGameStore.getState().getCurrentPlayer();
 
-  return {
+  return useMemo(() => ({
     // State
-    gameState: gameStore.gameState,
-    myPosition: gameStore.myPosition,
-    waitingInfo: gameStore.waitingInfo,
+    gameState,
+    myPosition,
+    waitingInfo,
     myPlayer,
     isMyTurn,
     playableCards,
     currentPlayer,
-    error: gameStore.error,
-    
+    error,
+
     // Actions
-    setMyPosition: gameStore.setMyPosition,
+    setMyPosition: useGameStore.getState().setMyPosition,
     joinGame,
     leaveGame,
     placeBid,
@@ -72,7 +76,23 @@ export function useGame() {
     makeFoldDecision,
     playCard,
     startNextRound,
-    clearGame: gameStore.clearGame,
-    setWaitingInfo: gameStore.setWaitingInfo,
-  };
+    clearGame: useGameStore.getState().clearGame,
+    setWaitingInfo: useGameStore.getState().setWaitingInfo,
+  }), [
+    gameState,
+    myPosition,
+    waitingInfo,
+    myPlayer,
+    isMyTurn,
+    playableCards,
+    currentPlayer,
+    error,
+    joinGame,
+    leaveGame,
+    placeBid,
+    declareTrump,
+    makeFoldDecision,
+    playCard,
+    startNextRound,
+  ]);
 }
