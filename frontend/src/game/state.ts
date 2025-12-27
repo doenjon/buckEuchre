@@ -380,17 +380,7 @@ export function applyFoldDecision(
         return player;
       }) as [Player, Player, Player, Player];
 
-      console.log('[SCORING] All non-bidders folded. Auto-scoring with bidder taking all 5 tricks:', {
-        isClubsTurnUp: state.isClubsTurnUp,
-        winningBidderPosition: winningBidder,
-        highestBid: state.highestBid,
-        playerStats: playersWithAutoTricks.map((p, i) => ({
-          position: i,
-          name: p.name,
-          tricksTaken: p.tricksTaken,
-          folded: p.folded,
-        })),
-      });
+      // All non-bidders folded - auto-scoring with bidder taking all 5 tricks
 
       // TypeScript knows highestBid is not null due to check on line 360
       const scoreChanges = calculateRoundScores(
@@ -400,16 +390,7 @@ export function applyFoldDecision(
         state.isClubsTurnUp
       );
 
-      console.log('[SCORING] Score changes for auto-win:', {
-        scoreChanges,
-        breakdown: playersWithAutoTricks.map((p, i) => ({
-          position: i,
-          name: p.name,
-          change: scoreChanges[p.position],
-          oldScore: p.score,
-          newScore: p.score + scoreChanges[p.position],
-        })),
-      });
+      // Score changes calculated for auto-win
 
       const scoredPlayers = playersWithAutoTricks.map((player, position) => ({
         ...player,
@@ -591,11 +572,7 @@ export function finishRound(state: GameState): GameState {
   // Idempotency guard: prevent applying score changes twice for the same round.
   // This fixes rare +10 "in one hand" bugs (double-applied +5 buck/euchre).
   if (state.scoresCalculated) {
-    console.warn('[SCORING] finishRound called but scores already calculated; returning state as-is.', {
-      round: state.round,
-      phase: state.phase,
-      scores: state.players.map(p => ({ name: p.name, score: p.score })),
-    });
+    // Scores already calculated - returning state as-is
     return state;
   }
 
