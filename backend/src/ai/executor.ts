@@ -612,12 +612,9 @@ async function executeAICardPlay(
       }
     }
 
-    // Calculate delay based on next player - only delay for AI players (same logic as human handler)
-    const nextPlayerPos = finalState.currentPlayerPosition;
-    const nextPlayerIsAI = nextPlayerPos !== null && finalState.players[nextPlayerPos] 
-      ? isAIPlayerByName(finalState.players[nextPlayerPos].name) 
-      : false;
-    const trickCompleteDelay = nextPlayerIsAI ? 3000 : 0;
+    // Always use 3000ms delay for UI consistency - backend shouldn't care about player type
+    // The frontend can handle whether to allow human input during the delay
+    const trickCompleteDelay = 3000;
 
     // Create display state showing completed trick
     const displayState = displayStateManager.createTrickCompleteDisplay(finalState, trickCompleteDelay);

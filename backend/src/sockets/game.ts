@@ -968,22 +968,18 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
         // The completed trick is now the last one in the tricks array
         const completedTrick = nextState.tricks[nextState.tricks.length - 1];
 
-        // Only delay if next player is AI (to slow down AI play)
-        // Skip delay if next player is human (they can play when ready)
-        const nextPlayerPos = nextState.currentPlayerPosition;
-        const nextPlayerIsAI = nextPlayerPos !== null && nextState.players[nextPlayerPos] ? isAIPlayerByName(nextState.players[nextPlayerPos].name) : false;
-        const delayMs = nextPlayerIsAI ? 3000 : 0;
+        // Always use 3000ms delay for UI consistency - backend shouldn't care about player type
+        const delayMs = 3000;
 
         io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
           trick: completedTrick,
           delayMs,
-          nextPlayerPosition: nextPlayerPos // Next player to act
+          nextPlayerPosition: nextState.currentPlayerPosition // Next player to act
         });
         console.log(`[TRICK_COMPLETE] Emitted for trick ${completedTrick.number}`, {
           winner: completedTrick.winner,
           cardsPlayed: completedTrick.cards.length,
           nextPlayer: nextState.currentPlayerPosition,
-          nextPlayerIsAI,
           delayMs,
         });
         trickWasCompleted = true;
@@ -1024,10 +1020,9 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
     console.log(`${logPrefix} Step 5: Handling trick completion and broadcasts...`);
     // Show all cards immediately if trick was completed, then delay transition
     if (trickWasCompleted) {
-      // Calculate delay based on next player - only delay for AI players
-      const nextPlayerPos = finalState.currentPlayerPosition;
-      const nextPlayerIsAI = nextPlayerPos !== null && finalState.players[nextPlayerPos] ? isAIPlayerByName(finalState.players[nextPlayerPos].name) : false;
-      const trickCompleteDelay = nextPlayerIsAI ? 3000 : 0;
+      // Always use 3000ms delay for UI consistency - backend shouldn't care about player type
+      // The frontend can handle whether to allow human input during the delay
+      const trickCompleteDelay = 3000;
 
       // Create display state showing completed trick
       const displayState = displayStateManager.createTrickCompleteDisplay(finalState, trickCompleteDelay);
@@ -1050,14 +1045,13 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
       console.log(`[PLAY_CARD] Immediate broadcast showing all cards in completed trick`, {
         trickNumber: displayState.currentTrick.number,
         cardsInTrick: displayState.currentTrick.cards.length,
-        nextPlayerIsAI,
         delayMs: trickCompleteDelay,
       });
 
       // Store finalState for fallback in case memory state is unavailable
       const stateForTransition = finalState;
 
-      // Schedule transition to actual state (delay depends on next player - 3s for AI, 0s for human)
+      // Schedule transition to actual state after delay (always 3000ms for UI consistency)
       displayStateManager.scheduleTransition(validated.gameId, async () => {
         console.log(`[PLAY_CARD] Transition callback starting for game ${validated.gameId}`);
         try {
