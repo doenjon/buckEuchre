@@ -34,12 +34,12 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * Get AI thinking delay (constant 0ms - no artificial delay)
+ * Get AI thinking delay (constant 750ms)
  *
  * @returns Delay in milliseconds
  */
 function getThinkingDelay(): number {
-  return 0; // No artificial delay - AI acts immediately
+  return 750; // 0.75 second delay for AI to "think"
 }
 
 /**
