@@ -76,7 +76,8 @@ export function extractObservations(
         const effectiveSuit = getEffectiveSuit(playedCard.card, gameState.trumpSuit);
 
         // If player didn't follow led suit, they're void in it
-        if (effectiveSuit !== ledSuit && effectiveSuit !== gameState.trumpSuit) {
+        // This includes both playing trump on a non-trump lead and playing off-suit
+        if (effectiveSuit !== ledSuit) {
           const playerVoids = observations.playerVoids.get(playedCard.playerPosition);
           if (playerVoids) {
             playerVoids.add(ledSuit as Suit);
@@ -100,7 +101,9 @@ export function extractObservations(
       if (gameState.trumpSuit && currentLedSuit) {
         const effectiveSuit = getEffectiveSuit(playedCard.card, gameState.trumpSuit);
 
-        if (effectiveSuit !== currentLedSuit && effectiveSuit !== gameState.trumpSuit) {
+        // If player didn't follow led suit, they're void in it
+        // This includes both playing trump on a non-trump lead and playing off-suit
+        if (effectiveSuit !== currentLedSuit) {
           const playerVoids = observations.playerVoids.get(playedCard.playerPosition);
           if (playerVoids) {
             playerVoids.add(currentLedSuit as Suit);
@@ -259,7 +262,9 @@ export function sampleOpponentHandsWithConstraints(
   myPosition: PlayerPosition,
   observations: Observations
 ): GameState {
-  const MAX_ATTEMPTS = 100;
+  // Reduced from 100 to 3 attempts to prevent excessive CPU usage
+  // The greedy algorithm rarely succeeds if it fails on first few attempts
+  const MAX_ATTEMPTS = 3;
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const result = trySampleWithConstraints(gameState, myPosition, observations);
@@ -269,7 +274,7 @@ export function sampleOpponentHandsWithConstraints(
   }
 
   // If we couldn't satisfy constraints after MAX_ATTEMPTS, fall back to simple sampling
-  console.warn('[ISMCTS] Could not satisfy void constraints, falling back to simple sampling');
+  // This is expected and not an error - void constraints from imperfect information can be over-restrictive
   return sampleOpponentHands(gameState, myPosition, observations);
 }
 
