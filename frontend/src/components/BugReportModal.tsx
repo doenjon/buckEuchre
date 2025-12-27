@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -90,18 +91,20 @@ export function BugReportModal({ isOpen, onClose }: BugReportModalProps) {
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+  const modalContent = (
+    <div className="fixed inset-0 z-[99999]">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="relative z-10 w-full max-w-lg mx-4 bg-gray-900 border border-white/20 rounded-lg shadow-xl">
+      {/* Modal Container - centered */}
+      <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+        {/* Modal */}
+        <div className="pointer-events-auto w-full max-w-lg bg-gray-900 border border-white/20 rounded-lg shadow-xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
+        <div className="flex items-center justify-between p-6 border-b border-white/10 flex-shrink-0">
           <h2 className="text-xl font-semibold text-white">Report a Bug</h2>
           <button
             onClick={onClose}
@@ -112,8 +115,8 @@ export function BugReportModal({ isOpen, onClose }: BugReportModalProps) {
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-4">
+        {/* Content - scrollable */}
+        <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
           {/* Success Message */}
           {success && (
             <div className="p-3 bg-emerald-500/20 border border-emerald-500/50 rounded text-emerald-200 text-sm">
@@ -150,21 +153,10 @@ export function BugReportModal({ isOpen, onClose }: BugReportModalProps) {
               Tip: Press Ctrl+Enter (or Cmd+Enter) to submit
             </p>
           </div>
-
-          {/* Info Box */}
-          <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded text-sm text-blue-200">
-            <p className="font-medium mb-1">What will be sent:</p>
-            <ul className="list-disc list-inside space-y-0.5 text-xs text-blue-300">
-              <li>Your bug description</li>
-              <li>Recent console logs (last 50 messages)</li>
-              <li>Browser information</li>
-              <li>Current page URL</li>
-            </ul>
-          </div>
         </div>
 
         {/* Footer */}
-        <div className="flex gap-4 p-6 border-t border-white/10">
+        <div className="flex gap-4 p-6 border-t border-white/10 flex-shrink-0">
           <Button
             onClick={onClose}
             variant="outline"
@@ -191,7 +183,11 @@ export function BugReportModal({ isOpen, onClose }: BugReportModalProps) {
             )}
           </Button>
         </div>
+        </div>
       </div>
     </div>
   );
+
+  // Render to document.body using portal to escape any parent z-index constraints
+  return createPortal(modalContent, document.body);
 }

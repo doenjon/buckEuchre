@@ -27,9 +27,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   // Local state for important settings only
   const [formData, setFormData] = useState({
     showCardOverlay: settingsStore.showCardOverlay,
-    showTooltips: settingsStore.showTooltips,
     autoSortHand: settingsStore.autoSortHand,
-    soundEffects: settingsStore.soundEffects,
   });
 
   // Load settings when modal opens
@@ -39,9 +37,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       // This ensures the toggle shows the correct state even if store was updated after mount
       setFormData({
         showCardOverlay: settingsStore.showCardOverlay,
-        showTooltips: settingsStore.showTooltips,
         autoSortHand: settingsStore.autoSortHand,
-        soundEffects: settingsStore.soundEffects,
       });
       // Then load from API to get server-side settings (may override store values)
       loadSettings();
@@ -53,9 +49,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       const settings = await getUserSettings();
       const newSettings = {
         showCardOverlay: settings.showCardOverlay,
-        showTooltips: settings.showTooltips,
         autoSortHand: settings.autoSortHand,
-        soundEffects: settings.soundEffects,
       };
       setFormData(newSettings);
       settingsStore.setSettings({
@@ -147,7 +141,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5 flex-1">
                 <Label htmlFor="showCardOverlay" className="text-base text-white">
-                  Show Card Overlay
+                  Training mode
                 </Label>
                 <p className="text-sm text-gray-400">
                   Display trump suit, bid info, and game phase
@@ -158,24 +152,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 checked={formData.showCardOverlay}
                 onCheckedChange={(checked) =>
                   setFormData({ ...formData, showCardOverlay: checked })
-                }
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5 flex-1">
-                <Label htmlFor="showTooltips" className="text-base text-white">
-                  Show Tooltips
-                </Label>
-                <p className="text-sm text-gray-400">
-                  Display helpful hints and explanations
-                </p>
-              </div>
-              <Switch
-                id="showTooltips"
-                checked={formData.showTooltips}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, showTooltips: checked })
                 }
               />
             </div>
@@ -194,31 +170,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 checked={formData.autoSortHand}
                 onCheckedChange={(checked) =>
                   setFormData({ ...formData, autoSortHand: checked })
-                }
-              />
-            </div>
-          </div>
-
-          {/* Audio Settings */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">
-              Audio
-            </h3>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5 flex-1">
-                <Label htmlFor="soundEffects" className="text-base text-white">
-                  Sound Effects
-                </Label>
-                <p className="text-sm text-gray-400">
-                  Play sounds for game actions
-                </p>
-              </div>
-              <Switch
-                id="soundEffects"
-                checked={formData.soundEffects}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, soundEffects: checked })
                 }
               />
             </div>
