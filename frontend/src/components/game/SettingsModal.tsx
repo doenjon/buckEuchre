@@ -35,9 +35,18 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   // Load settings when modal opens
   useEffect(() => {
     if (isOpen) {
+      // First sync with store (which may have been updated from localStorage)
+      // This ensures the toggle shows the correct state even if store was updated after mount
+      setFormData({
+        showCardOverlay: settingsStore.showCardOverlay,
+        showTooltips: settingsStore.showTooltips,
+        autoSortHand: settingsStore.autoSortHand,
+        soundEffects: settingsStore.soundEffects,
+      });
+      // Then load from API to get server-side settings (may override store values)
       loadSettings();
     }
-  }, [isOpen]);
+  }, [isOpen]); // Only re-run when modal opens/closes, not on store changes
 
   const loadSettings = async () => {
     try {
