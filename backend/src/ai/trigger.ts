@@ -291,6 +291,8 @@ export async function checkAndTriggerAI(
         if (isAI) {
           // AI needs to act - trigger it (no delay, no throttle - game state prevents duplicates)
           console.log(`[AI Trigger] Triggering AI fold decision for ${player.name} at position ${pos}`);
+          // Note: For FOLDING_DECISION, multiple AIs can act simultaneously (by design)
+          // So we don't await here - each AI acts independently
           executeAITurn(gameId, player.id, io).catch(err => 
             console.error(`[AI Trigger] Error:`, err)
           );
@@ -338,7 +340,9 @@ export async function checkAndTriggerAI(
     if (isAI) {
       // AI needs to act - trigger it (no delay, no throttle - game state prevents duplicates)
       console.log(`[AI Trigger] ✅ AI player detected - triggering turn for ${currentPlayer.name} (${currentPlayerId}) in phase ${gameState.phase}`);
-      executeAITurn(gameId, currentPlayerId, io)
+      // Await the AI turn to keep the lock until it completes
+      // This prevents multiple triggers from firing simultaneously
+      await executeAITurn(gameId, currentPlayerId, io)
         .then(() => {
           console.log(`[AI Trigger] ✅ AI turn promise resolved for ${currentPlayer.name}`);
         })
@@ -357,6 +361,7 @@ export async function checkAndTriggerAI(
     console.error(`[AI Trigger] Error stack:`, error.stack);
   } finally {
     // Always remove lock, even on error
+    // Lock is kept until AI turn completes (or errors) to prevent concurrent triggers
     activeAITriggers.delete(gameId);
   }
 }
