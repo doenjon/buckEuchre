@@ -246,10 +246,10 @@ export function setupSocketListeners(
     onAIAnalysisUpdate?: (data: any) => void;
   }
 ): void {
-  // CRITICAL: Remove all existing listeners first to prevent duplicates
-  // The socket is a singleton, so if setupSocketListeners is called multiple times,
-  // we'd accumulate listeners without this cleanup
-  cleanupSocketListeners(socket);
+  // NOTE: We don't cleanup here - cleanupSocketListeners should only be called
+  // in the component's useEffect cleanup function. This prevents race conditions
+  // where events are lost between cleanup and setup during component remounts.
+  // The cleanup function in useSocket handles removing listeners on unmount.
 
   if (handlers.onConnect) {
     socket.on('connect', handlers.onConnect);
