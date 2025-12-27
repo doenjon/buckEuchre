@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore } from '@/stores/gameStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ISMCTSEngine } from '@/ai/ismcts';
 import type { GameState, CardAnalysis, BidAnalysis, FoldAnalysis, SuitAnalysis, BidAmount, Suit } from '@buck-euchre/shared';
 
@@ -261,6 +262,22 @@ export function useLocalAnalysis() {
 
   // Auto-trigger analysis when it's my turn
   useEffect(() => {
+    const showCardOverlay = useSettingsStore.getState().showCardOverlay;
+
+    // Skip analysis if user has disabled card overlay
+    if (!showCardOverlay) {
+      // Clear all analysis and abort ongoing analysis
+      if (analysisRef.current) {
+        analysisRef.current.abortController.abort();
+        setAIAnalysis(null);
+        setBidAnalysis(null);
+        setFoldAnalysis(null);
+        setSuitAnalysis(null);
+        analysisRef.current = null;
+      }
+      return;
+    }
+
     if (!gameState || myPosition === null) {
       return;
     }
