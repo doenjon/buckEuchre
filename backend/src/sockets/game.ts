@@ -1081,11 +1081,12 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
             return;
           }
 
-          // IMPORTANT: Update the timestamp so frontend accepts this state
-          // Display state was emitted with a newer timestamp, so we need to ensure
-          // this actual state (with empty trick) has an even newer timestamp
+          // IMPORTANT: Increment version so frontend accepts this state
+          // Display state was emitted with a higher version, so we need to increment
+          // the version again for this transition to the actual state
           const stateWithUpdatedTimestamp = {
             ...currentState,
+            version: (currentState.version || 0) + 1,
             updatedAt: Date.now()
           };
 

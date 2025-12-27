@@ -642,10 +642,11 @@ async function executeAICardPlay(
         }
 
         // IMPORTANT: Ensure clients accept this transition.
-        // The "display state" is emitted with a newer updatedAt, so if we emit the real
-        // state with an older timestamp the frontend may treat it as stale and ignore it.
+        // The "display state" is emitted with a higher version, so we must increment
+        // the version again for the frontend to accept this transition to the actual state.
         const stateWithUpdatedTimestamp = {
           ...currentState,
+          version: (currentState.version || 0) + 1,
           updatedAt: Date.now(),
         };
 
