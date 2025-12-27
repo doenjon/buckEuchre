@@ -14,19 +14,19 @@ import { getCharacterPreset } from '../character.js';
 
 /**
  * Map difficulty to simulation count
- * 
- * Default is 5000 iterations. Can be overridden via customIterations parameter.
- * Difficulty-based values are kept for backward compatibility but default is now 5000.
+ *
+ * Default is 10000 iterations. Can be overridden via customIterations parameter.
+ * Difficulty-based values are kept for backward compatibility but default is now 10000.
  */
 function getSimulationCount(difficulty: AIDifficulty, customIterations?: number): number {
   // If custom iterations provided, use that
   if (customIterations !== undefined && customIterations > 0) {
     return customIterations;
   }
-  
-  // Default to 5000 iterations as requested
+
+  // Default to 10000 iterations for better AI quality
   // Difficulty-based values kept for reference but not used by default
-  return 5000;
+  return 10000;
 }
 
 /**
