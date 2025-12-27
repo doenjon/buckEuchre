@@ -23,6 +23,7 @@ import { scheduleAutoStartNextRound } from '../services/round.service.js';
 import { aiProviderCache } from './provider-cache.js';
 import type { AIProvider } from './types.js';
 import { buildRoundCompletionPayload, persistRoundCompletionStats } from '../sockets/game.js';
+import { isAIPlayerByName } from '../services/ai-player.service.js';
 
 /**
  * Delay for a specified amount of time
@@ -611,8 +612,15 @@ async function executeAICardPlay(
       }
     }
 
+    // Calculate delay based on next player - only delay for AI players (same logic as human handler)
+    const nextPlayerPos = finalState.currentPlayerPosition;
+    const nextPlayerIsAI = nextPlayerPos !== null && finalState.players[nextPlayerPos] 
+      ? isAIPlayerByName(finalState.players[nextPlayerPos].name) 
+      : false;
+    const trickCompleteDelay = nextPlayerIsAI ? 3000 : 0;
+
     // Create display state showing completed trick
-    const displayState = displayStateManager.createTrickCompleteDisplay(finalState, 3000);
+    const displayState = displayStateManager.createTrickCompleteDisplay(finalState, trickCompleteDelay);
     
     // Validate display state before emitting
     if (!displayState || !displayState.gameId) {
