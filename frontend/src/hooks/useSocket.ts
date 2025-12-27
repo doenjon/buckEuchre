@@ -3,7 +3,7 @@
  * @description Custom hook for WebSocket connection
  */
 
-import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import type { Socket } from 'socket.io-client';
 import { useAuthStore } from '@/stores/authStore';
 import { useGameStore } from '@/stores/gameStore';
@@ -12,7 +12,7 @@ import {
   createSocketConnection, 
   setupSocketListeners, 
   cleanupSocketListeners,
-  emitJoinGameReliable,
+  emitJoinGame,
   emitLeaveGame,
   emitPlaceBid,
   emitDeclareTrump,
@@ -24,29 +24,11 @@ import {
 
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
-  // Use selector to only subscribe to token changes, not entire auth store
-  const token = useAuthStore(state => state.token);
-  
-  // Track last processed version per gameId to prevent duplicate processing
-  // Use Map to track multiple games if user has multiple tabs/windows
-  const lastProcessedVersionsRef = useRef<Map<string, number>>(new Map());
-
-  // Store setters in refs to avoid re-renders - getters are stable, no need to subscribe to stores
-  const settersRef = useRef({
-    setGameState: useGameStore.getState().setGameState,
-    setError: useGameStore.getState().setError,
-    setWaitingInfo: useGameStore.getState().setWaitingInfo,
-    setAIAnalysis: useGameStore.getState().setAIAnalysis,
-    setBidAnalysis: useGameStore.getState().setBidAnalysis,
-    setFoldAnalysis: useGameStore.getState().setFoldAnalysis,
-    setSuitAnalysis: useGameStore.getState().setSuitAnalysis,
-    setNextPlayerPosition: useGameStore.getState().setNextPlayerPosition,
-    setConnected: useUIStore.getState().setConnected,
-    setNotification: useUIStore.getState().setNotification,
-  });
+  const { token } = useAuthStore();
+  const { setGameState, setError, setWaitingInfo, setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis, setNextPlayerPosition } = useGameStore();
+  const { setConnected, setNotification } = useUIStore();
 
   // Initialize socket connection
-  // IMPORTANT: Only depend on token - use refs for all callbacks to prevent re-renders
   useEffect(() => {
     if (!token) {
       console.log('[useSocket] No token available, skipping connection');
@@ -63,7 +45,7 @@ export function useSocket() {
           id: socket.id,
           connected: socket.connected,
         });
-        settersRef.current.setConnected(true);
+        setConnected(true);
       },
 
       onDisconnect: (reason: string) => {
@@ -71,7 +53,7 @@ export function useSocket() {
           reason,
           willReconnect: socket.active,
         });
-        settersRef.current.setConnected(false);
+        setConnected(false);
       },
 
       onConnectError: (error) => {
@@ -80,12 +62,12 @@ export function useSocket() {
           type: error.type,
           description: error.description,
         });
-        settersRef.current.setConnected(false);
+        setConnected(false);
 
         // Show a notification for connection errors
         const message = error.message || 'Failed to connect to game server';
-        settersRef.current.setNotification(`Connection error: ${message}`);
-        setTimeout(() => settersRef.current.setNotification(null), 5000);
+        setNotification(`Connection error: ${message}`);
+        setTimeout(() => setNotification(null), 5000);
       },
 
       onError: (error) => {
@@ -102,271 +84,164 @@ export function useSocket() {
 
         if (error.code && blockingErrorCodes.includes(error.code)) {
           // This is a blocking error - show the error modal
-          settersRef.current.setError(error.message || 'An error occurred');
+          setError(error.message || 'An error occurred');
         } else {
           // This is a gameplay error - just show a notification
           const message = error.message || 'An error occurred';
-          settersRef.current.setNotification(message);
-          setTimeout(() => settersRef.current.setNotification(null), 5000);
+          setNotification(message);
+          setTimeout(() => setNotification(null), 5000);
         }
       },
-
+      
       onGameStateUpdate: (data) => {
-        // ALWAYS log receipt of event for debugging
-        console.log('[useSocket] GAME_STATE_UPDATE event received (raw):', {
-          hasGameState: !!data.gameState,
-          gameId: data.gameState?.gameId,
-          version: data.gameState?.version,
-          event: data.event,
-          phase: data.gameState?.phase,
-          currentPlayerPosition: data.gameState?.currentPlayerPosition
-        });
+        console.log('Game state update:', data);
 
         // Validate that we have a valid game state
         if (!data.gameState || !data.gameState.gameId) {
-          console.error('[useSocket] Received invalid game state update:', data);
+          console.error('Received invalid game state update:', data);
+          // Don't clear state - just log the error and request fresh state if we have a gameId
           const currentState = useGameStore.getState().gameState;
           if (socketRef.current && currentState?.gameId) {
-            console.log('[useSocket] Requesting fresh state due to invalid update');
+            console.log('Requesting fresh state due to invalid update');
             emitRequestState(socketRef.current, currentState.gameId);
           }
           return;
         }
 
-        const gameId = data.gameState.gameId;
-        const newVersion = data.gameState.version || 0;
+        // Version and timestamp check: ensure we don't apply stale updates
         const currentState = useGameStore.getState().gameState;
+        const newVersion = data.gameState.version || 0;
         const currentVersion = currentState?.version || 0;
-        const lastProcessed = lastProcessedVersionsRef.current.get(gameId) || 0;
+        const newUpdatedAt = data.gameState.updatedAt || 0;
+        const currentUpdatedAt = currentState?.updatedAt || 0;
 
-        // Skip if we've already processed this exact version for this game (duplicate event)
-        // This prevents processing the same event multiple times even if it arrives multiple times
-        if (newVersion === lastProcessed && newVersion === currentVersion && currentState?.gameId === gameId) {
-          console.log('[useSocket] Ignoring duplicate event:', {
-            version: newVersion,
-            currentVersion,
-            lastProcessed,
-            gameId
-          });
-          return;
-        }
-
-        // Log all events for debugging
-        console.log('[useSocket] GAME_STATE_UPDATE processing:', {
-          event: data.event,
-          phase: data.gameState?.phase,
-          version: newVersion,
-          currentVersion,
-          lastProcessed,
-          gameId,
-          currentPlayerPosition: data.gameState?.currentPlayerPosition,
-          willAccept: newVersion > currentVersion || currentState?.gameId !== gameId
-        });
-
-        if (newVersion > currentVersion) {
-          // Newer version - update state
-          const oldPhase = currentState?.phase;
-          const newPhase = data.gameState.phase;
-          const oldTurn = currentState?.currentPlayerPosition;
-          const newTurn = data.gameState.currentPlayerPosition;
-          const oldBidder = currentState?.currentBidder;
-          const newBidder = data.gameState.currentBidder;
-
-          settersRef.current.setGameState(data.gameState);
-          // Update last processed version for this game
-          lastProcessedVersionsRef.current.set(gameId, newVersion);
-
-          // Only clear analysis when situation actually changes
-          const phaseChanged = oldPhase !== newPhase;
-          const turnChanged = oldTurn !== newTurn && newPhase === 'PLAYING';
-          const bidderChanged = oldBidder !== newBidder && newPhase === 'BIDDING';
-
-          if (phaseChanged) {
-            // Phase changed - clear all analysis
-            console.log('[useSocket] Phase changed, clearing all analysis');
-            settersRef.current.setAIAnalysis(null);
-            settersRef.current.setBidAnalysis(null);
-            settersRef.current.setFoldAnalysis(null);
-            settersRef.current.setSuitAnalysis(null);
-          } else if (turnChanged) {
-            // New turn in playing phase - clear card analysis only
-            console.log('[useSocket] Turn changed in playing phase, clearing card analysis');
-            settersRef.current.setAIAnalysis(null);
-          } else if (bidderChanged) {
-            // New bidder in bidding phase - clear bid analysis only
-            console.log('[useSocket] Bidder changed in bidding phase, clearing bid analysis');
-            settersRef.current.setBidAnalysis(null);
-          }
-          // Otherwise keep existing analysis - it's still valid!
+        // Accept if newer version OR (same version but newer timestamp for display transitions)
+        if (newVersion > currentVersion ||
+            (newVersion === currentVersion && newUpdatedAt > currentUpdatedAt)) {
+          // Apply update immediately (backend handles delays)
+          setGameState(data.gameState);
         } else if (newVersion < currentVersion) {
-          console.warn('[useSocket] Received stale update (old version), requesting fresh state');
-          if (socketRef.current && gameId) {
-            emitRequestState(socketRef.current, gameId);
-          }
-        } else if (newVersion === currentVersion && currentState?.gameId === gameId) {
-          // Same version - could be a duplicate OR a display state (showing completed trick)
-          // Display states use same version but show different content (completed trick)
-          // Check if this is a display state by looking for completed trick
-          const isDisplayState = 
-            data.gameState.currentTrick?.winner !== null && 
-            data.gameState.currentTrick?.cards?.length === 4 &&
-            (currentState.currentTrick?.winner === null || 
-             currentState.currentTrick?.cards?.length !== 4);
-          
-          if (isDisplayState) {
-            // This is a display state showing a completed trick - accept it
-            console.log('[useSocket] Accepting display state (completed trick) with same version');
-            settersRef.current.setGameState(data.gameState);
-            lastProcessedVersionsRef.current.set(gameId, newVersion);
-          } else {
-            // Same version, same content - this is a true duplicate, ignore
-            lastProcessedVersionsRef.current.set(gameId, newVersion);
-            // Silently ignore - already processed
-            return;
+          console.warn('Received stale update (old version), requesting fresh state');
+          if (socketRef.current && data.gameState.gameId) {
+            emitRequestState(socketRef.current, data.gameState.gameId);
           }
         } else {
-          // No current state but we have a new one - apply it
-          settersRef.current.setGameState(data.gameState);
-          lastProcessedVersionsRef.current.set(gameId, newVersion);
+          // Same version and same/older timestamp - duplicate
+          // Only update if we don't have a current state (shouldn't happen, but be safe)
+          if (!currentState) {
+            console.log('Applying state update with same version (no current state)');
+            setGameState(data.gameState);
+          } else {
+            console.log('Ignoring duplicate state update (same version and timestamp)');
+          }
         }
       },
-
+      
       onReconnected: (data) => {
         console.log('Reconnected to game:', data);
-        settersRef.current.setGameState(data.gameState);
-        settersRef.current.setNotification('Reconnected to game');
-        setTimeout(() => settersRef.current.setNotification(null), 3000);
+        setGameState(data.gameState);
+        setNotification('Reconnected to game');
+        setTimeout(() => setNotification(null), 3000);
       },
 
       onGameWaiting: (data) => {
         console.log('Waiting for players:', data);
-        settersRef.current.setWaitingInfo({
+        setWaitingInfo({
           gameId: data.gameId,
           playerCount: data.playerCount,
           playersNeeded: data.playersNeeded,
           message: data.message,
         });
       },
-
+      
       onPlayerConnected: (data) => {
         console.log('Player connected:', data);
-        settersRef.current.setNotification(`Player ${data.playerName || data.playerId} connected`);
-        setTimeout(() => settersRef.current.setNotification(null), 3000);
+        setNotification(`Player ${data.playerName || data.playerId} connected`);
+        setTimeout(() => setNotification(null), 3000);
       },
-
+      
       onPlayerDisconnected: (data) => {
         console.log('Player disconnected:', data);
-        settersRef.current.setNotification(`Player at position ${data.position} disconnected`);
-        setTimeout(() => settersRef.current.setNotification(null), 3000);
+        setNotification(`Player at position ${data.position} disconnected`);
+        setTimeout(() => setNotification(null), 3000);
       },
-
+      
       onPlayerReconnected: (data) => {
         console.log('Player reconnected:', data);
-        settersRef.current.setNotification(`${data.playerName} reconnected`);
-        setTimeout(() => settersRef.current.setNotification(null), 3000);
+        setNotification(`${data.playerName} reconnected`);
+        setTimeout(() => setNotification(null), 3000);
       },
-
+      
       onTrickComplete: (data) => {
         console.log('Trick complete:', data);
         // Set nextPlayerPosition to enable early analysis during the 3-second pause
         if (data.nextPlayerPosition !== null && data.nextPlayerPosition !== undefined) {
           console.log('[onTrickComplete] Setting next player position to trigger early analysis:', data.nextPlayerPosition);
-          settersRef.current.setNextPlayerPosition(data.nextPlayerPosition);
+          setNextPlayerPosition(data.nextPlayerPosition);
         }
       },
-
+      
       onRoundComplete: (data) => {
         console.log('Round complete:', data);
         // Could add animation trigger here in Phase 6
       },
-
+      
       onAllPlayersPassed: (data) => {
         console.log('All players passed:', data);
         // Show notification using the game store notification system
-        const currentGameStore = useGameStore.getState();
-        currentGameStore.showNotification('Everyone passed. Dealing new hand...', 'info');
+        const gameStore = useGameStore.getState();
+        gameStore.showNotification('Everyone passed. Dealing new hand...', 'info');
         // Auto-clear after 2.5 seconds
         setTimeout(() => {
-          currentGameStore.clearNotification();
+          gameStore.clearNotification();
         }, 2500);
       },
 
       onAIAnalysisUpdate: (data) => {
-        console.log('[useSocket] AI Analysis update received:', {
-          analysisType: data.analysisType,
-          playerPosition: data.playerPosition,
-          ...(data.analysisType === 'fold' && { foldOptionsCount: data.foldOptions?.length ?? 0 }),
-          ...(data.analysisType === 'card' && { cardsCount: data.cards?.length ?? 0 }),
-          ...(data.analysisType === 'bid' && { bidsCount: data.bids?.length ?? 0 }),
-          ...(data.analysisType === 'suit' && { suitsCount: data.suits?.length ?? 0 }),
-        });
-        // Only store analysis if it's for the current player.
-        // Note: analysis events are broadcast to the whole game room, so every client receives them.
-        // We gate on *our* seat position. If myPosition hasn't been set yet, derive it from auth+gameState.
-        const currentGameStore = useGameStore.getState();
-        const authState = useAuthStore.getState();
-        const derivedMyPosition =
-          currentGameStore.myPosition ??
-          (currentGameStore.gameState && authState.userId
-            ? (currentGameStore.gameState.players.find((p) => p.id === authState.userId)?.position ?? null)
-            : null);
-
-        console.log('[useSocket] Position check:', {
-          derivedMyPosition,
-          analysisPlayerPosition: data.playerPosition,
-          matches: derivedMyPosition !== null && data.playerPosition === derivedMyPosition,
-          gameStoreMyPosition: currentGameStore.myPosition,
-          authUserId: authState.userId,
-        });
-
-        if (derivedMyPosition !== null && data.playerPosition === derivedMyPosition) {
-          console.log('[useSocket] ✅ Storing analysis for current player');
-          // Store analysis - don't clear other types (they might still be valid)
+        console.log('AI Analysis update:', data);
+        // Only store analysis if it's for the current player
+        const gameStore = useGameStore.getState();
+        if (data.playerPosition === gameStore.myPosition) {
+          // Handle different analysis types
           if (data.analysisType === 'card' && data.cards) {
-            settersRef.current.setAIAnalysis(data.cards);
+            setAIAnalysis(data.cards);
+            setBidAnalysis(null);
+            setFoldAnalysis(null);
+            setSuitAnalysis(null);
           } else if (data.analysisType === 'bid' && data.bids) {
-            settersRef.current.setBidAnalysis(data.bids);
+            setBidAnalysis(data.bids);
+            setAIAnalysis(null);
+            setFoldAnalysis(null);
+            setSuitAnalysis(null);
           } else if (data.analysisType === 'fold' && data.foldOptions) {
-            settersRef.current.setFoldAnalysis(data.foldOptions);
+            setFoldAnalysis(data.foldOptions);
+            setAIAnalysis(null);
+            setBidAnalysis(null);
+            setSuitAnalysis(null);
           } else if (data.analysisType === 'suit' && data.suits) {
-            settersRef.current.setSuitAnalysis(data.suits);
+            setSuitAnalysis(data.suits);
+            setAIAnalysis(null);
+            setBidAnalysis(null);
+            setFoldAnalysis(null);
           }
-        } else {
-          console.log('[useSocket] ❌ Ignoring analysis - not for current player');
         }
       },
     });
 
     return () => {
       console.log('[useSocket] Cleaning up socket connection');
+
       cleanupSocketListeners(socket);
       socket.disconnect();
     };
-  }, [token]); // Only depend on token - all callbacks use refs (prevents re-render loops)
+  }, [token, setGameState, setError, setConnected, setNotification, setWaitingInfo, setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis, setNextPlayerPosition]);
 
   // Socket event emitters wrapped in callbacks
   const joinGame = useCallback((gameId: string) => {
     if (socketRef.current) {
-      const socket = socketRef.current;
-      // Reliable join + fallback state resync if we didn't receive anything promptly.
-      void emitJoinGameReliable(socket, { gameId }).catch((err) => {
-        // If join never reaches server (overload/disconnect), surface a notification.
-        const message = err instanceof Error ? err.message : 'Failed to join game';
-        settersRef.current.setNotification(`Join delayed: ${message}`);
-        setTimeout(() => settersRef.current.setNotification(null), 5000);
-      });
-
-      // If we haven't gotten waiting/state soon, request state explicitly (covers dropped updates).
-      setTimeout(() => {
-        const { gameState, waitingInfo } = useGameStore.getState();
-        const hasState = !!gameState && gameState.gameId === gameId;
-        const hasWaiting = !!waitingInfo && waitingInfo.gameId === gameId;
-        if (!hasState && !hasWaiting && socketRef.current) {
-          emitRequestState(socketRef.current, gameId);
-        }
-      }, 2500);
+      emitJoinGame(socketRef.current, { gameId });
     }
-  }, []); // No dependencies - uses refs
+  }, []);
 
   const leaveGame = useCallback((gameId: string) => {
     if (socketRef.current) {
@@ -394,19 +269,9 @@ export function useSocket() {
 
   const playCard = useCallback((gameId: string, cardId: string) => {
     if (socketRef.current) {
-      emitPlayCard(socketRef.current, { gameId, cardId }, (response) => {
-        if (!response.success) {
-          console.error('[playCard] Server rejected card play:', response);
-          // Show error notification to user
-          const message = response.reason || response.message || 'Card play failed';
-          settersRef.current.setNotification(`Card play rejected: ${message}`);
-          setTimeout(() => settersRef.current.setNotification(null), 3000);
-        } else {
-          console.log('[playCard] Server acknowledged card play');
-        }
-      });
+      emitPlayCard(socketRef.current, { gameId, cardId });
     }
-  }, []); // No dependencies - uses refs
+  }, []);
 
   const startNextRound = useCallback((gameId: string) => {
     if (socketRef.current) {
@@ -414,7 +279,7 @@ export function useSocket() {
     }
   }, []);
 
-  return useMemo(() => ({
+  return {
     socket: socketRef.current,
     joinGame,
     leaveGame,
@@ -423,5 +288,5 @@ export function useSocket() {
     makeFoldDecision,
     playCard,
     startNextRound,
-  }), [joinGame, leaveGame, placeBid, declareTrump, makeFoldDecision, playCard, startNextRound]);
+  };
 }

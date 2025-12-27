@@ -375,15 +375,21 @@ export function useLocalAnalysis() {
           : null;
     const stateId = `${gameState.gameId}-${gameState.version}-${gameState.phase}-${myPosition}-${turnKey}-${gameState.currentTrick.cards.length}`;
 
+    // Abort previous analysis if state has changed (socket update arrived)
+    // This ensures analysis doesn't continue with stale state
+    if (analysisRef.current && analysisRef.current.gameStateId !== stateId) {
+      console.log('[useLocalAnalysis] State changed, aborting previous analysis:', {
+        old: analysisRef.current.gameStateId,
+        new: stateId
+      });
+      analysisRef.current.abortController.abort();
+      analysisRef.current = null;
+    }
+
     // Skip if we've already analyzed this exact state
     if (analysisRef.current?.gameStateId === stateId) {
       console.log('[useLocalAnalysis] Skipping - already analyzing this state:', stateId);
       return;
-    }
-
-    // Abort previous analysis if running
-    if (analysisRef.current) {
-      analysisRef.current.abortController.abort();
     }
 
     // Create new abort controller for this analysis
