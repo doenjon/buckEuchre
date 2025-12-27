@@ -599,41 +599,15 @@ export function finishRound(state: GameState): GameState {
     return state;
   }
 
-  // Log scoring details for debugging
-  console.log('[SCORING] Calculating round scores:', {
-    isClubsTurnUp: state.isClubsTurnUp,
-    winningBidderPosition: state.winningBidderPosition,
-    highestBid: state.highestBid,
-    playerStats: state.players.map((p, i) => ({
-      position: i,
-      name: p.name,
-      tricksTaken: p.tricksTaken,
-      folded: p.folded,
-      currentScore: p.score,
-    })),
-  });
-
   // Calculate score changes
+  // Note: Removed verbose logging here as it's called thousands of times during MCTS simulations
+  // The idempotency warning above is sufficient for debugging actual game state issues
   const scoreChanges = calculateRoundScores(
     state.players,
     state.winningBidderPosition,
     state.highestBid!,
     state.isClubsTurnUp
   );
-
-  console.log('[SCORING] Score changes calculated:', {
-    scoreChanges,
-    breakdown: state.players.map((p, i) => ({
-      position: i,
-      name: p.name,
-      tricksTaken: p.tricksTaken,
-      folded: p.folded,
-      change: scoreChanges[p.position],
-      oldScore: p.score,
-      newScore: p.score + scoreChanges[p.position],
-      isBidder: p.position === state.winningBidderPosition,
-    })),
-  });
 
   // Apply score changes
   const players = state.players.map((p, i) => ({

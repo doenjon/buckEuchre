@@ -365,10 +365,19 @@ export function useLocalAnalysis() {
 
     // Create a unique ID for this game state + position combination
     // Include currentTrick length to detect mid-trick state changes
-    const stateId = `${gameState.gameId}-${gameState.version}-${gameState.phase}-${myPosition}-${gameState.currentTrick.cards.length}`;
+    // Also include currentPlayerPosition for PLAYING phase to detect turn changes
+    const turnKey = gameState.phase === 'PLAYING' 
+      ? gameState.currentPlayerPosition 
+      : gameState.phase === 'BIDDING' 
+        ? gameState.currentBidder 
+        : gameState.phase === 'DECLARING_TRUMP'
+          ? gameState.winningBidderPosition
+          : null;
+    const stateId = `${gameState.gameId}-${gameState.version}-${gameState.phase}-${myPosition}-${turnKey}-${gameState.currentTrick.cards.length}`;
 
     // Skip if we've already analyzed this exact state
     if (analysisRef.current?.gameStateId === stateId) {
+      console.log('[useLocalAnalysis] Skipping - already analyzing this state:', stateId);
       return;
     }
 
