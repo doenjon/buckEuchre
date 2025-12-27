@@ -4,6 +4,8 @@
  */
 
 import * as nodemailer from 'nodemailer';
+import * as fs from 'fs';
+import * as path from 'path';
 
 interface BugReportData {
   description: string;
@@ -17,10 +19,64 @@ interface BugReportData {
 }
 
 /**
+ * Save bug report to file
+ */
+function saveBugReportToFile(data: BugReportData): void {
+  try {
+    const bugReportsDir = path.join(process.cwd(), 'bug-reports');
+    
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(bugReportsDir)) {
+      fs.mkdirSync(bugReportsDir, { recursive: true });
+    }
+
+    // Create filename with timestamp
+    const date = new Date(data.timestamp);
+    const filename = `bug-report-${date.toISOString().replace(/[:.]/g, '-')}.txt`;
+    const filepath = path.join(bugReportsDir, filename);
+
+    // Format the report content
+    const reportContent = `
+===== BUG REPORT =====
+
+Timestamp: ${data.timestamp}
+
+User Information:
+- User ID: ${data.userId || 'Anonymous'}
+- Username: ${data.username || 'N/A'}
+- Email: ${data.email || 'N/A'}
+
+Browser Information:
+- User Agent: ${data.userAgent}
+- URL: ${data.url}
+
+Bug Description:
+${data.description}
+
+===== CONSOLE LOGS =====
+
+${data.logs || 'No logs available'}
+
+===== END OF REPORT =====
+`;
+
+    // Write to file
+    fs.writeFileSync(filepath, reportContent, 'utf-8');
+    console.log(`[BUG REPORT] Saved to file: ${filepath}`);
+  } catch (error) {
+    console.error('[BUG REPORT] Failed to save to file:', error);
+    // Don't throw - email is still sent
+  }
+}
+
+/**
  * Send a bug report email
  */
 export async function submitBugReport(data: BugReportData): Promise<void> {
   const { description, logs, userAgent, url, timestamp, userId, username, email } = data;
+
+  // Save to file first
+  saveBugReportToFile(data);
 
   // Format the email content
   const emailBody = `
