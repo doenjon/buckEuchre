@@ -1073,6 +1073,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
       }
 
       // Schedule transition to actual state after UI delay - this is ONLY for UI, not game logic
+      // IMPORTANT: Always schedule transition, even for ROUND_OVER phase, so the last card is visible
       displayStateManager.scheduleTransition(validated.gameId, async () => {
         console.log(`[PLAY_CARD] Transition callback starting for game ${validated.gameId}`);
         try {
@@ -1099,6 +1100,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
 
           // Increment version for transition state - this signals the actual state after display
           // Display state used same version, so we increment here to show this is the real update
+          // IMPORTANT: Always emit, even if phase is ROUND_OVER, so the last card is visible
           const stateToEmit = {
             ...freshState,
             version: (freshState.version || 0) + 1,
@@ -1112,11 +1114,13 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
           console.log(`[PLAY_CARD] Delayed transition after showing completed trick`, {
             phase: freshState.phase,
             currentPlayerPosition: freshState.currentPlayerPosition,
-            trickNumber: freshState.currentTrick.number,
-            cardsInTrick: freshState.currentTrick.cards.length,
+            trickNumber: freshState.currentTrick?.number || 'N/A',
+            cardsInTrick: freshState.currentTrick?.cards.length || 0,
             tricksCompleted: freshState.tricks.length,
+            isRoundOver: freshState.phase === 'ROUND_OVER',
           });
           // NOTE: AI trigger happens immediately above, not here - delay is only for UI
+          // NOTE: We emit even for ROUND_OVER phase so the last card is visible before round ends
         } catch (error) {
           console.error(`[PLAY_CARD] Error in transition callback for game ${validated.gameId}:`, error);
         }

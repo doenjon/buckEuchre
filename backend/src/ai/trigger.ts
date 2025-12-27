@@ -238,11 +238,15 @@ async function sendAIAnalysis(
   }
 }
 
+// Track active AI triggers to prevent concurrent triggers for the same game
+const activeAITriggers = new Set<string>();
+
 /**
  * Check if AI should act and trigger if needed
  *
  * ROBUST: No throttling. Game state prevents duplicates.
  * Always fetches fresh state from memory.
+ * Uses simple lock to prevent concurrent triggers for same game.
  *
  * @param gameId - ID of the game
  * @param _gameState - DEPRECATED: Ignored, fresh state is fetched from memory
@@ -253,7 +257,14 @@ export async function checkAndTriggerAI(
   _gameState: GameState, // Deprecated - always fetch fresh
   io: Server
 ): Promise<void> {
+  // Prevent concurrent triggers for the same game
+  if (activeAITriggers.has(gameId)) {
+    console.log(`[AI Trigger] ⏸️  Already processing AI trigger for game ${gameId}, skipping duplicate`);
+    return;
+  }
+
   try {
+    activeAITriggers.add(gameId);
     console.log(`[AI Trigger] 🔍 ENTRY: gameId=${gameId}`);
     // Always fetch fresh state
     const gameState = getActiveGameState(gameId);
@@ -344,6 +355,9 @@ export async function checkAndTriggerAI(
     console.error(`[AI Trigger] ❌ FATAL ERROR in checkAndTriggerAI:`, error);
     console.error(`[AI Trigger] Error message:`, error.message);
     console.error(`[AI Trigger] Error stack:`, error.stack);
+  } finally {
+    // Always remove lock, even on error
+    activeAITriggers.delete(gameId);
   }
 }
 
