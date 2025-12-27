@@ -663,11 +663,20 @@ async function executeAICardPlay(
           return;
         }
 
+        // ALWAYS use fresh state from memory for both emission and AI trigger
+        // State may have changed during the 3-second delay (e.g., player played a card)
+        const freshState = getActiveGameState(gameId) || currentState;
+        
+        if (!freshState) {
+          console.error(`[AI] No state available for game ${gameId} during transition - this should not happen`);
+          return;
+        }
+
         // Increment version for transition state - this signals the actual state after display
         // Display state used same version, so we increment here to show this is the real update
         const stateWithUpdatedTimestamp = {
-          ...currentState,
-          version: (currentState.version || 0) + 1,
+          ...freshState,
+          version: (freshState.version || 0) + 1,
           updatedAt: Date.now(),
         };
 
@@ -677,20 +686,19 @@ async function executeAICardPlay(
           data: play,
         });
         console.log(`[AI] [PLAY_CARD] Delayed transition after showing completed trick`, {
-          phase: currentState.phase,
-          currentPlayerPosition: currentState.currentPlayerPosition,
-          trickNumber: currentState.currentTrick.number,
-          cardsInTrick: currentState.currentTrick.cards.length,
-          tricksCompleted: currentState.tricks.length,
+          phase: freshState.phase,
+          currentPlayerPosition: freshState.currentPlayerPosition,
+          trickNumber: freshState.currentTrick.number,
+          cardsInTrick: freshState.currentTrick.cards.length,
+          tricksCompleted: freshState.tricks.length,
         });
 
         // Trigger AI after delay completes (only if round is still in progress)
-        // Use fresh state from memory to avoid stale state issues
-        const freshStateAfterDelay = getActiveGameState(gameId);
-        if (freshStateAfterDelay && freshStateAfterDelay.phase === 'PLAYING') {
+        // Use the same fresh state we just emitted to ensure consistency
+        if (freshState.phase === 'PLAYING') {
           console.log(`[AI] [PLAY_CARD] Triggering next AI after transition delay`);
           try {
-            await checkAndTriggerAI(gameId, freshStateAfterDelay, io);
+            await checkAndTriggerAI(gameId, freshState, io);
           } catch (triggerError) {
             console.error(`[AI] [PLAY_CARD] Error triggering AI after transition:`, triggerError);
             // Schedule a retry after a short delay
@@ -705,7 +713,7 @@ async function executeAICardPlay(
             }, 1000);
           }
         } else {
-          console.log(`[AI] [PLAY_CARD] Not triggering AI - phase is ${freshStateAfterDelay?.phase || 'unknown'}`);
+          console.log(`[AI] [PLAY_CARD] Not triggering AI - phase is ${freshState.phase || 'unknown'}`);
         }
       } catch (error) {
         console.error(`[AI] [PLAY_CARD] Error in transition callback for game ${gameId}:`, error);
