@@ -55,10 +55,13 @@ export function useLocalAnalysis() {
     setIsThinking(true);
 
     try {
-      // Create engine with 20k iterations
-      const maxIterations = ANALYSIS_STAGES[ANALYSIS_STAGES.length - 1]; // 20000
+      // Use fewer simulations for non-PLAYING phases to prevent UI freezing
+      // BIDDING, FOLDING_DECISION, and DECLARING_TRUMP have fewer options so need less analysis
+      const simulationCount = state.phase === 'PLAYING' ? 20000 : 5000;
+
+      // Create engine with appropriate iteration count
       const engine = new ISMCTSEngine({
-        simulations: maxIterations,
+        simulations: simulationCount,
         verbose: false,
       });
 
