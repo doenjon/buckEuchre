@@ -84,6 +84,28 @@ export async function executeAITurn(
   aiPlayerId: string,
   io: Server
 ): Promise<void> {
+  // Wrap the actual execution with timeout protection
+  return Promise.race([
+    executeAITurnInternal(gameId, aiPlayerId, io),
+    new Promise<void>((_, reject) =>
+      setTimeout(() => reject(new Error('AI turn timeout - exceeded 15 seconds')), AI_TURN_TIMEOUT_MS)
+    ),
+  ]).catch(async (error) => {
+    console.error(`[AI Executor] ❌ AI turn failed or timed out:`, error.message);
+    // On timeout or error, trigger recovery to continue the game
+    await triggerRecoveryCheck(gameId, io);
+    throw error;
+  });
+}
+
+/**
+ * Internal function that executes the AI turn
+ */
+async function executeAITurnInternal(
+  gameId: string,
+  aiPlayerId: string,
+  io: Server
+): Promise<void> {
   const startTime = Date.now();
   let actionTaken = false; // Track if AI actually did something
 
