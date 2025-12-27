@@ -1051,7 +1051,28 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
       // Store finalState for fallback in case memory state is unavailable
       const stateForTransition = finalState;
 
-      // Schedule transition to actual state after delay (always 3000ms for UI consistency)
+      // Trigger AI immediately after trick completes - this is game logic, not UI timing
+      // The delay is only for UI display, it shouldn't affect game progression
+      if (finalState.phase === 'PLAYING') {
+        console.log(`[PLAY_CARD] Triggering next AI immediately after trick completion`);
+        try {
+          await checkAndTriggerAI(validated.gameId, finalState, io);
+        } catch (triggerError) {
+          console.error(`[PLAY_CARD] Error triggering AI after trick completion:`, triggerError);
+          // Schedule a retry after a short delay
+          setTimeout(async () => {
+            const retryState = getActiveGameState(validated.gameId);
+            if (retryState && retryState.phase === 'PLAYING') {
+              console.log(`[PLAY_CARD] Retrying AI trigger after error`);
+              await checkAndTriggerAI(validated.gameId, retryState, io).catch(e =>
+                console.error(`[PLAY_CARD] Retry also failed:`, e)
+              );
+            }
+          }, 1000);
+        }
+      }
+
+      // Schedule transition to actual state after UI delay - this is ONLY for UI, not game logic
       displayStateManager.scheduleTransition(validated.gameId, async () => {
         console.log(`[PLAY_CARD] Transition callback starting for game ${validated.gameId}`);
         try {
@@ -1095,43 +1116,9 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
             cardsInTrick: freshState.currentTrick.cards.length,
             tricksCompleted: freshState.tricks.length,
           });
-
-          // Trigger AI after delay completes using the FRESH state (not stale captured state)
-          // Only if round is still in progress
-          if (freshState.phase === 'PLAYING') {
-            console.log(`[PLAY_CARD] Triggering next AI after transition delay`);
-            try {
-              // Re-fetch state right before AI trigger to ensure freshness
-              const stateForAI = getActiveGameState(validated.gameId) || freshState;
-              await checkAndTriggerAI(validated.gameId, stateForAI, io);
-            } catch (triggerError) {
-              console.error(`[PLAY_CARD] Error triggering AI after transition:`, triggerError);
-              // Schedule a retry after a short delay
-              setTimeout(async () => {
-                const retryState = getActiveGameState(validated.gameId);
-                if (retryState && retryState.phase === 'PLAYING') {
-                  console.log(`[PLAY_CARD] Retrying AI trigger after error`);
-                  await checkAndTriggerAI(validated.gameId, retryState, io).catch(e =>
-                    console.error(`[PLAY_CARD] Retry also failed:`, e)
-                  );
-                }
-              }, 1000);
-            }
-          } else {
-            console.log(`[PLAY_CARD] Not triggering AI - phase is ${freshState.phase}`);
-          }
+          // NOTE: AI trigger happens immediately above, not here - delay is only for UI
         } catch (error) {
           console.error(`[PLAY_CARD] Error in transition callback for game ${validated.gameId}:`, error);
-          // Try to recover by triggering AI check
-          setTimeout(async () => {
-            const recoveryState = getActiveGameState(validated.gameId);
-            if (recoveryState) {
-              console.log(`[PLAY_CARD] Attempting recovery trigger after callback error`);
-              await checkAndTriggerAI(validated.gameId, recoveryState, io).catch(e =>
-                console.error(`[PLAY_CARD] Recovery trigger failed:`, e)
-              );
-            }
-          }, 500);
         }
       });
     } else {
