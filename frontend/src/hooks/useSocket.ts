@@ -24,7 +24,11 @@ import {
 
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
-  const { token } = useAuthStore();
+  // Use selector to only subscribe to token changes, not entire auth store
+  const token = useAuthStore(state => state.token);
+  
+  // Track last processed version to prevent duplicate processing
+  const lastProcessedVersionRef = useRef<number>(0);
 
   // Store setters in refs to avoid re-renders - getters are stable, no need to subscribe to stores
   const settersRef = useRef({
@@ -107,20 +111,12 @@ export function useSocket() {
       },
 
       onGameStateUpdate: (data) => {
-        console.log('[useSocket] GAME_STATE_UPDATE received:', {
-          event: data.event,
-          phase: data.gameState?.phase,
-          version: data.gameState?.version,
-          winningBidder: data.gameState?.winningBidderPosition,
-          trumpSuit: data.gameState?.trumpSuit
-        });
-
         // Validate that we have a valid game state
         if (!data.gameState || !data.gameState.gameId) {
-          console.error('Received invalid game state update:', data);
+          console.error('[useSocket] Received invalid game state update:', data);
           const currentState = useGameStore.getState().gameState;
           if (socketRef.current && currentState?.gameId) {
-            console.log('Requesting fresh state due to invalid update');
+            console.log('[useSocket] Requesting fresh state due to invalid update');
             emitRequestState(socketRef.current, currentState.gameId);
           }
           return;
@@ -130,6 +126,23 @@ export function useSocket() {
         const currentState = useGameStore.getState().gameState;
         const newVersion = data.gameState.version || 0;
         const currentVersion = currentState?.version || 0;
+        const lastProcessed = lastProcessedVersionRef.current;
+
+        // Skip if we've already processed this exact version (duplicate event)
+        if (newVersion === lastProcessed && newVersion === currentVersion) {
+          // Silently ignore - this is a duplicate event we've already processed
+          return;
+        }
+
+        console.log('[useSocket] GAME_STATE_UPDATE received:', {
+          event: data.event,
+          phase: data.gameState?.phase,
+          version: data.gameState?.version,
+          currentVersion,
+          lastProcessed,
+          winningBidder: data.gameState?.winningBidderPosition,
+          trumpSuit: data.gameState?.trumpSuit
+        });
 
         if (newVersion > currentVersion) {
           // Newer version - update state
@@ -141,6 +154,7 @@ export function useSocket() {
           const newBidder = data.gameState.currentBidder;
 
           settersRef.current.setGameState(data.gameState);
+          lastProcessedVersionRef.current = newVersion;
 
           // Only clear analysis when situation actually changes
           const phaseChanged = oldPhase !== newPhase;
@@ -170,11 +184,9 @@ export function useSocket() {
             emitRequestState(socketRef.current, data.gameState.gameId);
           }
         } else {
-          // Same version - duplicate, ignore
-          if (!currentState) {
-            // No current state, apply it anyway
-            settersRef.current.setGameState(data.gameState);
-          }
+          // Same version - duplicate, ignore silently
+          // Don't log or process - this is expected during rapid state updates
+          return;
         }
       },
 
