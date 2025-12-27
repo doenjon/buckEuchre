@@ -355,8 +355,16 @@ export function rollout(
         break;
       }
 
+      case 'DEALING': {
+        // DEALING phase should auto-transition to BIDDING once cards are dealt
+        // This shouldn't normally happen during rollouts, but if it does, we wait for the transition
+        // Log to help diagnose why we're hitting this phase
+        console.warn('[Rollout] Encountered DEALING phase during simulation - waiting for auto-transition');
+        break;
+      }
+
       default:
-        // Shouldn't reach here
+        // Unknown phase - log and return 0
         console.warn(`[Rollout] Unknown phase: ${currentState.phase}`);
         return 0;
     }
