@@ -94,7 +94,13 @@ export function useSocket() {
       },
       
       onGameStateUpdate: (data) => {
-        console.log('Game state update:', data);
+        console.log('[useSocket] GAME_STATE_UPDATE received:', {
+          event: data.event,
+          phase: data.gameState?.phase,
+          version: data.gameState?.version,
+          winningBidder: data.gameState?.winningBidderPosition,
+          trumpSuit: data.gameState?.trumpSuit
+        });
 
         // Validate that we have a valid game state
         if (!data.gameState || !data.gameState.gameId) {
