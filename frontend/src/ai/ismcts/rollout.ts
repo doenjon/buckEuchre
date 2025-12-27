@@ -356,11 +356,11 @@ export function rollout(
       }
 
       case 'DEALING': {
-        // DEALING phase should auto-transition to BIDDING once cards are dealt
-        // This shouldn't normally happen during rollouts, but if it does, we wait for the transition
-        // Log to help diagnose why we're hitting this phase
-        console.warn('[Rollout] Encountered DEALING phase during simulation - waiting for auto-transition');
-        break;
+        // DEALING phase occurs when all players pass during bidding
+        // This triggers a re-deal with the next dealer
+        // Since no hand was played, score change is 0 (correct)
+        // Return 0 to end this simulation (no points awarded/penalized)
+        return 0;
       }
 
       default:
