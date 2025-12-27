@@ -191,10 +191,25 @@ export function useSocket() {
             emitRequestState(socketRef.current, gameId);
           }
         } else if (newVersion === currentVersion && currentState?.gameId === gameId) {
-          // Same version for same game - this is a duplicate, mark as processed and ignore
-          lastProcessedVersionsRef.current.set(gameId, newVersion);
-          // Silently ignore - already processed
-          return;
+          // Same version - could be a duplicate OR a display state update
+          // Display states (showing completed tricks) use the same version but different content
+          // Check if this represents a meaningful state change (display state)
+          const isDisplayState = 
+            data.gameState.currentTrick?.winner !== null && 
+            currentState.currentTrick?.winner === null &&
+            data.gameState.currentTrick?.cards?.length === 4;
+          
+          if (isDisplayState) {
+            // This is a display state showing a completed trick - accept it even with same version
+            console.log('[useSocket] Accepting display state with same version (completed trick)');
+            settersRef.current.setGameState(data.gameState);
+            lastProcessedVersionsRef.current.set(gameId, newVersion);
+          } else {
+            // Same version, same content - this is a true duplicate, ignore
+            lastProcessedVersionsRef.current.set(gameId, newVersion);
+            // Silently ignore - already processed
+            return;
+          }
         } else {
           // No current state but we have a new one - apply it
           settersRef.current.setGameState(data.gameState);
