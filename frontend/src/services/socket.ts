@@ -246,6 +246,11 @@ export function setupSocketListeners(
     onAIAnalysisUpdate?: (data: any) => void;
   }
 ): void {
+  // CRITICAL: Remove all existing listeners first to prevent duplicates
+  // The socket is a singleton, so if setupSocketListeners is called multiple times,
+  // we'd accumulate listeners without this cleanup
+  cleanupSocketListeners(socket);
+
   if (handlers.onConnect) {
     socket.on('connect', handlers.onConnect);
   }
