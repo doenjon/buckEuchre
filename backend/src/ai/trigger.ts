@@ -274,49 +274,32 @@ export async function checkAndTriggerAI(
     }
     console.log(`[AI Trigger] 📊 Game state: phase=${gameState.phase}, version=${gameState.version}`);
 
-    // FOLDING_DECISION phase: Only the current player (first undecided) should act
-    // This is sequential, just like playing cards - one player at a time in order
+    // Special handling for FOLDING_DECISION phase
     if (gameState.phase === 'FOLDING_DECISION') {
-      // Use getCurrentActingPlayer to find the first undecided player
-      const currentPlayerId = getCurrentActingPlayer(gameState);
-      
-      if (!currentPlayerId) {
-        console.log(`[AI Trigger] ⚠️ No current acting player in FOLDING_DECISION phase (all decided?)`);
-        return;
-      }
+      // Check all non-bidders
+      for (let pos = 0; pos < 4; pos++) {
+        const player = gameState.players[pos];
+        
+        // Skip bidder and already-decided players
+        if (pos === gameState.winningBidderPosition || player.foldDecision !== 'UNDECIDED') {
+          continue;
+        }
 
-      const currentPlayer = gameState.players.find(p => p.id === currentPlayerId);
-      if (!currentPlayer) {
-        console.error(`[AI Trigger] ❌ Current player ${currentPlayerId} not found in game state`);
-        return;
-      }
-
-      console.log(`[AI Trigger] 👤 Current player in FOLDING_DECISION: ${currentPlayer.name} (${currentPlayerId}) at position ${currentPlayer.position}`);
-
-      // Check if AI (try name first, then database)
-      let isAI = isAIPlayerByName(currentPlayer.name);
-      console.log(`[AI Trigger] 🤖 isAIPlayerByName("${currentPlayer.name}") = ${isAI}`);
-      
-      if (!isAI) {
-        console.log(`[AI Trigger] 🔍 Checking database for player ${currentPlayerId}...`);
-        isAI = await isAIPlayerAsync(currentPlayerId);
-        console.log(`[AI Trigger] 🤖 isAIPlayerAsync("${currentPlayerId}") = ${isAI}`);
-      }
-
-      if (isAI) {
-        // AI needs to act - trigger it (await to keep lock until turn completes)
-        console.log(`[AI Trigger] ✅ AI player detected - triggering fold decision for ${currentPlayer.name} (${currentPlayerId})`);
-        await executeAITurn(gameId, currentPlayerId, io)
-          .then(() => {
-            console.log(`[AI Trigger] ✅ AI fold decision promise resolved for ${currentPlayer.name}`);
-          })
-          .catch(err => {
-            console.error(`[AI Trigger] ❌ AI fold decision promise rejected for ${currentPlayer.name}:`, err);
-            console.error(`[AI Trigger] Error stack:`, err.stack);
-          });
-      } else {
-        // Human player - skip server analysis (should run locally on the client)
-        console.log(`[AI Trigger] 👤 Human player in FOLDING_DECISION phase - skipping server analysis (should run locally)`);
+        // Check if AI or human
+        const isAI = isAIPlayerByName(player.name);
+        
+        if (isAI) {
+          // AI needs to act - trigger it (no delay, no throttle - game state prevents duplicates)
+          console.log(`[AI Trigger] Triggering AI fold decision for ${player.name} at position ${pos}`);
+          // Note: For FOLDING_DECISION, multiple AIs can act simultaneously (by design)
+          // So we don't await here - each AI acts independently
+          executeAITurn(gameId, player.id, io).catch(err => 
+            console.error(`[AI Trigger] Error:`, err)
+          );
+        } else {
+          // Human needs analysis - skip server analysis (should run locally on the client)
+          console.log(`[AI Trigger] 👤 Human player ${player.name} at position ${pos} in FOLDING_DECISION phase - skipping server analysis (should run locally)`);
+        }
       }
       return;
     }
