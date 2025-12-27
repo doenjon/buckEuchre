@@ -246,6 +246,13 @@ export class ISMCTSEngine {
       return legalActions[0];
     }
 
+    // Log all child statistics
+    const stats = root.getChildStatistics();
+    console.log('[ISMCTS] Available options:');
+    for (const [key, stat] of stats) {
+      console.log(`  ${key}: visits=${stat.visits}, avgValue=${stat.avgValue.toFixed(3)}, buckProb=${stat.buckProbability.toFixed(3)}`);
+    }
+
     // Compare most visited vs best value to detect divergence
     const bestValueChild = root.getBestValueChild();
     if (bestValueChild && bestChild !== bestValueChild) {
@@ -253,6 +260,8 @@ export class ISMCTSEngine {
       console.log(`  Most Visited: ${serializeAction(bestChild.action)} - visits=${bestChild.visits}, avgValue=${bestChild.averageValue.toFixed(3)}, buckProb=${bestChild.getBuckProbability().toFixed(3)}`);
       console.log(`  Best Value:   ${serializeAction(bestValueChild.action)} - visits=${bestValueChild.visits}, avgValue=${bestValueChild.averageValue.toFixed(3)}, buckProb=${bestValueChild.getBuckProbability().toFixed(3)}`);
       console.log(`  AI will choose: ${serializeAction(bestChild.action)} (most visited)`);
+    } else {
+      console.log(`[ISMCTS] AI chose: ${serializeAction(bestChild.action)} - visits=${bestChild.visits}, avgValue=${bestChild.averageValue.toFixed(3)}, buckProb=${bestChild.getBuckProbability().toFixed(3)}`);
     }
 
     return bestChild.action;
