@@ -22,7 +22,18 @@ const ANALYSIS_STAGES = [5000, 10000, 15000, 20000];
  * Hook for running client-side MCTS analysis with progress tracking
  */
 export function useLocalAnalysis() {
-  const { gameState, myPosition, setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis } = useGameStore();
+  // Use stable selectors for state and setters to prevent unnecessary re-renders
+  const gameState = useGameStore(state => state.gameState);
+  const myPosition = useGameStore(state => state.myPosition);
+
+  // Store setters in refs to ensure stable callback references and prevent re-render loops
+  const settersRef = useRef({
+    setAIAnalysis: useGameStore.getState().setAIAnalysis,
+    setBidAnalysis: useGameStore.getState().setBidAnalysis,
+    setFoldAnalysis: useGameStore.getState().setFoldAnalysis,
+    setSuitAnalysis: useGameStore.getState().setSuitAnalysis,
+  });
+
   const [isThinking, setIsThinking] = useState(false);
   const [progress, setProgress] = useState<AnalysisProgress | null>(null);
   const analysisRef = useRef<{ gameStateId: string; position: number; abortController: AbortController } | null>(null);
@@ -108,7 +119,7 @@ export function useLocalAnalysis() {
           }));
           
           if (!abortController.signal.aborted) {
-            setBidAnalysis(bidAnalysis);
+            settersRef.current.setBidAnalysis(bidAnalysis);
           }
         } else if (state.phase === 'FOLDING_DECISION') {
           // Convert to FoldAnalysis
@@ -134,7 +145,7 @@ export function useLocalAnalysis() {
           }));
           
           if (!abortController.signal.aborted) {
-            setFoldAnalysis(foldAnalysis);
+            settersRef.current.setFoldAnalysis(foldAnalysis);
           }
         } else if (state.phase === 'DECLARING_TRUMP') {
           // Convert to SuitAnalysis
@@ -160,7 +171,7 @@ export function useLocalAnalysis() {
           }));
           
           if (!abortController.signal.aborted) {
-            setSuitAnalysis(suitAnalysis);
+            settersRef.current.setSuitAnalysis(suitAnalysis);
           }
         }
       } else {
@@ -251,7 +262,7 @@ export function useLocalAnalysis() {
               // Update UI with intermediate results every 1000 simulations
               if (!abortController.signal.aborted) {
                 const cardAnalysis = convertToCardAnalysis(intermediateResults);
-                setAIAnalysis(cardAnalysis);
+                settersRef.current.setAIAnalysis(cardAnalysis);
               }
             },
             abortController.signal
@@ -260,7 +271,7 @@ export function useLocalAnalysis() {
           // Set final results
           if (!abortController.signal.aborted) {
             const cardAnalysis = convertToCardAnalysis(results);
-            setAIAnalysis(cardAnalysis);
+            settersRef.current.setAIAnalysis(cardAnalysis);
           }
         }
       }
@@ -276,7 +287,7 @@ export function useLocalAnalysis() {
       setIsThinking(false);
       setProgress(null);
     }
-  }, [setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis]);
+  }, []); // No dependencies - uses refs for all setters
 
   // Auto-trigger analysis when it's my turn
   useEffect(() => {
@@ -287,10 +298,10 @@ export function useLocalAnalysis() {
       // Clear all analysis and abort ongoing analysis
       if (analysisRef.current) {
         analysisRef.current.abortController.abort();
-        setAIAnalysis(null);
-        setBidAnalysis(null);
-        setFoldAnalysis(null);
-        setSuitAnalysis(null);
+        settersRef.current.setAIAnalysis(null);
+        settersRef.current.setBidAnalysis(null);
+        settersRef.current.setFoldAnalysis(null);
+        settersRef.current.setSuitAnalysis(null);
         analysisRef.current = null;
       }
       return;
@@ -306,10 +317,10 @@ export function useLocalAnalysis() {
       // Clear all analysis and abort ongoing analysis
       if (analysisRef.current) {
         analysisRef.current.abortController.abort();
-        setAIAnalysis(null);
-        setBidAnalysis(null);
-        setFoldAnalysis(null);
-        setSuitAnalysis(null);
+        settersRef.current.setAIAnalysis(null);
+        settersRef.current.setBidAnalysis(null);
+        settersRef.current.setFoldAnalysis(null);
+        settersRef.current.setSuitAnalysis(null);
         analysisRef.current = null;
       }
       return;
@@ -343,10 +354,10 @@ export function useLocalAnalysis() {
       // Clear all analysis when not my turn and abort ongoing analysis
       if (analysisRef.current) {
         analysisRef.current.abortController.abort();
-        setAIAnalysis(null);
-        setBidAnalysis(null);
-        setFoldAnalysis(null);
-        setSuitAnalysis(null);
+        settersRef.current.setAIAnalysis(null);
+        settersRef.current.setBidAnalysis(null);
+        settersRef.current.setFoldAnalysis(null);
+        settersRef.current.setSuitAnalysis(null);
         analysisRef.current = null;
       }
       return;
@@ -393,7 +404,7 @@ export function useLocalAnalysis() {
 
     // Cleanup timeout if effect re-runs
     return () => clearTimeout(timeoutId);
-  }, [gameState, myPosition, runAnalysis, setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis]);
+  }, [gameState, myPosition, runAnalysis]); // Only depend on state values - setters use refs
 
   // Cleanup on unmount
   useEffect(() => {
