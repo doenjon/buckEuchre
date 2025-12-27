@@ -344,6 +344,13 @@ export function useSocket() {
     }
   }, []);
 
+  const requestState = useCallback((gameId: string) => {
+    if (socketRef.current) {
+      console.log('[useSocket] Requesting fresh game state for:', gameId);
+      emitRequestState(socketRef.current, gameId);
+    }
+  }, []);
+
   return {
     socket: socketRef.current,
     joinGame,
@@ -353,5 +360,6 @@ export function useSocket() {
     makeFoldDecision,
     playCard,
     startNextRound,
+    requestState,
   };
 }

@@ -3,23 +3,45 @@
  * @description Main game page
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useGame } from '@/hooks/useGame';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useAuthStore } from '@/stores/authStore';
 import { GameBoard } from '@/components/game/GameBoard';
 import { WaitingForPlayers } from '@/components/game/WaitingForPlayers';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 
 export function GamePage() {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
   const { checkAuth } = useAuth();
-  const { joinGame, gameState, myPosition, setMyPosition, waitingInfo, error, clearGame } = useGame();
+  const { joinGame, gameState, myPosition, setMyPosition, waitingInfo, error, clearGame, requestState } = useGame();
   const authStore = useAuthStore();
   const userId = authStore.userId;
+
+  // Pull-to-refresh handler
+  const handleRefresh = useCallback(async () => {
+    console.log('[GamePage] Pull-to-refresh triggered');
+    requestState();
+    // Add a small delay to show the refresh indicator
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }, [requestState]);
+
+  const {
+    containerRef,
+    isRefreshing,
+    pullDistance,
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd,
+  } = usePullToRefresh({
+    onRefresh: handleRefresh,
+    threshold: 80,
+    enabled: !!gameState, // Only enable when we have a game state
+  });
   
   // Debug: Log auth state changes
   useEffect(() => {
@@ -197,12 +219,42 @@ export function GamePage() {
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100">
+    <div
+      ref={containerRef}
+      className="h-screen overflow-hidden bg-slate-950 bg-[radial-gradient(circle_at_top,_#1f6f43,_transparent_55%)] text-slate-100"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Pull-to-refresh indicator */}
+      {(pullDistance > 0 || isRefreshing) && (
+        <div
+          className="absolute left-0 right-0 flex justify-center z-50 pointer-events-none"
+          style={{
+            top: `calc(env(safe-area-inset-top, 0px) + ${Math.min(pullDistance, 80)}px)`,
+            opacity: Math.min(pullDistance / 60, 1),
+            transition: isRefreshing ? 'none' : 'opacity 0.15s ease-out'
+          }}
+        >
+          <div className="rounded-full bg-slate-800/90 border border-emerald-400/30 p-2 shadow-lg backdrop-blur">
+            <RefreshCw
+              className={`h-5 w-5 text-emerald-300 ${isRefreshing ? 'animate-spin' : ''}`}
+              style={{
+                transform: isRefreshing ? 'none' : `rotate(${pullDistance * 3}deg)`,
+                transition: isRefreshing ? 'none' : 'transform 0.1s ease-out'
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       <div
         className="mx-auto flex h-full w-full max-w-6xl flex-col gap-2 md:gap-5 px-4 sm:px-6 lg:px-8"
         style={{
           paddingTop: `calc(0.5rem + env(safe-area-inset-top, 0px))`,
-          paddingBottom: `calc(0.5rem + env(safe-area-inset-bottom, 0px))`
+          paddingBottom: `calc(0.5rem + env(safe-area-inset-bottom, 0px))`,
+          transform: pullDistance > 0 ? `translateY(${Math.min(pullDistance * 0.3, 24)}px)` : 'none',
+          transition: pullDistance > 0 ? 'none' : 'transform 0.2s ease-out'
         }}
       >
         <header className="flex-shrink-0 flex flex-col gap-2 text-center pt-2 sm:pt-4 md:pt-6">

@@ -46,6 +46,11 @@ export function useGame() {
     socket.startNextRound(gameStore.gameState.gameId);
   }, [socket, gameStore.gameState]);
 
+  const requestState = useCallback(() => {
+    if (!gameStore.gameState) return;
+    socket.requestState(gameStore.gameState.gameId);
+  }, [socket, gameStore.gameState]);
+
   // Computed values
   const myPlayer = gameStore.getMyPlayer();
   const isMyTurn = gameStore.isMyTurn();
@@ -72,6 +77,7 @@ export function useGame() {
     makeFoldDecision,
     playCard,
     startNextRound,
+    requestState,
     clearGame: gameStore.clearGame,
     setWaitingInfo: gameStore.setWaitingInfo,
   };
