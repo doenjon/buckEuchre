@@ -25,10 +25,42 @@ import {
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
   const { token } = useAuthStore();
-  const { setGameState, setError, setWaitingInfo, setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis, setNextPlayerPosition } = useGameStore();
-  const { setConnected, setNotification } = useUIStore();
+
+  // Get store setters - these should be stable, but we use refs to be extra safe
+  // and prevent any potential re-render loops from dependency array changes
+  const gameStore = useGameStore();
+  const uiStore = useUIStore();
+
+  // Store the setters in refs to ensure stable callback references
+  const settersRef = useRef({
+    setGameState: gameStore.setGameState,
+    setError: gameStore.setError,
+    setWaitingInfo: gameStore.setWaitingInfo,
+    setAIAnalysis: gameStore.setAIAnalysis,
+    setBidAnalysis: gameStore.setBidAnalysis,
+    setFoldAnalysis: gameStore.setFoldAnalysis,
+    setSuitAnalysis: gameStore.setSuitAnalysis,
+    setNextPlayerPosition: gameStore.setNextPlayerPosition,
+    setConnected: uiStore.setConnected,
+    setNotification: uiStore.setNotification,
+  });
+
+  // Update refs on each render (they should be stable, but this ensures correctness)
+  settersRef.current = {
+    setGameState: gameStore.setGameState,
+    setError: gameStore.setError,
+    setWaitingInfo: gameStore.setWaitingInfo,
+    setAIAnalysis: gameStore.setAIAnalysis,
+    setBidAnalysis: gameStore.setBidAnalysis,
+    setFoldAnalysis: gameStore.setFoldAnalysis,
+    setSuitAnalysis: gameStore.setSuitAnalysis,
+    setNextPlayerPosition: gameStore.setNextPlayerPosition,
+    setConnected: uiStore.setConnected,
+    setNotification: uiStore.setNotification,
+  };
 
   // Initialize socket connection
+  // IMPORTANT: Only depend on token - use refs for all callbacks to prevent re-renders
   useEffect(() => {
     if (!token) {
       console.log('[useSocket] No token available, skipping connection');
@@ -45,7 +77,7 @@ export function useSocket() {
           id: socket.id,
           connected: socket.connected,
         });
-        setConnected(true);
+        settersRef.current.setConnected(true);
       },
 
       onDisconnect: (reason: string) => {
@@ -53,7 +85,7 @@ export function useSocket() {
           reason,
           willReconnect: socket.active,
         });
-        setConnected(false);
+        settersRef.current.setConnected(false);
       },
 
       onConnectError: (error) => {
@@ -62,12 +94,12 @@ export function useSocket() {
           type: error.type,
           description: error.description,
         });
-        setConnected(false);
+        settersRef.current.setConnected(false);
 
         // Show a notification for connection errors
         const message = error.message || 'Failed to connect to game server';
-        setNotification(`Connection error: ${message}`);
-        setTimeout(() => setNotification(null), 5000);
+        settersRef.current.setNotification(`Connection error: ${message}`);
+        setTimeout(() => settersRef.current.setNotification(null), 5000);
       },
 
       onError: (error) => {
@@ -84,15 +116,15 @@ export function useSocket() {
 
         if (error.code && blockingErrorCodes.includes(error.code)) {
           // This is a blocking error - show the error modal
-          setError(error.message || 'An error occurred');
+          settersRef.current.setError(error.message || 'An error occurred');
         } else {
           // This is a gameplay error - just show a notification
           const message = error.message || 'An error occurred';
-          setNotification(message);
-          setTimeout(() => setNotification(null), 5000);
+          settersRef.current.setNotification(message);
+          setTimeout(() => settersRef.current.setNotification(null), 5000);
         }
       },
-      
+
       onGameStateUpdate: (data) => {
         console.log('[useSocket] GAME_STATE_UPDATE received:', {
           event: data.event,
@@ -127,7 +159,7 @@ export function useSocket() {
           const oldBidder = currentState?.currentBidder;
           const newBidder = data.gameState.currentBidder;
 
-          setGameState(data.gameState);
+          settersRef.current.setGameState(data.gameState);
 
           // Only clear analysis when situation actually changes
           const phaseChanged = oldPhase !== newPhase;
@@ -137,18 +169,18 @@ export function useSocket() {
           if (phaseChanged) {
             // Phase changed - clear all analysis
             console.log('[useSocket] Phase changed, clearing all analysis');
-            setAIAnalysis(null);
-            setBidAnalysis(null);
-            setFoldAnalysis(null);
-            setSuitAnalysis(null);
+            settersRef.current.setAIAnalysis(null);
+            settersRef.current.setBidAnalysis(null);
+            settersRef.current.setFoldAnalysis(null);
+            settersRef.current.setSuitAnalysis(null);
           } else if (turnChanged) {
             // New turn in playing phase - clear card analysis only
             console.log('[useSocket] Turn changed in playing phase, clearing card analysis');
-            setAIAnalysis(null);
+            settersRef.current.setAIAnalysis(null);
           } else if (bidderChanged) {
             // New bidder in bidding phase - clear bid analysis only
             console.log('[useSocket] Bidder changed in bidding phase, clearing bid analysis');
-            setBidAnalysis(null);
+            settersRef.current.setBidAnalysis(null);
           }
           // Otherwise keep existing analysis - it's still valid!
         } else if (newVersion < currentVersion) {
@@ -160,68 +192,68 @@ export function useSocket() {
           // Same version - duplicate, ignore
           if (!currentState) {
             // No current state, apply it anyway
-            setGameState(data.gameState);
+            settersRef.current.setGameState(data.gameState);
           }
         }
       },
-      
+
       onReconnected: (data) => {
         console.log('Reconnected to game:', data);
-        setGameState(data.gameState);
-        setNotification('Reconnected to game');
-        setTimeout(() => setNotification(null), 3000);
+        settersRef.current.setGameState(data.gameState);
+        settersRef.current.setNotification('Reconnected to game');
+        setTimeout(() => settersRef.current.setNotification(null), 3000);
       },
 
       onGameWaiting: (data) => {
         console.log('Waiting for players:', data);
-        setWaitingInfo({
+        settersRef.current.setWaitingInfo({
           gameId: data.gameId,
           playerCount: data.playerCount,
           playersNeeded: data.playersNeeded,
           message: data.message,
         });
       },
-      
+
       onPlayerConnected: (data) => {
         console.log('Player connected:', data);
-        setNotification(`Player ${data.playerName || data.playerId} connected`);
-        setTimeout(() => setNotification(null), 3000);
+        settersRef.current.setNotification(`Player ${data.playerName || data.playerId} connected`);
+        setTimeout(() => settersRef.current.setNotification(null), 3000);
       },
-      
+
       onPlayerDisconnected: (data) => {
         console.log('Player disconnected:', data);
-        setNotification(`Player at position ${data.position} disconnected`);
-        setTimeout(() => setNotification(null), 3000);
+        settersRef.current.setNotification(`Player at position ${data.position} disconnected`);
+        setTimeout(() => settersRef.current.setNotification(null), 3000);
       },
-      
+
       onPlayerReconnected: (data) => {
         console.log('Player reconnected:', data);
-        setNotification(`${data.playerName} reconnected`);
-        setTimeout(() => setNotification(null), 3000);
+        settersRef.current.setNotification(`${data.playerName} reconnected`);
+        setTimeout(() => settersRef.current.setNotification(null), 3000);
       },
-      
+
       onTrickComplete: (data) => {
         console.log('Trick complete:', data);
         // Set nextPlayerPosition to enable early analysis during the 3-second pause
         if (data.nextPlayerPosition !== null && data.nextPlayerPosition !== undefined) {
           console.log('[onTrickComplete] Setting next player position to trigger early analysis:', data.nextPlayerPosition);
-          setNextPlayerPosition(data.nextPlayerPosition);
+          settersRef.current.setNextPlayerPosition(data.nextPlayerPosition);
         }
       },
-      
+
       onRoundComplete: (data) => {
         console.log('Round complete:', data);
         // Could add animation trigger here in Phase 6
       },
-      
+
       onAllPlayersPassed: (data) => {
         console.log('All players passed:', data);
         // Show notification using the game store notification system
-        const gameStore = useGameStore.getState();
-        gameStore.showNotification('Everyone passed. Dealing new hand...', 'info');
+        const currentGameStore = useGameStore.getState();
+        currentGameStore.showNotification('Everyone passed. Dealing new hand...', 'info');
         // Auto-clear after 2.5 seconds
         setTimeout(() => {
-          gameStore.clearNotification();
+          currentGameStore.clearNotification();
         }, 2500);
       },
 
@@ -237,19 +269,19 @@ export function useSocket() {
         // Only store analysis if it's for the current player.
         // Note: analysis events are broadcast to the whole game room, so every client receives them.
         // We gate on *our* seat position. If myPosition hasn't been set yet, derive it from auth+gameState.
-        const gameStore = useGameStore.getState();
+        const currentGameStore = useGameStore.getState();
         const authState = useAuthStore.getState();
         const derivedMyPosition =
-          gameStore.myPosition ??
-          (gameStore.gameState && authState.userId
-            ? (gameStore.gameState.players.find((p) => p.id === authState.userId)?.position ?? null)
+          currentGameStore.myPosition ??
+          (currentGameStore.gameState && authState.userId
+            ? (currentGameStore.gameState.players.find((p) => p.id === authState.userId)?.position ?? null)
             : null);
 
         console.log('[useSocket] Position check:', {
           derivedMyPosition,
           analysisPlayerPosition: data.playerPosition,
           matches: derivedMyPosition !== null && data.playerPosition === derivedMyPosition,
-          gameStoreMyPosition: gameStore.myPosition,
+          gameStoreMyPosition: currentGameStore.myPosition,
           authUserId: authState.userId,
         });
 
@@ -257,13 +289,13 @@ export function useSocket() {
           console.log('[useSocket] ✅ Storing analysis for current player');
           // Store analysis - don't clear other types (they might still be valid)
           if (data.analysisType === 'card' && data.cards) {
-            setAIAnalysis(data.cards);
+            settersRef.current.setAIAnalysis(data.cards);
           } else if (data.analysisType === 'bid' && data.bids) {
-            setBidAnalysis(data.bids);
+            settersRef.current.setBidAnalysis(data.bids);
           } else if (data.analysisType === 'fold' && data.foldOptions) {
-            setFoldAnalysis(data.foldOptions);
+            settersRef.current.setFoldAnalysis(data.foldOptions);
           } else if (data.analysisType === 'suit' && data.suits) {
-            setSuitAnalysis(data.suits);
+            settersRef.current.setSuitAnalysis(data.suits);
           }
         } else {
           console.log('[useSocket] ❌ Ignoring analysis - not for current player');
@@ -273,12 +305,10 @@ export function useSocket() {
 
     return () => {
       console.log('[useSocket] Cleaning up socket connection');
-
-
       cleanupSocketListeners(socket);
       socket.disconnect();
     };
-  }, [token, setGameState, setError, setConnected, setNotification, setWaitingInfo, setAIAnalysis, setBidAnalysis, setFoldAnalysis, setSuitAnalysis, setNextPlayerPosition]);
+  }, [token]); // Only depend on token - all callbacks use refs
 
   // Socket event emitters wrapped in callbacks
   const joinGame = useCallback((gameId: string) => {
@@ -288,8 +318,8 @@ export function useSocket() {
       void emitJoinGameReliable(socket, { gameId }).catch((err) => {
         // If join never reaches server (overload/disconnect), surface a notification.
         const message = err instanceof Error ? err.message : 'Failed to join game';
-        setNotification(`Join delayed: ${message}`);
-        setTimeout(() => setNotification(null), 5000);
+        settersRef.current.setNotification(`Join delayed: ${message}`);
+        setTimeout(() => settersRef.current.setNotification(null), 5000);
       });
 
       // If we haven't gotten waiting/state soon, request state explicitly (covers dropped updates).
@@ -302,7 +332,7 @@ export function useSocket() {
         }
       }, 2500);
     }
-  }, [setNotification]);
+  }, []); // No dependencies - uses refs
 
   const leaveGame = useCallback((gameId: string) => {
     if (socketRef.current) {
@@ -335,14 +365,14 @@ export function useSocket() {
           console.error('[playCard] Server rejected card play:', response);
           // Show error notification to user
           const message = response.reason || response.message || 'Card play failed';
-          setNotification(`Card play rejected: ${message}`);
-          setTimeout(() => setNotification(null), 3000);
+          settersRef.current.setNotification(`Card play rejected: ${message}`);
+          setTimeout(() => settersRef.current.setNotification(null), 3000);
         } else {
           console.log('[playCard] Server acknowledged card play');
         }
       });
     }
-  }, [setNotification]);
+  }, []); // No dependencies - uses refs
 
   const startNextRound = useCallback((gameId: string) => {
     if (socketRef.current) {
