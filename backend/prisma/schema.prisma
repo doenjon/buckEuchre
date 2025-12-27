@@ -90,7 +90,7 @@ model UserStats {
 model UserSettings {
   id               String   @id @default(uuid())
   userId           String   @unique
-  showCardOverlay  Boolean  @default(true)
+  showCardOverlay  Boolean  @default(false)
   showTooltips     Boolean  @default(true)
   autoSortHand     Boolean  @default(true)
   bidSpeed         String   @default("normal")
