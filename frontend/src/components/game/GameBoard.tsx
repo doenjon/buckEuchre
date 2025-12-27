@@ -350,13 +350,15 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                     )}
                   </div>
                 )}
-                {gameState.winningBidderPosition !== null && gameState.highestBid !== null && !gameState.isClubsTurnUp && (
+                {gameState.winningBidderPosition !== null && gameState.winningBidderPosition !== undefined && 
+                 gameState.highestBid !== null && gameState.highestBid !== undefined && 
+                 !gameState.isClubsTurnUp && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">BID:</span>
                     <span className="text-lg font-bold text-white">{gameState.highestBid}</span>
                     <span className="text-sm text-emerald-200/70">by</span>
                     <span className="text-base font-medium text-white">
-                      {players.find(p => p.position === gameState.winningBidderPosition)?.name || `P${gameState.winningBidderPosition}`}
+                      {players.find(p => p.position === gameState.winningBidderPosition)?.name || `P${gameState.winningBidderPosition ?? '?'}`}
                     </span>
                   </div>
                 )}
@@ -413,7 +415,9 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                       )}
                     </div>
                   )}
-                  {gameState.winningBidderPosition !== null && gameState.highestBid !== null && !gameState.isClubsTurnUp && (
+                  {gameState.winningBidderPosition !== null && gameState.winningBidderPosition !== undefined && 
+                   gameState.highestBid !== null && gameState.highestBid !== undefined && 
+                   !gameState.isClubsTurnUp && (
                     <>
                       {gameState.trumpSuit && <span className="text-emerald-200/50">•</span>}
                       <div className="flex items-center gap-1">
@@ -421,14 +425,14 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                         <span className="text-white font-bold text-sm">{gameState.highestBid}</span>
                         <span className="text-emerald-200/70 text-[11px]">by</span>
                         <span className="text-white font-medium text-sm">
-                          {players.find(p => p.position === gameState.winningBidderPosition)?.name || `P${gameState.winningBidderPosition}`}
+                          {players.find(p => p.position === gameState.winningBidderPosition)?.name || `P${gameState.winningBidderPosition ?? '?'}`}
                         </span>
                       </div>
                     </>
                   )}
                   {phase === 'BIDDING' && (
                     <>
-                      {(gameState.trumpSuit || (gameState.winningBidderPosition !== null && gameState.highestBid !== null && !gameState.isClubsTurnUp)) && <span className="text-emerald-200/50">•</span>}
+                      {(gameState.trumpSuit || (gameState.winningBidderPosition !== null && gameState.winningBidderPosition !== undefined && gameState.highestBid !== null && gameState.highestBid !== undefined && !gameState.isClubsTurnUp)) && <span className="text-emerald-200/50">•</span>}
                       <div className="flex items-center gap-1">
                         <span className="text-emerald-300 font-semibold">PHASE:</span>
                         <span className="text-white font-medium text-sm">Bidding</span>
