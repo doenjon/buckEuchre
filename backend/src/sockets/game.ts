@@ -1124,7 +1124,7 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
                 }
               }, 1000);
             }
-          } else if (freshState.phase !== 'PLAYING') {
+          } else {
             console.log(`[PLAY_CARD] Not triggering AI - phase is ${freshState.phase}`);
           }
         } catch (error) {
