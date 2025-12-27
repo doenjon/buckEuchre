@@ -484,7 +484,7 @@ async function executeAICardPlay(
     const completedTrick = finalState.tricks[finalState.tricks.length - 1];
     io.to(`game:${gameId}`).emit('TRICK_COMPLETE', {
       trick: completedTrick,
-      delayMs: 3000,
+      delayMs: 2000,
     });
     console.log(`[AI] [TRICK_COMPLETE] Emitted for trick ${completedTrick.number}`, {
       winner: completedTrick.winner,
@@ -522,7 +522,7 @@ async function executeAICardPlay(
     }
 
     // Create display state showing completed trick
-    const displayState = displayStateManager.createTrickCompleteDisplay(finalState, 3000);
+    const displayState = displayStateManager.createTrickCompleteDisplay(finalState, 2000);
     
     // Validate display state before emitting
     if (!displayState || !displayState.gameId) {

@@ -44,7 +44,7 @@ export class DisplayStateManager {
    */
   public createTrickCompleteDisplay(
     gameState: GameState,
-    transitionDelay: number = 3000
+    transitionDelay: number = 2000
   ): GameState {
     const completedTrick = gameState.tricks[gameState.tricks.length - 1];
     

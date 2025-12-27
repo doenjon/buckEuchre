@@ -968,8 +968,8 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
         // The completed trick is now the last one in the tricks array
         const completedTrick = nextState.tricks[nextState.tricks.length - 1];
 
-        // Always use 3000ms delay for UI consistency - backend shouldn't care about player type
-        const delayMs = 3000;
+        // Always use 2000ms delay for UI consistency - backend shouldn't care about player type
+        const delayMs = 2000;
 
         io.to(`game:${validated.gameId}`).emit('TRICK_COMPLETE', {
           trick: completedTrick,
@@ -1020,9 +1020,9 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
     console.log(`${logPrefix} Step 5: Handling trick completion and broadcasts...`);
     // Show all cards immediately if trick was completed, then delay transition
     if (trickWasCompleted) {
-      // Always use 3000ms delay for UI consistency - backend shouldn't care about player type
+      // Always use 2000ms delay for UI consistency - backend shouldn't care about player type
       // The frontend can handle whether to allow human input during the delay
-      const trickCompleteDelay = 3000;
+      const trickCompleteDelay = 2000;
 
       // Create display state showing completed trick
       const displayState = displayStateManager.createTrickCompleteDisplay(finalState, trickCompleteDelay);
