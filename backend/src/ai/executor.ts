@@ -663,9 +663,8 @@ async function executeAICardPlay(
           return;
         }
 
-        // IMPORTANT: Ensure clients accept this transition.
-        // The "display state" is emitted with a higher version, so we must increment
-        // the version again for the frontend to accept this transition to the actual state.
+        // Increment version for transition state - each state update gets a new version
+        // Display state already incremented version, so this is the next increment
         const stateWithUpdatedTimestamp = {
           ...currentState,
           version: (currentState.version || 0) + 1,

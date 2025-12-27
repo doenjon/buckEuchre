@@ -1082,9 +1082,8 @@ async function handlePlayCard(io: Server, socket: Socket, payload: unknown, call
             return;
           }
 
-          // Emit the fresh state with an incremented version
-          // Display state used the same version as actual state, so we increment here
-          // to signal to the frontend that this is the "real" state after the display pause
+          // Increment version for transition state - each state update gets a new version
+          // Display state already incremented version, so this is the next increment
           const stateToEmit = {
             ...freshState,
             version: (freshState.version || 0) + 1,
