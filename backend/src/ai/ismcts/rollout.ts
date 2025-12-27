@@ -312,7 +312,7 @@ export function rollout(
         const trickForAnalysis = currentState.currentTrick.winner !== null
           ? { ...currentState.currentTrick, cards: [], winner: null }
           : currentState.currentTrick;
-        
+
         const legalCards = player.hand.filter(
           c => canPlayCard(c, player.hand, trickForAnalysis, currentState.trumpSuit!, player.folded === true).valid
         );
@@ -332,7 +332,7 @@ export function rollout(
         );
         // Find the card by ID in legalCards to ensure we have the correct reference from current state
         const cardToPlay = legalCards.find(c => c.id === selectedCard.id);
-        
+
         if (!cardToPlay) {
           // Selected card not in legal cards - use first legal card as fallback
           console.warn(`[Rollout] Selected card ${selectedCard.id} not in legal cards, using fallback`);
@@ -355,8 +355,16 @@ export function rollout(
         break;
       }
 
+      case 'DEALING': {
+        // DEALING phase occurs when all players pass during bidding
+        // This triggers a re-deal with the next dealer
+        // Since no hand was played, score change is 0 (correct)
+        // Return 0 to end this simulation (no points awarded/penalized)
+        return 0;
+      }
+
       default:
-        // Shouldn't reach here
+        // Unknown phase - log and return 0
         console.warn(`[Rollout] Unknown phase: ${currentState.phase}`);
         return 0;
     }

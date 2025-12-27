@@ -355,8 +355,16 @@ export function rollout(
         break;
       }
 
+      case 'DEALING': {
+        // DEALING phase occurs when all players pass during bidding
+        // This triggers a re-deal with the next dealer
+        // Since no hand was played, score change is 0 (correct)
+        // Return 0 to end this simulation (no points awarded/penalized)
+        return 0;
+      }
+
       default:
-        // Shouldn't reach here
+        // Unknown phase - log and return 0
         console.warn(`[Rollout] Unknown phase: ${currentState.phase}`);
         return 0;
     }
