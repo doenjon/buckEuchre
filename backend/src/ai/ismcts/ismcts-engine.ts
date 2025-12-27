@@ -255,7 +255,7 @@ export class ISMCTSEngine {
 
     // Compare most visited vs best value to detect divergence
     const bestValueChild = root.getBestValueChild();
-    if (bestValueChild && bestChild !== bestValueChild) {
+    if (bestValueChild && bestValueChild.action && bestChild !== bestValueChild) {
       console.log('[ISMCTS] ⚠️ DECISION DIVERGENCE DETECTED:');
       console.log(`  Most Visited: ${serializeAction(bestChild.action)} - visits=${bestChild.visits}, avgValue=${bestChild.averageValue.toFixed(3)}, buckProb=${bestChild.getBuckProbability().toFixed(3)}`);
       console.log(`  Best Value:   ${serializeAction(bestValueChild.action)} - visits=${bestValueChild.visits}, avgValue=${bestValueChild.averageValue.toFixed(3)}, buckProb=${bestValueChild.getBuckProbability().toFixed(3)}`);
