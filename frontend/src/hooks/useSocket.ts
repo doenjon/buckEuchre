@@ -325,22 +325,11 @@ export function useSocket() {
     });
 
     return () => {
-      // Only cleanup if token actually changed (not just component remount)
-      // The socket singleton should persist across component remounts
-      // Only disconnect if we're actually changing tokens (logout/login)
-      const currentToken = useAuthStore.getState().token;
-      if (currentToken !== token) {
-        console.log('[useSocket] Token changed, cleaning up socket connection');
-        cleanupSocketListeners(socket);
-        // Don't disconnect the singleton - let it handle reconnection
-        // socket.disconnect();
-      } else {
-        // Just cleanup listeners, keep socket connection alive
-        console.log('[useSocket] Component unmounting, cleaning up listeners only');
-        cleanupSocketListeners(socket);
-      }
+      console.log('[useSocket] Cleaning up socket connection');
+      cleanupSocketListeners(socket);
+      socket.disconnect();
     };
-  }, [token]); // Only depend on token - all callbacks use refs
+  }, [token]); // Only depend on token - all callbacks use refs (prevents re-render loops)
 
   // Socket event emitters wrapped in callbacks
   const joinGame = useCallback((gameId: string) => {

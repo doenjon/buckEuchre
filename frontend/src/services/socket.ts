@@ -18,10 +18,6 @@ import type {
 // For production, this will use the same origin (empty string = relative URL)
 const WS_URL = import.meta.env.VITE_WS_URL || '';
 
-// Singleton socket connection so multiple hooks/components don't create competing connections.
-let singletonSocket: Socket | null = null;
-let singletonToken: string | null = null;
-
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -58,6 +54,10 @@ function waitForConnect(socket: Socket, timeoutMs: number): Promise<void> {
 
 /**
  * Create a new socket connection with authentication
+ * 
+ * NOTE: This creates a new socket each time (no singleton).
+ * The old working code always disconnected/reconnected, which ensured
+ * listeners were always fresh and no race conditions occurred.
  */
 export function createSocketConnection(token: string): Socket {
   console.log('[Socket] Creating connection:', {
@@ -66,30 +66,13 @@ export function createSocketConnection(token: string): Socket {
     tokenLength: token?.length || 0,
   });
 
-  // Reuse existing connection if token is unchanged.
-  if (singletonSocket && singletonToken === token) {
-    return singletonSocket;
-  }
-
-  // Token changed (login/logout/refresh) - reset connection.
-  if (singletonSocket) {
-    try {
-      singletonSocket.disconnect();
-    } catch {
-      // ignore
-    }
-    singletonSocket = null;
-    singletonToken = null;
-  }
-
   const socket = io(WS_URL, {
     auth: { token },
     transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionDelay: 1000,
-    reconnectionDelayMax: 10000,
-    // Under overload we want the client to keep trying, not give up after ~15s.
-    reconnectionAttempts: Infinity,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: 5,
   });
 
   // Log connection attempts
@@ -105,9 +88,7 @@ export function createSocketConnection(token: string): Socket {
     console.error('[Socket.io] Reconnection failed after all attempts');
   });
 
-  singletonSocket = socket;
-  singletonToken = token;
-  return singletonSocket;
+  return socket;
 }
 
 /**
