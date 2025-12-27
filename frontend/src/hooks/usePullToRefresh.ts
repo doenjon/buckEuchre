@@ -79,7 +79,16 @@ export function usePullToRefresh(
   const handleStart = useCallback((clientY: number, target: HTMLElement) => {
     if (!enabled) return;
 
+    console.log('[PullToRefresh] Start:', {
+      clientY,
+      isAtTop: isAtTop(),
+      scrollableParent: checkScrollableParent(target),
+      windowScrollY: window.scrollY,
+      docScrollTop: document.documentElement.scrollTop
+    });
+
     if (isAtTop() && checkScrollableParent(target)) {
+      console.log('[PullToRefresh] Starting pull');
       startY.current = clientY;
       isPullingRef.current = true;
     }
@@ -89,6 +98,8 @@ export function usePullToRefresh(
     if (!isPullingRef.current || startY.current === 0) return;
 
     const distance = clientY - startY.current;
+
+    console.log('[PullToRefresh] Move:', { distance, clientY, startY: startY.current });
 
     // Only handle pull down
     if (distance > 0) {
@@ -106,6 +117,7 @@ export function usePullToRefresh(
       pullDistanceRef.current = resistedDistance;
       setPullDistance(resistedDistance);
       setIsPulling(true);
+      console.log('[PullToRefresh] Pulling:', resistedDistance);
     }
   }, [maxPullDistance]);
 
