@@ -64,4 +64,4 @@ jobs:
 
           ssh -i "$HOME/.ssh/id_ed25519" -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=$STRICT_MODE \
-            "$USER@$HOST" 'bash -lc "~/buckEuchre/deploy.sh"'
+            "$USER@$HOST" 'bash -lc "~/buckEuchre/scripts/deploy.sh"'
