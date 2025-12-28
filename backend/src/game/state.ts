@@ -408,8 +408,13 @@ export function applyFoldDecision(
 
       if (existingEntry) {
         existingEntry.scoresByPlayerId = roundScores;
+        existingEntry.isClubsTurnUp = state.isClubsTurnUp;
       } else {
-        newScoreHistory.push({ round: state.round, scoresByPlayerId: roundScores });
+        newScoreHistory.push({
+          round: state.round,
+          scoresByPlayerId: roundScores,
+          isClubsTurnUp: state.isClubsTurnUp
+        });
         newScoreHistory.sort((a, b) => a.round - b.round);
       }
 
@@ -604,9 +609,14 @@ export function finishRound(state: GameState): GameState {
   if (existingEntry) {
     // Update existing entry
     existingEntry.scoresByPlayerId = roundScores;
+    existingEntry.isClubsTurnUp = state.isClubsTurnUp;
   } else {
     // Add new entry
-    newScoreHistory.push({ round: state.round, scoresByPlayerId: roundScores });
+    newScoreHistory.push({
+      round: state.round,
+      scoresByPlayerId: roundScores,
+      isClubsTurnUp: state.isClubsTurnUp
+    });
     newScoreHistory.sort((a, b) => a.round - b.round);
   }
 
