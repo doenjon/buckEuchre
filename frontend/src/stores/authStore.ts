@@ -100,6 +100,20 @@ export const useAuthStore = create<AuthStore>()(
         isGuest: state.isGuest,
         isAdmin: state.isAdmin,
       }),
+      onRehydrateStorage: () => (state) => {
+        // After hydration, validate the token and clear if expired
+        if (state && state.isAuthenticated) {
+          const isValid = state.expiresAt ? Date.now() < state.expiresAt : false;
+          if (!isValid) {
+            console.log('[AuthStore] Clearing expired session from localStorage');
+            // Clear expired session
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('auth-storage');
+            // Reset state
+            Object.assign(state, initialState);
+          }
+        }
+      },
     }
   )
 );

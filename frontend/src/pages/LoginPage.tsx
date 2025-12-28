@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -17,10 +17,15 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login, register } = useAuth();
+  const { login, register, checkAuth } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const gameId = searchParams.get('gameId');
+
+  // Validate auth on mount - clear expired tokens before login attempt
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

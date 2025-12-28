@@ -4,6 +4,7 @@
  */
 
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/uiStore';
 import { Button } from '@/components/ui/button';
@@ -12,8 +13,13 @@ export function HomePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const gameId = searchParams.get('gameId');
-  const { loginAsGuest, isAuthenticated } = useAuth();
+  const { loginAsGuest, isAuthenticated, checkAuth } = useAuth();
   const { isLoading, error, setError } = useUIStore();
+
+  // Validate auth on mount - clear expired tokens
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const handleGetStarted = () => {
     // If there's a gameId, pass it to the login page
