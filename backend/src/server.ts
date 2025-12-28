@@ -77,13 +77,10 @@ export function createAppServer(): {
       return;
     }
     
-    // In production, if CORS_ORIGIN is not set, allow requests from same origin
-    // (since nginx proxies both frontend and backend, they appear same-origin)
-    // This handles cases where frontend is accessed via IP or domain
+    // In production, CORS_ORIGIN must be explicitly set for security
     if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGIN) {
-      // Allow any origin in production if CORS_ORIGIN not explicitly set
-      // This is less secure but works when frontend/backend are proxied together
-      callback(null, true);
+      console.error('[CORS] PRODUCTION ERROR: CORS_ORIGIN environment variable must be set. Blocking request from:', origin);
+      callback(new Error('CORS_ORIGIN must be configured in production'));
       return;
     }
     
