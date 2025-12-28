@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
+import rateLimit from 'express-rate-limit';
 import {
   createUser,
   createGuestUser,
@@ -10,6 +11,15 @@ import {
 import { authenticateToken } from '../auth/middleware.js';
 
 const router = Router();
+
+// Rate limiting for auth endpoints (50 attempts per 15 minutes)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // 50 requests per windowMs
+  message: 'Too many authentication attempts, please try again later',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
 
 // Validation schemas
 const RegisterSchema = z.object({
@@ -37,7 +47,7 @@ const LoginSchema = z.object({
  * POST /api/auth/register
  * Register a new user account with email/password
  */
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', authLimiter, async (req: Request, res: Response) => {
   try {
     console.log('[REGISTER] Starting registration request');
     
@@ -111,7 +121,7 @@ router.post('/register', async (req: Request, res: Response) => {
  * POST /api/auth/login
  * Login with email/username and password
  */
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', authLimiter, async (req: Request, res: Response) => {
   try {
     // Validate request body
     const validation = LoginSchema.safeParse(req.body);
