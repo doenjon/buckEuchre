@@ -87,6 +87,9 @@ export function Scoreboard({
     // IMPORTANT: We intentionally do NOT show the in-progress round here; only completed rounds.
     const allRounds = [...scoreHistory].sort((a, b) => a.round - b.round);
 
+    // Debug: log score history to see if isClubsTurnUp is present
+    console.log('Score history:', scoreHistory.map(r => ({ round: r.round, isClubsTurnUp: r.isClubsTurnUp })));
+
     // Sort players by position for consistent column order
     const sortedByPosition = [...players].sort((a, b) => a.position - b.position);
 
@@ -119,7 +122,12 @@ export function Scoreboard({
                 {allRounds.map((roundScore, roundIndex) => {
                   // Get previous round to detect bucks (score increase of 5)
                   const previousRound = roundIndex > 0 ? allRounds[roundIndex - 1] : null;
-                  
+
+                  // Debug: log dirty clubs status
+                  if (roundScore.isClubsTurnUp) {
+                    console.log(`Round ${roundScore.round} has dirty clubs:`, roundScore.isClubsTurnUp);
+                  }
+
                   return (
                     <tr
                       key={roundScore.round}
