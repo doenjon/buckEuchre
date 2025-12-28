@@ -26,6 +26,7 @@ build/
 # IDE
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *~
@@ -58,6 +59,10 @@ prisma/*.db
 *.tmp
 .cache/
 .temp/
+
+# Backups
+backups/*
+!backups/.gitkeep
 
 # OS
 Thumbs.db
