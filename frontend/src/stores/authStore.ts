@@ -72,6 +72,7 @@ export const useAuthStore = create<AuthStore>()(
 
       logout: () => {
         localStorage.removeItem('authToken');
+        localStorage.removeItem('auth-storage');
         set(initialState);
       },
 
