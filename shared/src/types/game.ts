@@ -101,6 +101,7 @@ export interface Bid {
 export interface ScoreHistoryEntry {
   round: number;
   scoresByPlayerId: Record<string, number>;
+  isClubsTurnUp?: boolean;  // Whether this round had dirty clubs (clubs as turn-up card)
 }
 
 /**

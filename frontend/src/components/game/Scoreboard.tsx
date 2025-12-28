@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 interface ScoreHistoryRow {
   round: number;
   scoresByPlayerId: Record<string, number>;
+  isClubsTurnUp?: boolean;
 }
 
 export interface ScoreboardProps {
@@ -120,7 +121,7 @@ export function Scoreboard({
                   const previousRound = roundIndex > 0 ? allRounds[roundIndex - 1] : null;
                   
                   return (
-                    <tr 
+                    <tr
                       key={roundScore.round}
                       className={cn(
                         "border-b border-white/5",
@@ -129,6 +130,11 @@ export function Scoreboard({
                     >
                       <td className="px-2 py-1.5 text-emerald-200/70 font-medium">
                         {roundScore.round}
+                        {roundScore.isClubsTurnUp && (
+                          <span className="ml-1 rounded-md bg-red-500/20 border border-red-400/50 px-1 py-0.5 text-[10px] font-bold text-red-300">
+                            ♣
+                          </span>
+                        )}
                       </td>
                       {sortedByPosition.map((player) => {
                         const score = roundScore.scoresByPlayerId[player.id] ?? player.score;
