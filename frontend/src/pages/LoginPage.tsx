@@ -50,14 +50,16 @@ export default function LoginPage() {
     const trimmedUsername = regUsername.trim();
     const trimmedEmail = regEmail.trim();
     const trimmedDisplayName = regDisplayName.trim();
+    const trimmedPassword = regPassword.trim();
+    const trimmedConfirmPassword = regConfirmPassword.trim();
 
     // Validation
-    if (regPassword !== regConfirmPassword) {
+    if (trimmedPassword !== trimmedConfirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    if (regPassword.length < 6) {
+    if (trimmedPassword.length < 6) {
       setError('Password must be at least 6 characters');
       return;
     }
@@ -72,13 +74,19 @@ export default function LoginPage() {
       return;
     }
 
+    // Warn about accidental whitespace in passwords
+    if (regPassword !== trimmedPassword || regConfirmPassword !== trimmedConfirmPassword) {
+      setError('Password contains leading or trailing spaces. Please remove them.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       await register({
         username: trimmedUsername,
         email: trimmedEmail || undefined,
-        password: regPassword,
+        password: trimmedPassword,
         displayName: trimmedDisplayName,
       });
       // If there's a gameId, redirect to game instead of lobby
@@ -273,12 +281,14 @@ export default function LoginPage() {
                   type="password"
                   value={regPassword}
                   onChange={(e) => setRegPassword(e.target.value)}
+                  onBlur={(e) => setRegPassword(e.target.value.trim())}
                   className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                   placeholder="Create a password"
                   required
                   disabled={loading}
                   minLength={6}
                 />
+                <p className="text-xs text-slate-400 mt-1">At least 6 characters</p>
               </div>
 
               <div>
@@ -290,6 +300,7 @@ export default function LoginPage() {
                   type="password"
                   value={regConfirmPassword}
                   onChange={(e) => setRegConfirmPassword(e.target.value)}
+                  onBlur={(e) => setRegConfirmPassword(e.target.value.trim())}
                   className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                   placeholder="Confirm your password"
                   required
