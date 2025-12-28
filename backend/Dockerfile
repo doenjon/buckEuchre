@@ -65,9 +65,10 @@ WORKDIR /app
 # Copy package files
 COPY backend/package*.json ./
 
-# Copy Prisma schema and scripts
+# Copy Prisma schema, scripts, and source code (needed for scripts)
 COPY --chown=nodejs:nodejs backend/prisma ./prisma
 COPY --chown=nodejs:nodejs backend/scripts ./scripts
+COPY --from=builder --chown=nodejs:nodejs /app/src ./src
 
 # Install production dependencies only
 RUN npm ci --only=production && \
