@@ -16,6 +16,7 @@ export interface AuthState {
   expiresAt: number | null;
   isAuthenticated: boolean;
   isGuest: boolean;
+  isAdmin: boolean;
 }
 
 export interface AuthActions {
@@ -28,6 +29,7 @@ export interface AuthActions {
     token: string;
     expiresAt: number;
     isGuest: boolean;
+    isAdmin?: boolean;
   }) => void;
   logout: () => void;
   isTokenValid: () => boolean;
@@ -45,6 +47,7 @@ const initialState: AuthState = {
   expiresAt: null,
   isAuthenticated: false,
   isGuest: false,
+  isAdmin: false,
 };
 
 /**
@@ -67,6 +70,7 @@ export const useAuthStore = create<AuthStore>()(
           expiresAt: response.expiresAt,
           isAuthenticated: true,
           isGuest: response.isGuest,
+          isAdmin: response.isAdmin || false,
         });
       },
 
@@ -93,6 +97,7 @@ export const useAuthStore = create<AuthStore>()(
         expiresAt: state.expiresAt,
         isAuthenticated: state.isAuthenticated,
         isGuest: state.isGuest,
+        isAdmin: state.isAdmin,
       }),
     }
   )

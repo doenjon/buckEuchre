@@ -97,6 +97,7 @@ export function useAuth() {
     token: authStore.token,
     isAuthenticated: authStore.isAuthenticated,
     isGuest: authStore.isGuest,
+    isAdmin: authStore.isAdmin,
     register,
     login,
     loginAsGuest,

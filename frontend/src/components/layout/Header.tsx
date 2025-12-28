@@ -9,7 +9,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { BugReportModal } from '@/components/BugReportModal';
 
 export function Header() {
-  const { displayName, username, isGuest, isAuthenticated, logout } = useAuth();
+  const { displayName, username, isGuest, isAuthenticated, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -197,6 +197,22 @@ export function Header() {
                         </>
                       )}
                     </div>
+
+                    {/* Admin Panel Link */}
+                    {isAdmin && (
+                      <>
+                        <div className="border-t border-white/10 my-1"></div>
+                        <button
+                          onClick={() => {
+                            navigate('/admin');
+                            setMenuOpen(false);
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-purple-300 hover:bg-white/10 font-semibold"
+                        >
+                          🔒 Admin Panel
+                        </button>
+                      </>
+                    )}
 
                     {/* Bug Report Button */}
                     <button
