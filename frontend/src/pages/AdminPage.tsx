@@ -49,7 +49,8 @@ export default function AdminPage() {
       setLoading(true);
       setError('');
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/admin/users`, {
+      const API_URL = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${API_URL}/api/admin/users`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -88,8 +89,9 @@ export default function AdminPage() {
       setError('');
       setSuccess('');
 
+      const API_URL = import.meta.env.VITE_API_URL || '';
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/admin/users/${selectedUser.id}/reset-password`,
+        `${API_URL}/api/admin/users/${selectedUser.id}/reset-password`,
         {
           method: 'POST',
           headers: {
