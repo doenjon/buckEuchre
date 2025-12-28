@@ -13,6 +13,7 @@ declare global {
         username: string;
         displayName: string;
         isGuest: boolean;
+        isAdmin: boolean;
       };
     }
   }
@@ -63,6 +64,7 @@ export async function authenticateToken(
       username: result.user.username,
       displayName: result.user.displayName,
       isGuest: result.user.isGuest,
+      isAdmin: result.user.isAdmin,
     };
 
     next();
@@ -99,6 +101,7 @@ export async function optionalAuth(
           username: result.user.username,
           displayName: result.user.displayName,
           isGuest: result.user.isGuest,
+          isAdmin: result.user.isAdmin,
         };
       }
     }
@@ -109,4 +112,41 @@ export async function optionalAuth(
     // For optional auth, we don't block the request on errors
     next();
   }
+}
+
+/**
+ * Admin authorization middleware
+ *
+ * Must be used AFTER authenticateToken middleware.
+ * Checks if the authenticated user has admin privileges.
+ *
+ * If user is not admin, sends 403 Forbidden response.
+ *
+ * @example
+ * ```typescript
+ * router.post('/admin/users/:id/reset-password',
+ *   authenticateToken,
+ *   requireAdmin,
+ *   async (req, res) => {
+ *     // Only admins can access this
+ *   }
+ * );
+ * ```
+ */
+export function requireAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+
+  if (!req.user.isAdmin) {
+    res.status(403).json({ error: 'Admin access required' });
+    return;
+  }
+
+  next();
 }

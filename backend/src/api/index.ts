@@ -9,6 +9,7 @@ import testRoutes from './test.routes.js';
 import arenaRoutes from './arena.routes.js';
 import settingsRoutes from './settings.routes.js';
 import bugsRoutes from './bugs.routes.js';
+import adminRoutes from './admin.routes.js';
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.use('/api/leaderboard', leaderboardRoutes);
 router.use('/api/arena', arenaRoutes);
 router.use('/api/settings', settingsRoutes);
 router.use('/api/bugs', bugsRoutes);
+router.use('/api/admin', adminRoutes);
 
 const enableTestRoutes = process.env.ENABLE_TEST_CONTROLS !== 'false';
 

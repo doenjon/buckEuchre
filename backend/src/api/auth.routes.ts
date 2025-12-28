@@ -86,6 +86,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
       token,
       expiresAt: session.expiresAt.getTime(),
       isGuest: false,
+      isAdmin: user.isAdmin,
     };
 
     console.log('[REGISTER] Sending success response');
@@ -147,6 +148,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
       token,
       expiresAt: session.expiresAt.getTime(),
       isGuest: user.isGuest,
+      isAdmin: user.isAdmin,
     });
   } catch (error) {
     console.error('Error logging in:', error);
@@ -185,6 +187,7 @@ router.post('/guest', async (_req: Request, res: Response) => {
       token,
       expiresAt: session.expiresAt.getTime(),
       isGuest: true,
+      isAdmin: user.isAdmin,
     });
   } catch (error) {
     console.error('Error creating guest user:', error);
@@ -249,6 +252,7 @@ router.get('/me', authenticateToken, async (req: Request, res: Response) => {
         email: userWithStats.email,
         avatarUrl: userWithStats.avatarUrl,
         isGuest: userWithStats.isGuest,
+        isAdmin: userWithStats.isAdmin,
         createdAt: userWithStats.createdAt,
         lastLoginAt: userWithStats.lastLoginAt,
       },

@@ -18,6 +18,7 @@ model User {
   oauthId                String?
   emailVerified          Boolean          @default(false)
   isGuest                Boolean          @default(false)
+  isAdmin                Boolean          @default(false)
   createdAt              DateTime         @default(now())
   lastLoginAt            DateTime         @default(now())
   receivedFriendRequests Friendship[]     @relation("Receiver")
