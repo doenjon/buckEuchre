@@ -46,6 +46,11 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
 
+    // Trim inputs to match backend validation
+    const trimmedUsername = regUsername.trim();
+    const trimmedEmail = regEmail.trim();
+    const trimmedDisplayName = regDisplayName.trim();
+
     // Validation
     if (regPassword !== regConfirmPassword) {
       setError('Passwords do not match');
@@ -57,8 +62,13 @@ export default function LoginPage() {
       return;
     }
 
-    if (regUsername.length < 3) {
+    if (trimmedUsername.length < 3) {
       setError('Username must be at least 3 characters');
+      return;
+    }
+
+    if (trimmedDisplayName.length < 2) {
+      setError('Display name must be at least 2 characters');
       return;
     }
 
@@ -66,10 +76,10 @@ export default function LoginPage() {
 
     try {
       await register({
-        username: regUsername,
-        email: regEmail || undefined,
+        username: trimmedUsername,
+        email: trimmedEmail || undefined,
         password: regPassword,
-        displayName: regDisplayName,
+        displayName: trimmedDisplayName,
       });
       // If there's a gameId, redirect to game instead of lobby
       if (gameId) {
@@ -78,7 +88,10 @@ export default function LoginPage() {
         navigate('/lobby');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      // Extract error message from the error object
+      const errorMessage = err instanceof Error ? err.message : 'Registration failed';
+      setError(errorMessage);
+      console.error('Registration error:', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -109,7 +122,10 @@ export default function LoginPage() {
           {/* Tabs */}
           <div className="flex mb-6 bg-white/5 rounded-lg p-1 border border-white/10">
             <button
-              onClick={() => setActiveTab('login')}
+              onClick={() => {
+                setActiveTab('login');
+                setError('');
+              }}
               className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
                 activeTab === 'login'
                   ? 'bg-white/10 text-emerald-300 shadow-sm'
@@ -119,7 +135,10 @@ export default function LoginPage() {
               Login
             </button>
             <button
-              onClick={() => setActiveTab('register')}
+              onClick={() => {
+                setActiveTab('register');
+                setError('');
+              }}
               className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
                 activeTab === 'register'
                   ? 'bg-white/10 text-emerald-300 shadow-sm'
@@ -195,6 +214,7 @@ export default function LoginPage() {
                   type="text"
                   value={regUsername}
                   onChange={(e) => setRegUsername(e.target.value)}
+                  onBlur={(e) => setRegUsername(e.target.value.trim())}
                   className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                   placeholder="Choose a username"
                   required
@@ -216,6 +236,7 @@ export default function LoginPage() {
                   type="text"
                   value={regDisplayName}
                   onChange={(e) => setRegDisplayName(e.target.value)}
+                  onBlur={(e) => setRegDisplayName(e.target.value.trim())}
                   className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                   placeholder="Your display name"
                   required
@@ -223,7 +244,7 @@ export default function LoginPage() {
                   minLength={2}
                   maxLength={30}
                 />
-                <p className="text-xs text-slate-400 mt-1">How other players will see you</p>
+                <p className="text-xs text-slate-400 mt-1">2-30 characters, how other players will see you</p>
               </div>
 
               <div>
@@ -235,6 +256,7 @@ export default function LoginPage() {
                   type="email"
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
+                  onBlur={(e) => setRegEmail(e.target.value.trim())}
                   className="w-full px-3 py-2 border border-white/15 bg-white/5 rounded-md text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                   placeholder="your@email.com"
                   disabled={loading}
