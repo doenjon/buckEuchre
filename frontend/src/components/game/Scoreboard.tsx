@@ -119,7 +119,16 @@ export function Scoreboard({
                 {allRounds.map((roundScore, roundIndex) => {
                   // Get previous round to detect bucks (score increase of 5)
                   const previousRound = roundIndex > 0 ? allRounds[roundIndex - 1] : null;
-                  
+
+                  // Debug logging
+                  if (roundScore.round > 0) {
+                    console.log(`[Scoreboard] Rendering round ${roundScore.round}:`, {
+                      round: roundScore.round,
+                      isClubsTurnUp: roundScore.isClubsTurnUp,
+                      willShowIndicator: !!roundScore.isClubsTurnUp
+                    });
+                  }
+
                   return (
                     <tr
                       key={roundScore.round}

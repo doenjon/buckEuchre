@@ -610,13 +610,24 @@ export function finishRound(state: GameState): GameState {
     // Update existing entry
     existingEntry.scoresByPlayerId = roundScores;
     existingEntry.isClubsTurnUp = state.isClubsTurnUp;
+    console.log(`[finishRound] Updated score history for round ${state.round}:`, {
+      round: state.round,
+      isClubsTurnUp: state.isClubsTurnUp,
+      existingEntry
+    });
   } else {
     // Add new entry
-    newScoreHistory.push({
+    const newEntry = {
       round: state.round,
       scoresByPlayerId: roundScores,
       isClubsTurnUp: state.isClubsTurnUp
+    };
+    console.log(`[finishRound] Adding new score history entry for round ${state.round}:`, {
+      round: state.round,
+      isClubsTurnUp: state.isClubsTurnUp,
+      newEntry
     });
+    newScoreHistory.push(newEntry);
     newScoreHistory.sort((a, b) => a.round - b.round);
   }
 
