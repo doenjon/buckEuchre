@@ -22,9 +22,6 @@ export interface Observations {
 
   /** Cards in my hand */
   myHand: Set<string>;
-
-  /** Cards in the blind (not in play) */
-  blindCards: Set<string>;
 }
 
 /**
@@ -42,7 +39,6 @@ export function extractObservations(
     playedCards: new Set(),
     playerVoids: new Map(),
     myHand: new Set(),
-    blindCards: new Set(),
   };
 
   // Initialize void tracking for all players
@@ -56,10 +52,8 @@ export function extractObservations(
     observations.myHand.add(card.id);
   }
 
-  // Track blind cards
-  for (const card of gameState.blind) {
-    observations.blindCards.add(card.id);
-  }
+  // Note: We do NOT track blind cards - those are hidden information
+  // The AI should not know which specific cards are in the blind
 
   // Track played cards from completed tricks
   for (const trick of gameState.tricks) {
@@ -127,10 +121,11 @@ function getUnseenCards(observations: Observations): Card[] {
 
   for (const card of FULL_DECK) {
     // Skip if we've seen this card
+    // Note: Blind cards are NOT excluded - they're hidden information that could be
+    // in opponent hands OR in the blind. This is correct for imperfect information MCTS.
     if (
       observations.playedCards.has(card.id) ||
-      observations.myHand.has(card.id) ||
-      observations.blindCards.has(card.id)
+      observations.myHand.has(card.id)
     ) {
       continue;
     }
