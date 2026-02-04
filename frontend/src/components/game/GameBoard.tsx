@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { GAME_TIMEOUTS } from '@buck-euchre/shared';
 import type { GameState } from '@buck-euchre/shared';
 import { canPlayCard, getPlayableCards } from '@/utils/gameValidation';
+import { formatRank, getSuitColor, getSuitSymbol } from '@/utils/cardHelpers';
 
 interface GameBoardProps {
   gameState: GameState;
@@ -217,6 +218,18 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
       ? activePosition
       : displayTrick?.cards[displayTrick.cards.length - 1]?.playerPosition ?? 0;
 
+  const blindCard = gameState.turnUpCard;
+  const blindSuitColor = blindCard ? getSuitColor(blindCard.suit) : null;
+  const blindSuitClassName = blindSuitColor === 'red' ? 'text-red-400' : 'text-gray-300';
+  const blindRankText = blindCard ? formatRank(blindCard.rank) : null;
+  const blindSuitSymbol = blindCard ? getSuitSymbol(blindCard.suit) : null;
+
+  const showBidInfo =
+    gameState.winningBidderPosition !== null &&
+    gameState.winningBidderPosition !== undefined &&
+    gameState.highestBid !== null &&
+    gameState.highestBid !== undefined &&
+    !gameState.isClubsTurnUp;
 
   let inlineActionPanel: ReactNode = null;
 
@@ -350,6 +363,13 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                     )}
                   </div>
                 )}
+                {blindCard && blindRankText && blindSuitSymbol && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">BLIND:</span>
+                    <span className="text-base font-medium text-white">{blindRankText}</span>
+                    <span className={`text-xl font-bold ${blindSuitClassName}`}>{blindSuitSymbol}</span>
+                  </div>
+                )}
                 {gameState.winningBidderPosition !== null && gameState.winningBidderPosition !== undefined && 
                  gameState.highestBid !== null && gameState.highestBid !== undefined && 
                  !gameState.isClubsTurnUp && (
@@ -415,11 +435,19 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                       )}
                     </div>
                   )}
-                  {gameState.winningBidderPosition !== null && gameState.winningBidderPosition !== undefined && 
-                   gameState.highestBid !== null && gameState.highestBid !== undefined && 
-                   !gameState.isClubsTurnUp && (
+                  {blindCard && blindRankText && blindSuitSymbol && (
                     <>
                       {gameState.trumpSuit && <span className="text-emerald-200/50">•</span>}
+                      <div className="flex items-center gap-1">
+                        <span className="text-emerald-300 font-semibold">BLIND:</span>
+                        <span className="text-white font-medium text-sm">{blindRankText}</span>
+                        <span className={`font-bold text-base ${blindSuitClassName}`}>{blindSuitSymbol}</span>
+                      </div>
+                    </>
+                  )}
+                  {showBidInfo && (
+                    <>
+                      {(gameState.trumpSuit || (blindCard && blindRankText && blindSuitSymbol)) && <span className="text-emerald-200/50">•</span>}
                       <div className="flex items-center gap-1">
                         <span className="text-emerald-300 font-semibold">BID:</span>
                         <span className="text-white font-bold text-sm">{gameState.highestBid}</span>
@@ -432,7 +460,7 @@ export function GameBoard({ gameState, myPosition }: GameBoardProps) {
                   )}
                   {phase === 'BIDDING' && (
                     <>
-                      {(gameState.trumpSuit || (gameState.winningBidderPosition !== null && gameState.winningBidderPosition !== undefined && gameState.highestBid !== null && gameState.highestBid !== undefined && !gameState.isClubsTurnUp)) && <span className="text-emerald-200/50">•</span>}
+                      {(gameState.trumpSuit || (blindCard && blindRankText && blindSuitSymbol) || showBidInfo) && <span className="text-emerald-200/50">•</span>}
                       <div className="flex items-center gap-1">
                         <span className="text-emerald-300 font-semibold">PHASE:</span>
                         <span className="text-white font-medium text-sm">Bidding</span>
