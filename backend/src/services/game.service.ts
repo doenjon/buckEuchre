@@ -9,6 +9,35 @@ import { executeGameActionWithInit, getActiveGameState, loadGameState, setActive
 let availableGamesCache: { at: number; data: GameSummary[] } | null = null;
 let availableGamesInFlight: Promise<GameSummary[]> | null = null;
 const AVAILABLE_GAMES_CACHE_TTL_MS = 1000;
+const WAITING_GAME_EXPIRATION_MS = 2 * 60 * 60 * 1000;
+
+function isWaitingGameExpired(createdAt: Date, now = Date.now()): boolean {
+  return createdAt.getTime() < now - WAITING_GAME_EXPIRATION_MS;
+}
+
+async function expireWaitingGames(now = Date.now()): Promise<number> {
+  const cutoff = new Date(now - WAITING_GAME_EXPIRATION_MS);
+  const result = await prisma.game.updateMany({
+    where: {
+      status: GameStatus.WAITING,
+      createdAt: {
+        lt: cutoff,
+      },
+    },
+    data: {
+      status: GameStatus.ABANDONED,
+    },
+  });
+
+  if (result.count > 0) {
+    console.log(
+      `[expireWaitingGames] Marked ${result.count} waiting games as abandoned (created before ${cutoff.toISOString()})`
+    );
+    availableGamesCache = null;
+  }
+
+  return result.count;
+}
 
 /**
  * Game summary for listing available games
@@ -42,6 +71,9 @@ export async function createGame(creatorId: string): Promise<GameWithPlayers> {
   if (!creatorId) {
     throw new Error('Creator ID is required');
   }
+
+  // Expire stale waiting games so creators aren't blocked by old lobbies.
+  await expireWaitingGames();
 
   // Verify creator exists and is valid
   const creator = await prisma.user.findUnique({
@@ -117,6 +149,8 @@ export async function createRematchGame(oldGameId: string, requestingUserId: str
   if (!oldGameId || !requestingUserId) {
     throw new Error('Game ID and user ID are required');
   }
+
+  await expireWaitingGames();
 
   // Get the old game with all players
   const oldGame = await prisma.game.findUnique({
@@ -228,6 +262,7 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
   if (!gameId || !playerId) {
     throw new Error('Game ID and Player ID are required');
   }
+  const now = Date.now();
 
   // Verify user exists
   const user = await prisma.user.findUnique({
@@ -269,6 +304,18 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
   if (inThisGame && inThisGame.game) {
     // User is already in this game - handle reconnection
     const game = inThisGame.game;
+
+    // Expire stale waiting games so reconnects don't revive old lobbies.
+    if (game.status !== GameStatus.IN_PROGRESS && isWaitingGameExpired(game.createdAt, now)) {
+      if (game.status === GameStatus.WAITING) {
+        await prisma.game.update({
+          where: { id: gameId },
+          data: { status: GameStatus.ABANDONED },
+        });
+        availableGamesCache = null;
+      }
+      throw new Error('Game has expired');
+    }
 
     // Check if game state exists in memory
     let gameState = getActiveGameState(gameId);
@@ -348,6 +395,7 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
 
   // Check if user is already in another active game (different from this one)
   // Use a more efficient query that filters by status at the database level
+  await expireWaitingGames(now);
   const existingGame = await prisma.gamePlayer.findFirst({
     where: {
       userId: playerId,
@@ -382,6 +430,15 @@ export async function joinGame(gameId: string, playerId: string): Promise<GameSt
 
   if (game.status !== GameStatus.WAITING) {
     throw new Error('Game is not accepting new players');
+  }
+
+  if (isWaitingGameExpired(game.createdAt, now)) {
+    await prisma.game.update({
+      where: { id: gameId },
+      data: { status: GameStatus.ABANDONED },
+    });
+    availableGamesCache = null;
+    throw new Error('Game has expired');
   }
 
   if (game.players.length >= 4) {
@@ -605,6 +662,8 @@ export async function getUserActiveGames(userId: string): Promise<GameSummary[]>
     throw new Error('User ID is required');
   }
 
+  await expireWaitingGames();
+
   console.log(`[getUserActiveGames] Querying games for userId: ${userId}`);
   
   const games = await prisma.game.findMany({
@@ -752,9 +811,14 @@ export async function listAvailableGames(): Promise<GameSummary[]> {
   }
 
   availableGamesInFlight = (async () => {
+    await expireWaitingGames(now);
+    const cutoff = new Date(now - WAITING_GAME_EXPIRATION_MS);
     const games = await prisma.game.findMany({
       where: {
         status: GameStatus.WAITING,
+        createdAt: {
+          gte: cutoff,
+        },
       },
       include: {
         players: {
