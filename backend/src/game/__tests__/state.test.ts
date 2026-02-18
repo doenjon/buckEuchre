@@ -385,6 +385,22 @@ describe('state.ts - State Transitions', () => {
       expect(state.players[1].score).toBe(10);
       expect(state.players[0].score).toBe(15);
     });
+
+    it('should clamp auto-scored bidder at 0 on game-ending hand', () => {
+      state.players[1].score = 3;
+
+      state = applyFoldDecision(state, 0, true);
+      state = applyFoldDecision(state, 2, true);
+      state = applyFoldDecision(state, 3, true);
+
+      expect(state.phase).toBe('GAME_OVER');
+      expect(state.players[1].score).toBe(0);
+      expect(state.gameOver).toBe(true);
+      expect(state.winner).toBe(1);
+
+      const roundEntry = state.scoreHistory.find((entry) => entry.round === state.round);
+      expect(roundEntry?.scoresByPlayerId['p2']).toBe(0);
+    });
   });
 
   describe('applyCardPlay', () => {
@@ -533,6 +549,20 @@ describe('state.ts - State Transitions', () => {
       expect(state.phase).toBe('GAME_OVER');
       expect(state.gameOver).toBe(true);
       expect(state.winner).toBe(1);
+    });
+
+    it('should clamp game-ending score at 0', () => {
+      state.players[1].score = 2; // Bidder takes 3 tricks and would otherwise go to -1
+
+      state = finishRound(state);
+
+      expect(state.phase).toBe('GAME_OVER');
+      expect(state.players[1].score).toBe(0);
+      expect(state.gameOver).toBe(true);
+      expect(state.winner).toBe(1);
+
+      const roundEntry = state.scoreHistory.find((entry) => entry.round === state.round);
+      expect(roundEntry?.scoresByPlayerId['p2']).toBe(0);
     });
 
     it('should set winner to lowest score', () => {
