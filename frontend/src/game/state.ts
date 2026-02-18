@@ -24,6 +24,12 @@ function withVersion(state: GameState, updates: Partial<GameState>): GameState {
   };
 }
 
+function applyScoreChange(currentScore: number, scoreChange: number): number {
+  const nextScore = currentScore + scoreChange;
+  // Once players are counting down, scores should never display below zero.
+  return currentScore >= 0 ? Math.max(0, nextScore) : nextScore;
+}
+
 /**
  * Initializes a new game with given player IDs
  * @param playerIds - Array of 4 player IDs
@@ -394,7 +400,7 @@ export function applyFoldDecision(
 
       const scoredPlayers = playersWithAutoTricks.map((player, position) => ({
         ...player,
-        score: player.score + scoreChanges[player.position],
+        score: applyScoreChange(player.score, scoreChanges[player.position]),
       })) as [Player, Player, Player, Player];
 
       // Update score history with auto-scored round
@@ -589,7 +595,7 @@ export function finishRound(state: GameState): GameState {
   // Apply score changes
   const players = state.players.map((p, i) => ({
     ...p,
-    score: p.score + scoreChanges[p.position],
+    score: applyScoreChange(p.score, scoreChanges[p.position]),
   })) as [Player, Player, Player, Player];
 
   // Update score history with current round scores
