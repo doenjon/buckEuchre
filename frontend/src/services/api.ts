@@ -10,6 +10,11 @@ import type {
   GameState,
   AddAIPlayerResponse
 } from '@buck-euchre/shared';
+import {
+  handleSessionExpired,
+  isSessionExpiredError,
+  SESSION_EXPIRED_MESSAGE,
+} from '@/lib/authSession';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -57,6 +62,11 @@ async function fetchJson<T>(
           if (error?.message) message = error.message;
         } else {
           await response.text().catch(() => null);
+        }
+
+        if (isSessionExpiredError(message, response.status) && getAuthToken()) {
+          handleSessionExpired();
+          throw new Error(SESSION_EXPIRED_MESSAGE);
         }
 
         if (!shouldRetry) {

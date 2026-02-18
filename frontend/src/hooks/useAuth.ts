@@ -7,6 +7,7 @@ import { useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { login as loginAPI, register as registerAPI, logout as logoutAPI, joinAsGuest } from '@/services/api';
+import { handleSessionExpired } from '@/lib/authSession';
 
 export function useAuth() {
   const authStore = useAuthStore();
@@ -81,7 +82,7 @@ export function useAuth() {
     }
     
     if (!authStore.isTokenValid()) {
-      authStore.logout();
+      handleSessionExpired();
       return false;
     }
     
