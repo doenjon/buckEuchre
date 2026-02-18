@@ -8,6 +8,7 @@ import type { Socket } from 'socket.io-client';
 import { useAuthStore } from '@/stores/authStore';
 import { useGameStore } from '@/stores/gameStore';
 import { useUIStore } from '@/stores/uiStore';
+import { handleSessionExpired, isSessionExpiredError } from '@/lib/authSession';
 import { 
   createSocketConnection, 
   setupSocketListeners, 
@@ -57,20 +58,30 @@ export function useSocket() {
       },
 
       onConnectError: (error) => {
+        const message = error.message || 'Failed to connect to game server';
+        if (isSessionExpiredError(message, undefined, error?.code)) {
+          handleSessionExpired();
+          return;
+        }
+
         console.warn('[useSocket] WebSocket connection failed:', {
-          message: error.message || error,
+          message: message || error,
           type: error.type,
           description: error.description,
         });
         setConnected(false);
 
         // Show a notification for connection errors
-        const message = error.message || 'Failed to connect to game server';
         setNotification(`Connection error: ${message}`);
         setTimeout(() => setNotification(null), 5000);
       },
 
       onError: (error) => {
+        if (isSessionExpiredError(error?.message, undefined, error?.code)) {
+          handleSessionExpired();
+          return;
+        }
+
         console.error('Socket error:', error);
 
         // Only show blocking errors for join-related failures

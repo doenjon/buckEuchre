@@ -14,14 +14,14 @@ import { Header } from '@/components/layout/Header';
 
 export function LobbyPage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, checkAuth } = useAuth();
   const { error, clearError } = useUIStore();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !checkAuth()) {
       navigate('/');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, checkAuth, navigate]);
 
   if (!isAuthenticated) {
     return null;

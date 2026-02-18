@@ -3,6 +3,12 @@
  * @description Axios-like API client wrapper for frontend
  */
 
+import {
+  handleSessionExpired,
+  isSessionExpiredError,
+  SESSION_EXPIRED_MESSAGE,
+} from '@/lib/authSession';
+
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 /**
@@ -28,6 +34,35 @@ function getAuthHeaders(): HeadersInit {
   return headers;
 }
 
+async function readErrorMessage(response: Response): Promise<string> {
+  const contentType = response.headers.get('content-type');
+
+  if (contentType && contentType.includes('application/json')) {
+    const error = await response.json().catch(() => null);
+    if (error?.message) {
+      return error.message;
+    }
+  } else {
+    await response.text().catch(() => null);
+  }
+
+  return `HTTP ${response.status}: ${response.statusText}`;
+}
+
+async function ensureOk(response: Response): Promise<void> {
+  if (response.ok) {
+    return;
+  }
+
+  const message = await readErrorMessage(response);
+  if (isSessionExpiredError(message, response.status) && getAuthToken()) {
+    handleSessionExpired();
+    throw new Error(SESSION_EXPIRED_MESSAGE);
+  }
+
+  throw new Error(message);
+}
+
 interface ApiResponse<T = any> {
   data: T;
   status: number;
@@ -47,15 +82,7 @@ export const api = {
       headers: getAuthHeaders(),
     });
 
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const error = await response.json();
-        throw new Error(error.message || `HTTP ${response.status}: ${response.statusText}`);
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-    }
+    await ensureOk(response);
 
     const data = await response.json();
 
@@ -76,15 +103,7 @@ export const api = {
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const error = await response.json();
-        throw new Error(error.message || `HTTP ${response.status}: ${response.statusText}`);
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-    }
+    await ensureOk(response);
 
     const data = await response.json();
 
@@ -105,15 +124,7 @@ export const api = {
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const error = await response.json();
-        throw new Error(error.message || `HTTP ${response.status}: ${response.statusText}`);
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-    }
+    await ensureOk(response);
 
     const data = await response.json();
 
@@ -133,15 +144,7 @@ export const api = {
       headers: getAuthHeaders(),
     });
 
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const error = await response.json();
-        throw new Error(error.message || `HTTP ${response.status}: ${response.statusText}`);
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-    }
+    await ensureOk(response);
 
     // DELETE might return empty response
     const contentType = response.headers.get('content-type');
@@ -166,15 +169,7 @@ export const api = {
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const error = await response.json();
-        throw new Error(error.message || `HTTP ${response.status}: ${response.statusText}`);
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-    }
+    await ensureOk(response);
 
     const data = await response.json();
 

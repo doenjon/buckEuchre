@@ -3,7 +3,8 @@
  * @description Root component for Buck Euchre frontend with routing
  */
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
 import { LobbyPage } from './pages/LobbyPage';
 import { GamePage } from './pages/GamePage';
@@ -15,6 +16,39 @@ import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 import { ConsoleLogger } from './components/ConsoleLogger';
 import { useSettingsStore } from './stores/settingsStore';
+import { useAuthStore } from './stores/authStore';
+import { handleSessionExpired } from './lib/authSession';
+
+function AuthExpirationWatcher() {
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const expiresAt = useAuthStore((state) => state.expiresAt);
+
+  useEffect(() => {
+    if (!isAuthenticated || !expiresAt) {
+      return;
+    }
+
+    const msUntilExpiration = expiresAt - Date.now();
+
+    if (msUntilExpiration <= 0) {
+      handleSessionExpired();
+      navigate('/', { replace: true });
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      handleSessionExpired();
+      navigate('/', { replace: true });
+    }, msUntilExpiration);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [expiresAt, isAuthenticated, navigate]);
+
+  return null;
+}
 
 function App() {
   const { showDebugConsole } = useSettingsStore();
@@ -22,6 +56,7 @@ function App() {
   return (
     <BrowserRouter>
       {showDebugConsole && <ConsoleLogger />}
+      <AuthExpirationWatcher />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
