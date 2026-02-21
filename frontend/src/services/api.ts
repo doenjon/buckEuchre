@@ -64,7 +64,7 @@ async function fetchJson<T>(
           await response.text().catch(() => null);
         }
 
-        if (isSessionExpiredError(message, response.status) && getAuthToken()) {
+        if (isSessionExpiredError(message, response.status)) {
           handleSessionExpired();
           throw new Error(SESSION_EXPIRED_MESSAGE);
         }

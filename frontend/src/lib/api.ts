@@ -55,7 +55,7 @@ async function ensureOk(response: Response): Promise<void> {
   }
 
   const message = await readErrorMessage(response);
-  if (isSessionExpiredError(message, response.status) && getAuthToken()) {
+  if (isSessionExpiredError(message, response.status)) {
     handleSessionExpired();
     throw new Error(SESSION_EXPIRED_MESSAGE);
   }
