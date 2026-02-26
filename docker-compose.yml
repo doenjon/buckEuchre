@@ -2,17 +2,17 @@
 # Buck Euchre - Production Docker Compose
 # ==============================================================================
 # 
-# This docker-compose file orchestrates all production services:
+# This docker-compose file orchestrates all BuckEuchre services:
 # - PostgreSQL database
-# - Backend API server
-# - Frontend web application
-# - Nginx reverse proxy
+# - Backend API server  (exposed on host port 3000)
+# - Frontend web application (exposed on host port 5173)
+#
+# Routing (80/443) is handled by the standalone nginx-proxy stack.
 # 
 # ⚠️  SECURITY WARNINGS:
 # - Generate strong passwords for all services
 # - Use secrets management for production (AWS Secrets Manager, etc.)
 # - Never commit .env files to version control
-# - Configure SSL/TLS certificates (not included in this config)
 # 
 # Usage:
 #   docker-compose up -d                # Start all services
@@ -52,9 +52,7 @@ services:
     
     networks:
       - buckeuchre-internal
-      - buckeuchre-web
     
-    # Expose to host for integration tests
     ports:
       - "5432:5432"
 
@@ -83,7 +81,6 @@ services:
       WS_HEARTBEAT_INTERVAL: ${WS_HEARTBEAT_INTERVAL:-30000}
       WS_GRACE_PERIOD: ${WS_GRACE_PERIOD:-30000}
     
-    # Run migrations before starting
     command: >
       sh -c "npx prisma migrate deploy &&
              node dist/index.js"
@@ -97,12 +94,10 @@ services:
     
     networks:
       - buckeuchre-internal
-      - buckeuchre-web
     
-    # Expose to host for integration tests
-    # In production, access through nginx only
+    # Exposed to host so nginx-proxy can route to it
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
   # ----------------------------------------------------------------------------
   # Frontend Web Application
@@ -121,42 +116,9 @@ services:
       retries: 3
       start_period: 5s
     
-    networks:
-      - buckeuchre-web
-    
-    # Expose to host for local development
+    # Exposed to host so nginx-proxy can route to it
     ports:
-      - "5173:80"
-
-  # ----------------------------------------------------------------------------
-  # Nginx Reverse Proxy
-  # ----------------------------------------------------------------------------
-  nginx:
-    image: nginx:alpine
-    container_name: buckeuchre-nginx
-    restart: unless-stopped
-    
-    depends_on:
-      - frontend
-      - backend
-    
-    ports:
-      - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
-    
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-    
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-    
-    networks:
-      - buckeuchre-web
+      - "127.0.0.1:5173:80"
 
 # ------------------------------------------------------------------------------
 # Volumes
@@ -169,11 +131,7 @@ volumes:
 # Networks
 # ------------------------------------------------------------------------------
 networks:
-  # Internal network (database, not exposed to internet)
+  # Internal network (database ↔ backend only)
   buckeuchre-internal:
     driver: bridge
     internal: true
-  
-  # Web network (frontend, backend, nginx)
-  buckeuchre-web:
-    driver: bridge
