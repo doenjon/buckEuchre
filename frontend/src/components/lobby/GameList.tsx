@@ -9,6 +9,7 @@ import { listGames } from '@/services/api';
 import type { GameSummary } from '@buck-euchre/shared';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
+import { handleSessionExpired, isSessionExpiredError } from '@/lib/authSession';
 import { Users, Clock, Play, Loader2 } from 'lucide-react';
 import { AddAIButton } from './AddAIButton';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,11 @@ export function GameList() {
       setGames(response.games);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load games';
+      if (isSessionExpiredError(message)) {
+        handleSessionExpired();
+        navigate('/', { replace: true });
+        return;
+      }
       setError(message);
     } finally {
       fetchingRef.current = false;
