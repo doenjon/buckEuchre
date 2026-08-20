@@ -85,8 +85,12 @@ services:
     networks:
       - buckeuchre-internal
     
+    # Loopback-only: only this stack's backend uses the database, and it
+    # reaches it over the internal network. A published port bypasses ufw,
+    # since docker writes its DNAT rules ahead of the FORWARD chain.
+    # An SSH tunnel still works — it terminates on the host.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
 
   # ----------------------------------------------------------------------------
   # Backend API Server
