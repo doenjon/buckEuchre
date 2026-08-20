@@ -72,7 +72,7 @@ RUN echo '#!/bin/sh' > /usr/local/bin/health-check.sh && \
 EXPOSE 80
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=60s --timeout=3s --start-period=5s --retries=3 \
     CMD /usr/local/bin/health-check.sh
 
 # Use dumb-init to handle signals properly
